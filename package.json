@@ -1,0 +1,16 @@
+{
+  "name": "weekendesk-advertising-platform",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Plataforma publicitaria Weekendesk — motor de precios y esquema de datos",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  }
+}
