@@ -193,6 +193,8 @@ total_facturado = presupuesto_medios + fee
 
 El suelo de margen del 50 % de 4.3 **no se aplica línea a línea** a los soportes de media buy: están fuera de la fórmula general. Sí entran en el margen de la opción, calculado **neto de medios**, que es el que debe superar el 50 % (ver 5.1 y 5.3). Así, un ADS-03 con poco presupuesto de medios y un fee que no cubre sus horas bloquea el envío por la vía del control de opción, no por un suelo de línea que la especificación no define.
 
+**El fee mínimo mensual resiste los descuentos, confirmado.** Es un `max()` en la fórmula: dejar que un descuento lo perfore por debajo dejaría el "mínimo" sin sentido. Un fee de Pmax que dispara el mínimo mensual (por ejemplo, el caso de 4.500 € con 3.000 € de medios a tres meses) entra igualmente en la base del descuento por volumen, pero el descuento no puede bajarlo de los 4.500 €: el suelo se reaplica después del reparto, igual que en cualquier otra línea (ver 4.5).
+
 Motivo: incluir los medios en la base del margen dispararía el precio final (un 50 % sobre 10.000 € de medios = fee implícito del 121 %, fuera de mercado) y falsearía el porcentaje de margen del informe.
 
 **Regla de tesorería: los medios se cobran al 100 % por adelantado**, sea cual sea la condición de pago del resto. Weekendesk no adelanta dinero de Meta ni de Google.
@@ -239,9 +241,11 @@ El tramo se determina sobre la base **antes** de descuento. Los umbrales son inc
 
 #### Acumulación y suelo
 
-Los descuentos (volumen + manuales) se **suman** sobre la base, y el total se reparte a prorrata entre las líneas descontables.
+Los descuentos (volumen + manuales) se **suman** sobre la base, y el total se reparte a prorrata entre las líneas descontables. **Confirmado por Vincent**: 15 % + 10 % son 25 %, no una composición (15 % + 10 % × 85 % = 23,5 %).
 
 Después del reparto **se vuelve a aplicar el suelo de margen del 50 % línea a línea** (regla de 4.3). Una línea que cae por debajo de su suelo se sube de nuevo al suelo y el exceso **no** se redistribuye: el descuento realmente concedido es menor que el nominal. El motor devuelve ambos, nominal y efectivo, para que el comercial vea que el suelo ha mordido.
+
+**El total de descuento acumulado (nominal y efectivo) debe verse de forma bien visible en la interfaz del comercial** — no es un dato secundario en un desglose: es lo primero que hay que ver antes de enviar una opción con varios descuentos apilados, precisamente porque el suelo puede hacer que lo efectivo sea menor que lo nominal sin que salte ningún error.
 
 Toda excepción (margen bajo suelo, descuento manual, forzado de antelación) se registra con autor, motivo y marca de tiempo.
 
@@ -285,6 +289,12 @@ Bloquean el botón de envío (forzables con motivo registrado):
 2. Antelación insuficiente: días laborables entre hoy y el inicio de campaña < antelación del soporte más lento
 3. Disponibilidad no confirmada con Marketing — checkbox manual con quién y cuándo, obligatorio para ON-01, ON-02, ON-03, CRM-03 y ADS-01
 4. Brief vacío (solo aviso)
+
+**Días laborables, resuelto (CLAUDE.md §9).** El cálculo excluye sábados, domingos y los festivos nacionales del mercado de cada línea (tabla `market_holidays`, editable en admin, sembrada con FR/ES/IT/BE-FR/BE-NL 2026-2027). BE-FR y BE-NL comparten calendario: son festivos federales belgas, no de comunidad lingüística.
+
+El control 2 se evalúa **por línea, no por opción**: el calendario de festivos es por mercado, así que dos soportes con la misma antelación nominal pueden tener fecha límite real distinta según dónde se contraten. Motivo de la tabla: la primera campaña real es Navidad, y 15 días laborables desde diciembre cruzan el 25 de diciembre y el 1 de enero — sin festivos la calculadora decía que se llegaba a tiempo cuando no era así.
+
+No incluye festivos regionales o municipales (2 por comunidad autónoma en España, patronales en Italia): solo el calendario nacional. Añadir eso, si hace falta, es una fila más en `market_holidays`.
 
 ### 5.4 Inmutabilidad
 
@@ -383,8 +393,7 @@ Entidad facturadora: Weekendesk SAS, 28 rue de Londres, 75009 Paris.
 | Coste de boost: ¿100 € en los 5 mercados? | Social | Abierto |
 | Objetivo por persona y por quarter | Vincent / dirección | Editable en admin |
 | **Fee mínimo mensual de ADS-03 (Display) e INF-01 (Influencer)** | Vincent / Quentin Heliot | Abierto. Parámetro nulo en base de datos, el motor avisa. Ver 4.4 |
-| ¿Los descuentos acumulados se suman o se componen? | Vincent | Implementado **sumando**; confirmar |
-| Calendario de festivos por mercado para el cálculo de antelación | Vincent | Abierto. Hoy solo se excluyen sábados y domingos |
+| Festivos regionales/municipales (ES, IT) en el cálculo de antelación | Vincent | Fuera de alcance por ahora. Solo calendario nacional en `market_holidays` |
 
 
 ---
@@ -418,7 +427,7 @@ Cuatro puntos no estaban determinados en la especificación. Se resolvieron así
 3. **Base del descuento**: neto de medios, idéntica al `importe_neto_de_medios`. Ver 4.5.
 4. **Mercado líder**: se determina por soporte. Ver 4.2.
 
-Se mantienen como supuestos por confirmar, listados en la sección 9: la **suma** (no composición) de descuentos acumulados, y el cálculo de días laborables **sin calendario de festivos**.
+Confirmado por Vincent, ya no son supuestos: el fee mínimo mensual resiste los descuentos (ver 4.4), los descuentos acumulados se **suman** y no se componen (ver 4.5), y el cálculo de días laborables **excluye los festivos por mercado** de la tabla `market_holidays`, evaluado por línea (ver 5.3). Queda fuera de alcance el detalle regional/municipal de festivos en España e Italia, listado en la sección 9.
 
 ---
 

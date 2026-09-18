@@ -5,6 +5,7 @@
  * autor, motivo y marca de tiempo (tabla `overrides`).
  */
 
+import type { PublicHoliday } from './holidays.js';
 import type { Market, PricedOption, PricingParameters } from './types.js';
 
 export type CheckCode =
@@ -30,6 +31,8 @@ export interface PreSendContext {
   /** Claves `SUPPORT|MERCADO` con check manual de disponibilidad registrado. */
   readonly confirmedAvailability: ReadonlySet<string>;
   readonly parameters: PricingParameters;
+  /** Festivos por mercado (CLAUDE.md §9). Estado inicial: `DEFAULT_HOLIDAYS`. */
+  readonly holidays: readonly PublicHoliday[];
 }
 
 export function availabilityKey(supportId: string, market: Market): string {
@@ -37,18 +40,35 @@ export function availabilityKey(supportId: string, market: Market): string {
 }
 
 /**
- * Días laborables (lunes a viernes) estrictamente entre dos fechas.
- * Sin calendario de festivos: pendiente de decisión (CLAUDE.md §9).
+ * Días laborables (lunes a viernes, excluidos los festivos del mercado)
+ * estrictamente entre dos fechas.
+ *
+ * El calendario es por mercado: 15 días laborables desde diciembre no son
+ * los mismos en FR (excluye 25/12 y 11/11) que en IT (excluye además 26/12,
+ * 8/12 y 6/1). Sin esto la calculadora podía decir que se llegaba a tiempo
+ * a una campaña de Navidad cuando en realidad no.
  */
-export function businessDaysBetween(from: Date, to: Date): number {
+export function businessDaysBetween(
+  from: Date,
+  to: Date,
+  market: Market,
+  holidays: readonly PublicHoliday[],
+): number {
   const start = Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate());
   const end = Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), to.getUTCDate());
   if (end <= start) return 0;
 
+  const marketHolidays = new Set(
+    holidays.filter((h) => h.market === market).map((h) => h.date),
+  );
+
   let count = 0;
   for (let t = start + 86_400_000; t <= end; t += 86_400_000) {
-    const day = new Date(t).getUTCDay(); // 0 domingo, 6 sábado
-    if (day !== 0 && day !== 6) count += 1;
+    const d = new Date(t);
+    const day = d.getUTCDay(); // 0 domingo, 6 sábado
+    if (day === 0 || day === 6) continue;
+    if (marketHolidays.has(d.toISOString().slice(0, 10))) continue;
+    count += 1;
   }
   return count;
 }
@@ -67,9 +87,6 @@ export function runPreSendChecks(
   const blockers: CheckResult[] = [];
   const warnings: CheckResult[] = [];
 
-  const availableBusinessDays =
-    ctx.campaignStart === null ? null : businessDaysBetween(ctx.today, ctx.campaignStart);
-
   for (const option of options) {
     // 1. Margen por debajo del 50 % en cualquier opción. No se compensa una
     //    opción floja con otra.
@@ -85,20 +102,33 @@ export function runPreSendChecks(
       });
     }
 
-    // 2. Antelación insuficiente frente al soporte más lento de la opción.
-    if (availableBusinessDays !== null && availableBusinessDays < option.maxLeadTimeBusinessDays) {
-      blockers.push({
-        code: 'LEAD_TIME_INSUFFICIENT',
-        severity: 'BLOCKER',
-        message:
-          `Opción ${option.name ?? option.id ?? '—'}: quedan ${availableBusinessDays} días ` +
-          `laborables hasta el inicio y el soporte más lento exige ` +
-          `${option.maxLeadTimeBusinessDays}.`,
-        optionId: option.id,
-      });
-    }
-
     for (const line of option.lines) {
+      // 2. Antelación insuficiente. Por línea, no por opción: el calendario de
+      //    festivos es por mercado, así que dos soportes con la misma
+      //    antelación nominal pueden tener distinta fecha límite real según
+      //    el mercado en el que se contraten.
+      if (ctx.campaignStart !== null) {
+        const available = businessDaysBetween(
+          ctx.today,
+          ctx.campaignStart,
+          line.market,
+          ctx.holidays,
+        );
+        if (available < line.leadTimeBusinessDays) {
+          blockers.push({
+            code: 'LEAD_TIME_INSUFFICIENT',
+            severity: 'BLOCKER',
+            message:
+              `${line.supportId} en ${line.market}: quedan ${available} días laborables ` +
+              `hasta el inicio (descontando festivos de ${line.market}) y el soporte exige ` +
+              `${line.leadTimeBusinessDays}.`,
+            optionId: option.id,
+            supportId: line.supportId,
+            market: line.market,
+          });
+        }
+      }
+
       // 3. Disponibilidad no confirmada con Marketing.
       if (
         line.requiresAvailabilityCheck &&
