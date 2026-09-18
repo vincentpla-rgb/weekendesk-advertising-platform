@@ -1,0 +1,278 @@
+/*
+ * Marca Weekendesk (CLAUDE.md §2): Host Grotesk + Inter, rojo #f8443a, azul
+ * marino #001c4d. Sin librería de diseño: CSS plano con variables, suficiente
+ * para el MVP y sin dependencias que compliquen el deploy en Vercel Hobby.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Host+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+  --wk-red: #f8443a;
+  --wk-red-dark: #d5342b;
+  --wk-navy: #001c4d;
+  --wk-navy-light: #0a2c66;
+  --wk-bg: #f6f7fb;
+  --wk-surface: #ffffff;
+  --wk-border: #e2e5ee;
+  --wk-text: #10152a;
+  --wk-text-muted: #5b6378;
+  --wk-success: #1f8a4c;
+  --wk-warning: #b9720a;
+  --wk-danger: #c02626;
+  --wk-font-display: 'Host Grotesk', 'Inter', system-ui, sans-serif;
+  --wk-font-body: 'Inter', system-ui, sans-serif;
+  --wk-radius: 10px;
+  --wk-shadow: 0 1px 2px rgba(16, 21, 42, 0.06), 0 8px 24px rgba(16, 21, 42, 0.06);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+body {
+  background: var(--wk-bg);
+  color: var(--wk-text);
+  font-family: var(--wk-font-body);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--wk-font-display);
+  color: var(--wk-navy);
+  margin: 0 0 0.4em;
+}
+
+a {
+  color: var(--wk-navy);
+}
+
+button {
+  font-family: inherit;
+}
+
+.wk-shell {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px 20px 64px;
+}
+
+.wk-card {
+  background: var(--wk-surface);
+  border: 1px solid var(--wk-border);
+  border-radius: var(--wk-radius);
+  box-shadow: var(--wk-shadow);
+  padding: 20px;
+}
+
+.wk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 10px 16px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.wk-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.wk-btn-primary {
+  background: var(--wk-red);
+  color: #fff;
+}
+
+.wk-btn-primary:hover:not(:disabled) {
+  background: var(--wk-red-dark);
+}
+
+.wk-btn-secondary {
+  background: var(--wk-surface);
+  color: var(--wk-navy);
+  border-color: var(--wk-border);
+}
+
+.wk-btn-secondary:hover:not(:disabled) {
+  background: var(--wk-bg);
+}
+
+.wk-btn-ghost {
+  background: transparent;
+  color: var(--wk-text-muted);
+}
+
+.wk-input,
+.wk-select,
+.wk-textarea {
+  width: 100%;
+  border: 1px solid var(--wk-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  background: var(--wk-surface);
+  color: var(--wk-text);
+}
+
+.wk-textarea {
+  resize: vertical;
+  min-height: 90px;
+}
+
+.wk-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--wk-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin-bottom: 4px;
+}
+
+.wk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.wk-badge-danger {
+  background: #fdecec;
+  color: var(--wk-danger);
+}
+
+.wk-badge-warning {
+  background: #fdf3e2;
+  color: var(--wk-warning);
+}
+
+.wk-badge-success {
+  background: #e8f6ee;
+  color: var(--wk-success);
+}
+
+.wk-badge-neutral {
+  background: var(--wk-bg);
+  color: var(--wk-text-muted);
+}
+
+.wk-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--wk-navy);
+  color: #fff;
+}
+
+.wk-header a {
+  color: #fff;
+  text-decoration: none;
+  font-family: var(--wk-font-display);
+  font-weight: 700;
+  font-size: 17px;
+}
+
+.wk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.wk-table th {
+  text-align: left;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--wk-text-muted);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--wk-border);
+}
+
+.wk-table td {
+  padding: 8px;
+  border-bottom: 1px solid var(--wk-border);
+  vertical-align: top;
+}
+
+.wk-alert {
+  border-radius: var(--wk-radius);
+  padding: 12px 16px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wk-alert-danger {
+  background: #fdecec;
+  border: 1px solid #f6c7c3;
+  color: #7a1d1d;
+}
+
+.wk-alert-warning {
+  background: #fdf3e2;
+  border: 1px solid #f0d9a4;
+  color: #6b4909;
+}
+
+.wk-alert-info {
+  background: #eef2fb;
+  border: 1px solid #cdd8f2;
+  color: var(--wk-navy);
+}
+
+.wk-grid-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.wk-discount-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 20px;
+  padding: 14px 18px;
+  border-radius: var(--wk-radius);
+  background: var(--wk-navy);
+  color: #fff;
+}
+
+.wk-discount-banner .wk-discount-figure {
+  font-family: var(--wk-font-display);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.wk-discount-banner .wk-discount-figure small {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.75;
+  display: block;
+}
+
+@media (max-width: 640px) {
+  .wk-shell {
+    padding: 16px 14px 48px;
+  }
+}
