@@ -13,20 +13,59 @@ no esté ahí, preguntar antes de inventar.
 |---|---|---|
 | Esquema PostgreSQL / Supabase | `supabase/migrations/` | Hecho |
 | Motor de precios | `src/pricing/` | Hecho |
-| Tests unitarios | `src/pricing/__tests__/` | Hecho — 72 tests |
-| Interfaz (Next.js) | — | No empezada |
+| Tests unitarios | `src/pricing/__tests__/` | Hecho — 81 tests |
+| Interfaz (Next.js) | `app/`, `lib/`, `components/` | Hecho — 3 pantallas del MVP |
+
+Ver CLAUDE.md §10 para el detalle de qué pantallas existen y qué queda
+explícitamente fuera de esta pasada (dashboard, contrapropuesta, forzar
+bloqueos, gestión de cuentas como CRM propio).
 
 ## Desarrollo
 
 ```bash
 npm install
-npm test          # vitest
-npm run typecheck # tsc --noEmit
+npm test          # vitest — motor de precios
+npm run typecheck # tsc --noEmit — todo el proyecto, motor + app
+npm run build     # next build
+npm run dev       # next dev
 ```
 
-Las migraciones se aplican con la CLI de Supabase (`supabase db push`) o con
-`psql` en orden alfabético. La tercera carga los parámetros y el catálogo
-iniciales; todo ello es editable después desde admin.
+### Base de datos
+
+Las migraciones de `supabase/migrations/` se aplican en orden alfabético (por
+fecha en el nombre), con la CLI de Supabase (`supabase db push`) o con `psql`.
+Verificadas ejecutándolas contra un PostgreSQL 16 real, no solo por sintaxis.
+
+1. `..._initial_schema.sql` — esquema, RLS, funciones de fecha
+2. `..._public_proposal_access.sql` — lectura pública (`get_public_proposal`)
+3. `..._seed_reference_data.sql` — catálogo y parámetros, estado inicial editable
+4. `..._market_holidays.sql` — tabla de festivos
+5. `..._seed_market_holidays.sql` — festivos FR/ES/IT/BE-FR/BE-NL 2026-2027
+6. `..._create_and_send_proposal.sql` — creación atómica de presupuestos, aceptación y rechazo públicos
+7. `..._grants.sql` — privilegios de tabla explícitos para `authenticated`
+
+### Variables de entorno
+
+```bash
+cp .env.example .env.local
+```
+
+Rellenar con la URL y la clave anon de un proyecto Supabase real (Project
+Settings > API). Sin proyecto conectado, `npm run build` funciona igual (las
+páginas que necesitan datos son dinámicas, no se generan en build), pero
+`npm run dev` no podrá leer ni escribir nada.
+
+`lib/supabase/database.types.ts` está escrito a mano a partir de las
+migraciones (no hay proyecto Supabase vivo en este entorno de desarrollo para
+generarlo). Al crear el proyecto real, regenerar con:
+
+```bash
+supabase gen types typescript --project-id <id> > lib/supabase/database.types.ts
+```
+
+y revisar que coincide con lo que espera el resto del código — sobre todo las
+funciones `Functions` (`create_and_send_proposal`, `get_public_proposal`,
+`accept_public_proposal`, `reject_public_proposal`, `mark_public_proposal_viewed`).
 
 ## Cómo está organizado el motor
 
@@ -41,5 +80,21 @@ y el catálogo, y devuelve el cálculo con su traza.
 | `catalog.ts` | Los 19 soportes del rate card |
 | `engine.ts` | Coste, multimercado, suelo, media buy, descuentos |
 | `reach.ts` | Audiencia: sin dato medido, valor nulo |
-| `checks.ts` | Controles previos al envío |
+| `checks.ts` | Controles previos al envío, festivos por mercado incluidos |
 | `fiscal.ts` | Año fiscal mayo–abril |
+| `holidays.ts` | Festivos nacionales FR/ES/IT/BE-FR/BE-NL 2026-2027 |
+
+## Cómo está organizada la app
+
+- `app/(internal)/proposals/new/` — creación de presupuesto (requiere sesión)
+- `app/p/[token]/` — pantalla pública comparativa + aceptación + rechazo
+- `app/api/proposals/` — crea y envía un presupuesto (recalcula con el motor en el servidor)
+- `app/api/public/proposals/[token]/{accept,reject}/` — flujo público
+- `lib/pricing-context.ts` — puente entre las tablas de Supabase y el motor puro
+- `lib/vies.ts` — verificación VIES (llamada de servidor, la función SQL no tiene salida de red)
+- `lib/i18n.ts` — textos de la pantalla pública en el idioma del cliente
+
+**Ningún precio que ve el cliente se calcula en el navegador y se guarda tal
+cual.** El navegador solo usa el motor para la vista previa en vivo; al
+enviar, el servidor recibe los datos crudos y recalcula con los parámetros
+vivos de la base de datos antes de persistir nada.

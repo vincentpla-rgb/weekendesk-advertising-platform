@@ -406,10 +406,35 @@ Entidad facturadora: Weekendesk SAS, 28 rue de Londres, 75009 Paris.
 |---|---|---|
 | Esquema PostgreSQL / Supabase | `supabase/migrations/` | Hecho |
 | Motor de precios | `src/pricing/` | Hecho |
-| Tests unitarios | `src/pricing/__tests__/` | Hecho |
-| Interfaz (Next.js) | — | No empezada |
+| Tests unitarios | `src/pricing/__tests__/` | Hecho — 81 tests |
+| Interfaz (Next.js) | `app/`, `lib/`, `components/` | Hecho — 3 pantallas del MVP |
 
 El motor es **puro**: no lee de la base de datos. Recibe el juego de parámetros y el catálogo como argumentos, para que los valores editables en admin (tarifa hora, suelo, coeficientes, escalas) lleguen desde `pricing_parameter_sets` y nunca estén hardcodeados en la lógica. Los valores de la sección 3 viven en `src/pricing/parameters.ts` y en la migración de seed únicamente como **estado inicial**, no como constantes de cálculo.
+
+### 10.1.1 Pantallas construidas
+
+| Pantalla | Ruta | Notas |
+|---|---|---|
+| Creación de presupuesto | `/proposals/new` | 2-3 opciones, líneas multimercado, descuentos manuales, vista previa en vivo con el motor, checklist de controles previos al envío |
+| Pantalla pública comparativa | `/p/[token]` | `get_public_proposal` (SECURITY DEFINER), reach solo con dato medido, caduca a los 14 días, idioma del cliente |
+| Aceptación con datos fiscales | Modal en `/p/[token]` | VIES verificado en servidor (`app/api/public/proposals/[token]/accept`), régimen de IVA decidido en `accept_public_proposal` |
+| Rechazo | Modal en `/p/[token]` | Registra motivo; **no** construye la contrapropuesta (ver más abajo) |
+| Login | `/login` | Magic link (Supabase Auth), lista blanca comprobada en `/auth/callback` contra `profiles` |
+
+**Arquitectura de cálculo:** el navegador ejecuta el mismo motor (`src/pricing/`) para la vista previa en vivo mientras el comercial edita, pero esos números **nunca se persisten**. Al pulsar "Enviar", `app/api/proposals/route.ts` recibe los datos crudos (soportes, mercados, cantidades, descuentos) y **vuelve a calcular en el servidor** con los parámetros vivos de la base de datos — eso es lo único que se guarda, vía `create_and_send_proposal` (una función SQL `SECURITY INVOKER`, atómica: opción + líneas + descuentos + checks de disponibilidad en una sola transacción, con el envío ya congelado).
+
+**Verificado end to end contra un PostgreSQL 16 real** (no solo tipado): crear y enviar un presupuesto con el motor real, leer la pantalla pública (reach con y sin dato, caducidad), aceptar con VIES simulado (régimen de IVA correcto), rechazar, y los bloqueos de estado (no se puede aceptar dos veces, ni aceptar un envío caducado).
+
+### 10.1.2 Deliberadamente fuera de esta pasada
+
+Explícito para no dar por hecho más de lo construido:
+
+- **Dashboard de seguimiento** por persona y quarter fiscal (CLAUDE.md §1): no pedido en esta pasada, no construido.
+- **Contrapropuesta** tras rechazo (§5.4, §5.5): el rechazo se registra; crear la versión nueva en `borrador` es una acción interna posterior, no implementada.
+- **Forzar un bloqueo con motivo** (§5.3, tabla `overrides`): hoy un bloqueo (margen, antelación, disponibilidad) impide enviar sin excepción; no hay UI para forzarlo y registrar autor/motivo.
+- **Gestión de cuentas y contactos** como pantallas propias: se crean inline al construir un presupuesto, sin un CRM dedicado.
+- **Verificación VIES mientras se escribe**: se comprueba solo al enviar el formulario de aceptación, no en vivo. Probado que el endpoint construye la llamada REST correctamente; **no se ha podido probar contra la API real de la UE** porque la política de red de este entorno de desarrollo bloquea la salida a `ec.europa.eu` — funcionará en Vercel, pero conviene una prueba manual tras el primer despliegue.
+- **Sin proyecto Supabase real conectado**: el código usa `@supabase/ssr` correctamente (`lib/supabase/`), pero no hay credenciales en este entorno. `lib/supabase/database.types.ts` está escrito a mano a partir de las migraciones; al crear el proyecto real, regenerar con `supabase gen types typescript` y revisar que coincide.
 
 ### 10.2 Convenciones de cálculo
 
