@@ -2,7 +2,16 @@
  * Verificación VIES (CLAUDE.md §7). Se llama desde una ruta de servidor
  * (tiene salida de red; una función de Postgres no la tiene de forma
  * fiable). Guardar siempre número, fecha de verificación y resultado — eso lo
- * hace accept_public_proposal, no este módulo.
+ * hace accept_public_proposal (o resolve_vat_regime en un reintento), no
+ * este módulo.
+ *
+ * Tres resultados posibles, y solo dos de ellos fijan un régimen de IVA:
+ *   VALID       -> autoliquidación
+ *   INVALID     -> IVA francés 20 % (incluye un número con formato irreconocible)
+ *   UNAVAILABLE -> fallo técnico (red, timeout, servicio caído, respuesta sin
+ *                  `valid` ni error claro). NO se traduce a ningún régimen:
+ *                  la aceptación no se bloquea por esto, pero el régimen
+ *                  queda `PENDING` hasta reintentar con éxito.
  */
 
 const VIES_ENDPOINT = 'https://ec.europa.eu/taxation_customs/vies/rest-api/ms';

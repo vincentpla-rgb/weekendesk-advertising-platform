@@ -341,17 +341,31 @@ Al aceptar: se verifica el número contra VIES, se fija el régimen de IVA, el e
 
 | Cliente | Régimen |
 |---|---|
-| Empresa u organismo **francés** | IVA francés 20 % |
-| Empresa UE **con número válido en VIES** | Sin IVA, autoliquidación por el cliente |
-| Cliente UE **sin número válido en VIES** | IVA francés 20 % |
+| Empresa u organismo **francés** | IVA francés 20 % — no depende de VIES |
+| Empresa UE, VIES **válido** | Sin IVA, autoliquidación por el cliente |
+| Cliente UE, VIES **inválido** (o sin número aportado) | IVA francés 20 % |
+| Cliente UE, VIES **no disponible** (fallo técnico) | **Pendiente de verificación** — ver más abajo |
 
 Base legal: artículo 44 de la Directiva 2006/112/CE, transpuesto en el artículo 259-1° del CGI. Una persona jurídica no sujeta pero identificada a efectos de IVA **se considera sujeto pasivo** para las reglas de localización (art. 43(2)) — un ente público con número válido va a autoliquidación.
 
 **Tener NIF no implica estar en VIES.** En España hace falta alta en el ROI (modelo 036); en Italia hay que solicitar la inclusión expresamente. Muchos organismos públicos que nunca han comprado fuera de su país no están dados de alta.
 
-Guardar siempre: número, fecha de verificación, resultado. Un número inválido en VIES tumba la autoliquidación y la administración puede reclamar el IVA francés.
+Guardar siempre: número, fecha de verificación, resultado — **cada intento**, no solo el primero, porque un régimen pendiente puede reintentarse varias veces antes de resolverse. Un número inválido en VIES tumba la autoliquidación y la administración puede reclamar el IVA francés.
 
 Obligación asociada (no en el MVP): declaración europea de servicios (DES) mensual desde el primer euro facturado.
+
+#### Régimen pendiente: VIES no disponible
+
+**La aceptación es un compromiso comercial y no puede depender de la disponibilidad de un servicio público externo.** Si VIES falla técnicamente (caído, timeout, respuesta sin resultado claro) en el momento de aceptar, **la aceptación no se bloquea**: el envío pasa a `aceptado` igual que en cualquier otro caso. Lo que cambia es el régimen de IVA, que queda **pendiente de verificación** en vez de fijarse — no se asume ni el 20 % francés ni la autoliquidación sin haberlo comprobado.
+
+Tres resultados de VIES, no dos:
+- **Válido** → autoliquidación.
+- **Inválido**, o sin número de IVA aportado → IVA francés 20 %, definitivo.
+- **No disponible** (fallo técnico) → régimen **pendiente**. Debe reintentarse hasta obtener un resultado concluyente (válido o inválido) **antes de emitir la factura** — la verificación fiscal ocurre días después de la aceptación, no en el momento.
+
+Un cliente francés es siempre IVA francés 20 %, con VIES disponible o no: la nacionalidad francesa no depende de VIES.
+
+**El estado pendiente tiene que verse en la ficha del presupuesto aceptado**, para que nadie facture sin resolverlo — no es un dato que se pueda dejar enterrado en un log.
 
 ### Mención en presupuestos fuera de Francia
 
@@ -417,13 +431,14 @@ El motor es **puro**: no lee de la base de datos. Recibe el juego de parámetros
 |---|---|---|
 | Creación de presupuesto | `/proposals/new` | 2-3 opciones, líneas multimercado, descuentos manuales, vista previa en vivo con el motor, checklist de controles previos al envío |
 | Pantalla pública comparativa | `/p/[token]` | `get_public_proposal` (SECURITY DEFINER), reach solo con dato medido, caduca a los 14 días, idioma del cliente |
-| Aceptación con datos fiscales | Modal en `/p/[token]` | VIES verificado en servidor (`app/api/public/proposals/[token]/accept`), régimen de IVA decidido en `accept_public_proposal` |
+| Aceptación con datos fiscales | Modal en `/p/[token]` | VIES verificado en servidor (`app/api/public/proposals/[token]/accept`), régimen de IVA decidido en `accept_public_proposal` — tres vías, ver §7 |
 | Rechazo | Modal en `/p/[token]` | Registra motivo; **no** construye la contrapropuesta (ver más abajo) |
+| Ficha interna del presupuesto | `/proposals/[id]` | Estado, opciones, y la tarjeta de estado fiscal — con botón de reintento cuando el régimen queda `PENDING`, vía `resolve_vat_regime` |
 | Login | `/login` | Magic link (Supabase Auth), lista blanca comprobada en `/auth/callback` contra `profiles` |
 
 **Arquitectura de cálculo:** el navegador ejecuta el mismo motor (`src/pricing/`) para la vista previa en vivo mientras el comercial edita, pero esos números **nunca se persisten**. Al pulsar "Enviar", `app/api/proposals/route.ts` recibe los datos crudos (soportes, mercados, cantidades, descuentos) y **vuelve a calcular en el servidor** con los parámetros vivos de la base de datos — eso es lo único que se guarda, vía `create_and_send_proposal` (una función SQL `SECURITY INVOKER`, atómica: opción + líneas + descuentos + checks de disponibilidad en una sola transacción, con el envío ya congelado).
 
-**Verificado end to end contra un PostgreSQL 16 real** (no solo tipado): crear y enviar un presupuesto con el motor real, leer la pantalla pública (reach con y sin dato, caducidad), aceptar con VIES simulado (régimen de IVA correcto), rechazar, y los bloqueos de estado (no se puede aceptar dos veces, ni aceptar un envío caducado).
+**Verificado end to end contra un PostgreSQL 16 real** (no solo tipado): crear y enviar un presupuesto con el motor real, leer la pantalla pública (reach con y sin dato, caducidad), aceptar con los tres resultados de VIES (régimen correcto en cada caso, incluido el pendiente), reintentar y resolver un régimen pendiente desde la ficha, rechazar, y los bloqueos de estado (no se puede aceptar dos veces, ni aceptar un envío caducado).
 
 ### 10.1.2 Deliberadamente fuera de esta pasada
 

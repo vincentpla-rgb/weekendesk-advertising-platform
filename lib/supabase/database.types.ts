@@ -22,6 +22,9 @@ export type SupportUnit =
   | 'COLLABORATION';
 export type ContentLanguageEnum = 'FR' | 'ES' | 'IT' | 'NL' | 'EN';
 export type ViesResultEnum = 'VALID' | 'INVALID' | 'UNAVAILABLE';
+export type ProposalStatusEnum = 'DRAFT' | 'SENT' | 'VIEWED' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+/** PENDING = fallo técnico de VIES al aceptar; reintentar con resolve_vat_regime. */
+export type VatRegimeEnum = 'FR_VAT_20' | 'REVERSE_CHARGE' | 'PENDING';
 
 export interface Database {
   // Marcador que @supabase/postgrest-js (v2.47+) exige en el tipo Database
@@ -203,6 +206,136 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['reach_measurements']['Row']>;
         Relationships: [];
       };
+      // Las cuatro tablas siguientes solo se leen desde la ficha interna del
+      // presupuesto (app/(internal)/proposals/[id]) — la escritura del ciclo
+      // envío/aceptación/rechazo pasa por RPC (create_and_send_proposal,
+      // accept_public_proposal, reject_public_proposal, resolve_vat_regime),
+      // no por INSERT/UPDATE directos desde el cliente.
+      proposals: {
+        Row: {
+          id: string;
+          account_id: string;
+          contact_id: string;
+          owner_id: string;
+          status: ProposalStatusEnum;
+          language: ContentLanguageEnum;
+          brief: string | null;
+          campaign_start: string | null;
+          campaign_end: string | null;
+          public_token: string;
+          sent_at: string | null;
+          expires_at: string | null;
+          decided_at: string | null;
+          created_at: string;
+        };
+        Insert: Partial<Database['public']['Tables']['proposals']['Row']> & {
+          account_id: string;
+          contact_id: string;
+          owner_id: string;
+          public_token: string;
+        };
+        Update: Partial<Database['public']['Tables']['proposals']['Row']>;
+        Relationships: [
+          {
+            foreignKeyName: 'proposals_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      proposal_options: {
+        Row: {
+          id: string;
+          proposal_id: string;
+          code: string;
+          name: string;
+          pitch: string | null;
+          net_revenue_cents: number | null;
+          media_budget_cents: number | null;
+          billed_total_cents: number | null;
+          margin_rate: number | null;
+          sort_order: number;
+        };
+        Insert: Partial<Database['public']['Tables']['proposal_options']['Row']> & {
+          proposal_id: string;
+          code: string;
+          name: string;
+        };
+        Update: Partial<Database['public']['Tables']['proposal_options']['Row']>;
+        Relationships: [
+          {
+            foreignKeyName: 'proposal_options_proposal_id_fkey';
+            columns: ['proposal_id'];
+            isOneToOne: false;
+            referencedRelation: 'proposals';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      acceptances: {
+        Row: {
+          id: string;
+          proposal_id: string;
+          option_id: string;
+          legal_name: string;
+          billing_address: string;
+          vat_number: string | null;
+          billing_contact_name: string;
+          billing_contact_email: string;
+          signer_name: string;
+          signer_role: string;
+          purchase_order_reference: string | null;
+          vies_check_id: string | null;
+          vat_regime_applied: VatRegimeEnum;
+          accepted_at: string;
+          fiscal_year: number;
+          fiscal_quarter: number;
+        };
+        Insert: Partial<Database['public']['Tables']['acceptances']['Row']> & {
+          proposal_id: string;
+          option_id: string;
+          legal_name: string;
+        };
+        Update: Partial<Database['public']['Tables']['acceptances']['Row']>;
+        Relationships: [
+          {
+            foreignKeyName: 'acceptances_proposal_id_fkey';
+            columns: ['proposal_id'];
+            isOneToOne: true;
+            referencedRelation: 'proposals';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'acceptances_option_id_fkey';
+            columns: ['option_id'];
+            isOneToOne: false;
+            referencedRelation: 'proposal_options';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      rejections: {
+        Row: {
+          id: string;
+          proposal_id: string;
+          reason: string | null;
+          counter_proposal_id: string | null;
+          rejected_at: string;
+        };
+        Insert: Partial<Database['public']['Tables']['rejections']['Row']> & { proposal_id: string };
+        Update: Partial<Database['public']['Tables']['rejections']['Row']>;
+        Relationships: [
+          {
+            foreignKeyName: 'rejections_proposal_id_fkey';
+            columns: ['proposal_id'];
+            isOneToOne: true;
+            referencedRelation: 'proposals';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -239,6 +372,10 @@ export interface Database {
         Args: { p_token: string; p_reason: string | null };
         Returns: Json;
       };
+      resolve_vat_regime: {
+        Args: { p_acceptance_id: string; p_vies_result: ViesResultEnum; p_vies_raw: Json };
+        Returns: Json;
+      };
     };
     Enums: {
       market: Market;
@@ -246,6 +383,8 @@ export interface Database {
       support_unit: SupportUnit;
       content_language: ContentLanguageEnum;
       vies_result: ViesResultEnum;
+      proposal_status: ProposalStatusEnum;
+      vat_regime: VatRegimeEnum;
     };
     CompositeTypes: Record<string, never>;
   };

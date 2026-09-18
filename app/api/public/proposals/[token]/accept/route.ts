@@ -20,6 +20,12 @@ interface AcceptBody {
  * Aceptación pública (CLAUDE.md §6, §7). Verifica el número contra VIES aquí
  * (esta ruta tiene salida de red; la función SQL no) y persiste el resultado
  * llamando a accept_public_proposal, que decide el régimen de IVA.
+ *
+ * La aceptación nunca se bloquea por un fallo de VIES: es un compromiso
+ * comercial, no depende de la disponibilidad de un servicio externo. Si VIES
+ * no responde, el envío queda `ACCEPTED` igualmente y el régimen de IVA
+ * queda `PENDING` — visible en la ficha interna del presupuesto
+ * (`/proposals/[id]`), con un botón para reintentar la verificación.
  */
 export async function POST(request: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
@@ -46,12 +52,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
     }
   }
 
-  // Sin número de IVA no hay nada que verificar: se trata como sin dato, no
-  // como inválido (un organismo público puede no tener uno y aun así ser
-  // francés, con IVA francés directo).
+  // Sin número de IVA no hay nada que verificar: se trata como INVALID, no
+  // como UNAVAILABLE. La diferencia importa desde que UNAVAILABLE significa
+  // "fallo técnico, reintentar" (régimen PENDING) — no proporcionar ningún
+  // número no es un fallo técnico que reintentar, es una ausencia de base
+  // para la autoliquidación, y resuelve igual de definitivo que un número
+  // inválido: IVA francés 20 % (salvo que la cuenta ya sea francesa).
   const vies = body.vatNumber.trim()
     ? await checkVies(body.vatNumber)
-    : { result: 'UNAVAILABLE' as const, raw: { note: 'Sin número de IVA aportado' } };
+    : { result: 'INVALID' as const, raw: { note: 'Sin número de IVA aportado' } };
 
   const supabase = createPublicClient();
   const { data, error } = await supabase.rpc('accept_public_proposal', {

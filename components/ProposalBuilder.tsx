@@ -99,7 +99,7 @@ export function ProposalBuilder({
   ]);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ publicToken: string } | null>(null);
+  const [result, setResult] = useState<{ proposalId: string; publicToken: string } | null>(null);
 
   const selectedAccount = accounts.find((a) => a.id === accountId) ?? null;
 
@@ -296,7 +296,7 @@ export function ProposalBuilder({
       if (!res.ok) {
         throw new Error(body.error ?? 'Error al crear el envío');
       }
-      setResult({ publicToken: body.publicToken });
+      setResult({ proposalId: body.proposalId, publicToken: body.publicToken });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
@@ -332,6 +332,9 @@ export function ProposalBuilder({
           </a>
           <a className="wk-btn wk-btn-secondary" href={publicUrl} target="_blank" rel="noreferrer">
             Ver pantalla pública
+          </a>
+          <a className="wk-btn wk-btn-ghost" href={`/proposals/${result.proposalId}`}>
+            Ver ficha interna
           </a>
         </div>
       </div>
