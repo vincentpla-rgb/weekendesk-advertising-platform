@@ -45,7 +45,11 @@ export async function updateSession(request: NextRequest) {
     request.nextUrl.pathname.startsWith('/auth') ||
     request.nextUrl.pathname.startsWith('/p/') ||
     request.nextUrl.pathname.startsWith('/api/public') ||
-    request.nextUrl.pathname.startsWith('/api/vies');
+    request.nextUrl.pathname.startsWith('/api/vies') ||
+    // El "Send Email Hook" de Supabase Auth llama aquí servidor a servidor,
+    // sin cookie de sesión — se autentica con su propia firma de webhook
+    // (SEND_EMAIL_HOOK_SECRET), verificada dentro de la propia ruta.
+    request.nextUrl.pathname.startsWith('/api/auth/send-email');
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone();

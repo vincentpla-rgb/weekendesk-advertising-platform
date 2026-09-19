@@ -1,22 +1,15 @@
 import { NextResponse } from 'next/server';
 
 import { createClient } from '@/lib/supabase/server';
-import { createServiceClient } from '@/lib/supabase/service';
-import { createSupabaseTeamAccessGateway, resolveTeamAccess } from '@/lib/supabase/team-access';
+import { authorizeTeamSession } from '@/lib/supabase/authorize-session';
 
 /**
- * Vuelta del magic link. Intercambia el código por sesión y comprueba la
- * lista blanca (`allowed_emails`): un email autenticado que no esté ahí se
- * desconecta y se redirige a /no-autorizado.
- *
- * La comprobación usa la clave de servicio (`resolveTeamAccess`), no la
- * sesión del propio usuario: tanto `allowed_emails` como `profiles` tienen
- * una política RLS que exige `is_team_member()`, y `is_team_member()` exige
- * un `profiles` activo — el mismo que un usuario en su primer login todavía
- * no tiene. Con la sesión del usuario esa comprobación es circular y se
- * queda fuera para siempre aunque su email esté en la lista blanca; con la
- * clave de servicio no lo es, y de paso crea el `profiles` que falta la
- * primera vez.
+ * Vuelta de un flujo de auth basado en código PKCE (`?code=`). El magic link
+ * del equipo ya no pasa por aquí — usa `/auth/confirm` con `token_hash`
+ * (CLAUDE.md §2: el email del enlace ahora lo construye el "Send Email Hook"
+ * de Supabase con Resend, no la plantilla por defecto de Supabase que
+ * generaba un `code`). Se deja esta ruta por si algún flujo futuro (o un
+ * enlace ya enviado antes del cambio) todavía trae un `code`.
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -33,21 +26,5 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}/login`);
   }
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user || !user.email) {
-    return NextResponse.redirect(`${origin}/login`);
-  }
-
-  const gateway = createSupabaseTeamAccessGateway(createServiceClient());
-  const authorized = await resolveTeamAccess(gateway, { id: user.id, email: user.email });
-
-  if (!authorized) {
-    await supabase.auth.signOut();
-    return NextResponse.redirect(`${origin}/no-autorizado`);
-  }
-
-  return NextResponse.redirect(`${origin}${next}`);
+  return authorizeTeamSession(supabase, origin, next);
 }

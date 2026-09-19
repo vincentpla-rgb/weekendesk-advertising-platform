@@ -306,30 +306,20 @@ export function ProposalBuilder({
 
   if (result) {
     const publicUrl = `${window.location.origin}/p/${result.publicToken}`;
-    const mailtoBody = [
-      brief || '(brief pendiente)',
-      '',
-      `Puedes ver la propuesta completa y aceptarla aquí: ${publicUrl}`,
-      '',
-      'Un saludo,',
-    ].join('\n');
-    const mailtoHref =
+    const contactEmail =
       contactId !== '__new__'
-        ? `mailto:${selectedAccount?.contacts.find((c) => c.id === contactId)?.email ?? ''}`
-        : `mailto:${newContact.email}`;
-    const mailto = `${mailtoHref}?subject=${encodeURIComponent('Propuesta Weekendesk Advertising')}&body=${encodeURIComponent(mailtoBody)}`;
+        ? (selectedAccount?.contacts.find((c) => c.id === contactId)?.email ?? '')
+        : newContact.email;
 
     return (
       <div className="wk-card" style={{ maxWidth: 560, margin: '40px auto' }}>
-        <h2>Envío creado</h2>
+        <h2>Envío enviado</h2>
         <p style={{ color: 'var(--wk-text-muted)' }}>
-          El envío está congelado y ya tiene enlace público. Ningún cambio posterior lo altera.
+          El envío está congelado y el email ya ha salido a <strong>{contactEmail}</strong>, con copia
+          a ti y a contracting@weekendesk.fr. Ningún cambio posterior lo altera.
         </p>
         <div className="wk-input" style={{ marginBottom: 12, userSelect: 'all' }}>{publicUrl}</div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <a className="wk-btn wk-btn-primary" href={mailto}>
-            Abrir borrador de email
-          </a>
           <a className="wk-btn wk-btn-secondary" href={publicUrl} target="_blank" rel="noreferrer">
             Ver pantalla pública
           </a>

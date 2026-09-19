@@ -28,7 +28,7 @@ Desarrollo en solitario, sin equipo técnico. Fecha objetivo del MVP: **martes**
 - Construcción de presupuestos con 2–3 opciones comparables
 - Soporte multimercado dentro de una misma opción
 - Controles previos al envío (margen, antelación, VIES, disponibilidad)
-- Envío mediante enlace único + borrador de email prerellenado
+- Envío mediante enlace único + email automático por Resend
 - Pantalla pública comparativa para el cliente
 - Aceptación con captura de datos fiscales y verificación VIES
 - Rechazo con flujo de contrapropuesta
@@ -52,12 +52,15 @@ Desarrollo en solitario, sin equipo técnico. Fecha objetivo del MVP: **martes**
 | Framework | Next.js (App Router) | — |
 | Base de datos | Supabase (PostgreSQL) | Sin proceso IT interno |
 | Auth | Supabase Auth, magic link + lista blanca de emails | Google SSO exige app interna en el Workspace = 1 semana de IT |
+| Email transaccional | Resend | Sin dominio propio de Weekendesk todavía; su dominio de pruebas no depende de IT |
 | Hosting | Vercel (Hobby) | Deploy desde GitHub |
 | Repo | GitHub | — |
 
-**Restricción central del proyecto:** nada que dependa del proceso IT interno de Weekendesk (una semana). Eso excluye del MVP: Google SSO, dominio propio, DNS, API de Docusign, GCP, envío automático de email desde dominio weekendesk.
+**Restricción central del proyecto:** nada que dependa del proceso IT interno de Weekendesk (una semana). Eso excluye del MVP: Google SSO, dominio propio, DNS, API de Docusign, GCP, y **enviar desde una dirección `@weekendesk.fr` real** (necesitaría verificar ese dominio en Resend, que sí depende de DNS/IT).
 
-El envío de email en el MVP es **un borrador prerellenado que abre el cliente de correo del usuario**. El usuario pulsa enviar. El seguimiento de apertura lo captura la página pública, no el email.
+El envío de email **sí es automático**: la aplicación manda el presupuesto directamente por Resend al aceptar "Enviar" — ya no es un borrador que el comercial abre y manda a mano. El remitente usa el dominio de pruebas de Resend (`onboarding@resend.dev`) con el nombre visible "Weekendesk Advertising", configurable por variable de entorno (`RESEND_FROM_EMAIL`) para poder pasar al dominio propio sin tocar código el día que esté verificado. El seguimiento de apertura lo sigue capturando la página pública, no el email. Si el envío de email falla, el presupuesto **no** queda marcado como enviado (ver §5.3 y §10.3).
+
+El magic link del equipo también sale por Resend, no por el SMTP de pruebas de Supabase (límite de 4 correos/hora que bloqueaba al equipo): un "Send Email Hook" de Supabase Auth (`app/api/auth/send-email/`) intercepta el envío y lo manda con el mismo remitente configurable.
 
 Marca: Host Grotesk + Inter, rojo `#f8443a`, azul marino `#001c4d`.
 
@@ -279,7 +282,7 @@ Ambos en **el idioma del cliente** — cada comercial escribe directamente en fr
 
 Texto enriquecido básico: negrita, cursiva, listas, saltos de línea. Nada más (la página es pública, un editor completo abre riesgos de inyección).
 
-El brief se reutiliza en el cuerpo del email prerellenado y, más adelante, en el PDF. Empieza vacío, sin plantilla. Si está vacío al enviar: **aviso, no bloqueo**.
+El brief se reutiliza en el cuerpo del email que manda la aplicación y, más adelante, en el PDF. Empieza vacío, sin plantilla. Si está vacío al enviar: **aviso, no bloqueo**.
 
 ### 5.3 Controles antes del envío
 
@@ -295,6 +298,8 @@ Bloquean el botón de envío (forzables con motivo registrado):
 El control 2 se evalúa **por línea, no por opción**: el calendario de festivos es por mercado, así que dos soportes con la misma antelación nominal pueden tener fecha límite real distinta según dónde se contraten. Motivo de la tabla: la primera campaña real es Navidad, y 15 días laborables desde diciembre cruzan el 25 de diciembre y el 1 de enero — sin festivos la calculadora decía que se llegaba a tiempo cuando no era así.
 
 No incluye festivos regionales o municipales (2 por comunidad autónoma en España, patronales en Italia): solo el calendario nacional. Añadir eso, si hace falta, es una fila más en `market_holidays`.
+
+**Un quinto control, técnico, no de negocio: el email tiene que salir de verdad.** El cálculo y las líneas se persisten en cuanto se pulsan los controles anteriores, pero el envío no se marca `enviado` hasta que Resend confirma la entrega. Si el email falla (Resend caído, dirección inválida, etc.), el comercial ve el error y el envío se queda internamente en `borrador` — no aparece como enviado en ningún sitio y el cliente no recibe nada. Ver §10.3.
 
 ### 5.4 Inmutabilidad
 
@@ -406,7 +411,8 @@ Entidad facturadora: Weekendesk SAS, 28 rue de Londres, 75009 Paris.
 |---|---|---|
 | Esquema PostgreSQL / Supabase | `supabase/migrations/` | Hecho |
 | Motor de precios | `src/pricing/` | Hecho |
-| Tests unitarios | `src/pricing/__tests__/` | Hecho — 81 tests |
+| Envío de email real (Resend) | `app/api/proposals/`, `app/api/auth/send-email/`, `lib/email/` | Hecho — presupuesto al cliente y magic link del equipo |
+| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts` | Hecho — 111 tests |
 | Interfaz (Next.js) | `app/`, `lib/`, `components/` | Hecho — 3 pantallas del MVP |
 
 El motor es **puro**: no lee de la base de datos. Recibe el juego de parámetros y el catálogo como argumentos, para que los valores editables en admin (tarifa hora, suelo, coeficientes, escalas) lleguen desde `pricing_parameter_sets` y nunca estén hardcodeados en la lógica. Los valores de la sección 3 viven en `src/pricing/parameters.ts` y en la migración de seed únicamente como **estado inicial**, no como constantes de cálculo.
@@ -419,11 +425,11 @@ El motor es **puro**: no lee de la base de datos. Recibe el juego de parámetros
 | Pantalla pública comparativa | `/p/[token]` | `get_public_proposal` (SECURITY DEFINER), reach solo con dato medido, caduca a los 14 días, idioma del cliente |
 | Aceptación con datos fiscales | Modal en `/p/[token]` | VIES verificado en servidor (`app/api/public/proposals/[token]/accept`), régimen de IVA decidido en `accept_public_proposal` |
 | Rechazo | Modal en `/p/[token]` | Registra motivo; **no** construye la contrapropuesta (ver más abajo) |
-| Login | `/login` | Magic link (Supabase Auth), lista blanca comprobada en `/auth/callback` contra `allowed_emails` con la clave de servicio (`lib/supabase/team-access.ts`), que crea el `profiles` que falta en el primer login para evitar la dependencia circular con RLS (`is_team_member()` exige un `profiles` que aún no existe). `allowed_emails.full_name` es opcional: si no se rellena al dar de alta a alguien, se deriva del email. Un fallo al crear el `profiles` (constraint, RLS mal configurado, lo que sea) se registra explícitamente como fallo de aprovisionamiento y no como "no autorizado", para no repetir el mismo malentendido dos veces |
+| Login | `/login` | Magic link (Supabase Auth) enviado por Resend vía el "Send Email Hook" (`app/api/auth/send-email/`), no por el SMTP de pruebas de Supabase (límite de 4 correos/hora que bloqueaba al equipo). La vuelta es `/auth/confirm` (`token_hash` + `verifyOtp`), no `/auth/callback?code=...` — Supabase no genera su propio enlace cuando el hook está activo. La lista blanca se comprueba igual que antes, ahora compartida por `/auth/callback` y `/auth/confirm` en `lib/supabase/authorize-session.ts`, contra `allowed_emails` con la clave de servicio (`lib/supabase/team-access.ts`), que crea el `profiles` que falta en el primer login para evitar la dependencia circular con RLS (`is_team_member()` exige un `profiles` que aún no existe). `allowed_emails.full_name` es opcional: si no se rellena al dar de alta a alguien, se deriva del email. Un fallo al crear el `profiles` (constraint, RLS mal configurado, lo que sea) se registra explícitamente como fallo de aprovisionamiento y no como "no autorizado", para no repetir el mismo malentendido dos veces |
 
-**Arquitectura de cálculo:** el navegador ejecuta el mismo motor (`src/pricing/`) para la vista previa en vivo mientras el comercial edita, pero esos números **nunca se persisten**. Al pulsar "Enviar", `app/api/proposals/route.ts` recibe los datos crudos (soportes, mercados, cantidades, descuentos) y **vuelve a calcular en el servidor** con los parámetros vivos de la base de datos — eso es lo único que se guarda, vía `create_and_send_proposal` (una función SQL `SECURITY INVOKER`, atómica: opción + líneas + descuentos + checks de disponibilidad en una sola transacción, con el envío ya congelado).
+**Arquitectura de cálculo:** el navegador ejecuta el mismo motor (`src/pricing/`) para la vista previa en vivo mientras el comercial edita, pero esos números **nunca se persisten**. Al pulsar "Enviar", `app/api/proposals/route.ts` recibe los datos crudos (soportes, mercados, cantidades, descuentos) y **vuelve a calcular en el servidor** con los parámetros vivos de la base de datos — eso es lo único que se guarda, vía `create_and_send_proposal` (una función SQL `SECURITY INVOKER`, atómica: opción + líneas + descuentos + checks de disponibilidad en una sola transacción). El envío ya no se marca `SENT` dentro de esa misma función: queda en `DRAFT`, congelado (mismo `frozen_snapshot` de siempre) pero invisible en la pantalla pública, hasta que la ruta de servidor manda el email por Resend y llama a `mark_proposal_sent`. Si Resend falla, llama a `log_proposal_send_failure` en su lugar y el envío se queda en `DRAFT` — nunca se marca enviado sin que el cliente lo haya recibido (ver §5.3, §10.3).
 
-**Verificado end to end contra un PostgreSQL 16 real** (no solo tipado): crear y enviar un presupuesto con el motor real, leer la pantalla pública (reach con y sin dato, caducidad), aceptar con VIES simulado (régimen de IVA correcto), rechazar, y los bloqueos de estado (no se puede aceptar dos veces, ni aceptar un envío caducado).
+**Verificado end to end contra un PostgreSQL 16 real** (no solo tipado): crear y enviar un presupuesto con el motor real, leer la pantalla pública (reach con y sin dato, caducidad), aceptar con VIES simulado (régimen de IVA correcto), rechazar, y los bloqueos de estado (no se puede aceptar dos veces, ni aceptar un envío caducado). El envío de email por Resend y el "Send Email Hook" de Supabase están escritos contra la documentación de ambos, no contra un proyecto Supabase ni una cuenta de Resend reales (ver más abajo): conviene una prueba manual tras el primer despliegue.
 
 ### 10.1.2 Deliberadamente fuera de esta pasada
 
@@ -435,6 +441,8 @@ Explícito para no dar por hecho más de lo construido:
 - **Gestión de cuentas y contactos** como pantallas propias: se crean inline al construir un presupuesto, sin un CRM dedicado.
 - **Verificación VIES mientras se escribe**: se comprueba solo al enviar el formulario de aceptación, no en vivo. Probado que el endpoint construye la llamada REST correctamente; **no se ha podido probar contra la API real de la UE** porque la política de red de este entorno de desarrollo bloquea la salida a `ec.europa.eu` — funcionará en Vercel, pero conviene una prueba manual tras el primer despliegue.
 - **Sin proyecto Supabase real conectado**: el código usa `@supabase/ssr` correctamente (`lib/supabase/`), pero no hay credenciales en este entorno. `lib/supabase/database.types.ts` está escrito a mano a partir de las migraciones; al crear el proyecto real, regenerar con `supabase gen types typescript` y revisar que coincide.
+- **Sin cuenta de Resend ni "Send Email Hook" de Supabase reales conectados**: `lib/email/` (contenido de los emails, cliente de Resend, verificación de firma del webhook) está probado con tests unitarios y mocks de `fetch`; el envío real (`app/api/proposals/route.ts`, `app/api/auth/send-email/route.ts`) sigue la documentación de ambos servicios pero no se ha podido disparar contra Resend ni contra un hook de Supabase real en este entorno. Configurar `RESEND_API_KEY`, `RESEND_FROM_EMAIL` y `SEND_EMAIL_HOOK_SECRET` en Vercel, dar de alta el hook en el dashboard de Supabase (Authentication > Hooks > Send Email → `/api/auth/send-email`), y probar ambos envíos a mano tras el despliegue.
+- **Reintento de un envío con email fallido**: si Resend falla, el presupuesto se queda en `DRAFT` internamente (ver §5.3, §10.3), pero no hay ninguna pantalla que liste esos borradores ni un botón de "reintentar envío" — el comercial solo ve el error en el momento y tendría que rehacer el presupuesto desde cero. Aceptable para el MVP porque un fallo de Resend en producción debería ser raro, pero es una limitación real, no un descuido.
 
 ### 10.2 Convenciones de cálculo
 
@@ -453,6 +461,10 @@ Cuatro puntos no estaban determinados en la especificación. Se resolvieron así
 4. **Mercado líder**: se determina por soporte. Ver 4.2.
 
 Confirmado por Vincent, ya no son supuestos: el fee mínimo mensual resiste los descuentos (ver 4.4), los descuentos acumulados se **suman** y no se componen (ver 4.5), y el cálculo de días laborables **excluye los festivos por mercado** de la tabla `market_holidays`, evaluado por línea (ver 5.3). Queda fuera de alcance el detalle regional/municipal de festivos en España e Italia, listado en la sección 9.
+
+Un quinto punto, al implementar el envío real por Resend:
+
+5. **"Enviado" se marca al confirmar el email, no al persistir el cálculo.** `create_and_send_proposal` dejó de poner `SENT` — ahora deja el envío en `DRAFT` (calculado, congelado, con enlace público ya generado, pero invisible: `get_public_proposal` sigue descartando `DRAFT`). Solo `mark_proposal_sent` pone `SENT` + `sent_at` + `expires_at`, y solo se llama si Resend confirma la entrega; si falla, `log_proposal_send_failure` registra el intento y el envío se queda en `DRAFT`. Es la única forma de cumplir a la vez la inmutabilidad de §5.4 (el cálculo se congela en un solo paso, no se recalcula después) y la regla nueva de que un email fallido no puede dejar un envío marcado como enviado.
 
 ---
 

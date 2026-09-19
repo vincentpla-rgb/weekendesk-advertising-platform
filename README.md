@@ -13,7 +13,8 @@ no esté ahí, preguntar antes de inventar.
 |---|---|---|
 | Esquema PostgreSQL / Supabase | `supabase/migrations/` | Hecho |
 | Motor de precios | `src/pricing/` | Hecho |
-| Tests unitarios | `src/pricing/__tests__/` | Hecho — 81 tests |
+| Envío de email real (Resend) | `app/api/proposals/`, `lib/email/` | Hecho — presupuesto al cliente y magic link del equipo |
+| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts` | Hecho — 111 tests |
 | Interfaz (Next.js) | `app/`, `lib/`, `components/` | Hecho — 3 pantallas del MVP |
 
 Ver CLAUDE.md §10 para el detalle de qué pantallas existen y qué queda
@@ -44,6 +45,7 @@ Verificadas ejecutándolas contra un PostgreSQL 16 real, no solo por sintaxis.
 6. `..._create_and_send_proposal.sql` — creación atómica de presupuestos, aceptación y rechazo públicos
 7. `..._grants.sql` — privilegios de tabla explícitos para `authenticated`
 8. `..._allowed_emails_full_name.sql` — nombre opcional en la lista blanca, para el `profiles` que se autoprovisiona en el primer login (ver `lib/supabase/team-access.ts`)
+9. `..._email_send.sql` — separa "crear el presupuesto" de "marcarlo enviado": `create_and_send_proposal` ahora deja el envío en `DRAFT`, y `mark_proposal_sent` / `log_proposal_send_failure` lo confirman o registran el fallo según la respuesta de Resend (ver `app/api/proposals/route.ts`)
 
 ### Variables de entorno
 
@@ -66,7 +68,31 @@ supabase gen types typescript --project-id <id> > lib/supabase/database.types.ts
 
 y revisar que coincide con lo que espera el resto del código — sobre todo las
 funciones `Functions` (`create_and_send_proposal`, `get_public_proposal`,
-`accept_public_proposal`, `reject_public_proposal`, `mark_public_proposal_viewed`).
+`accept_public_proposal`, `reject_public_proposal`, `mark_public_proposal_viewed`,
+`mark_proposal_sent`, `log_proposal_send_failure`).
+
+### Email (Resend) y magic link del equipo
+
+`RESEND_API_KEY` ya está configurada en Vercel. Además hace falta:
+
+- `RESEND_FROM_EMAIL` — remitente de todos los emails salientes (presupuestos
+  y magic link), con nombre visible. Dominio de pruebas de Resend por ahora
+  (`onboarding@resend.dev`); el dominio propio llegará más adelante y solo
+  hará falta cambiar esta variable.
+- `SEND_EMAIL_HOOK_SECRET` — secreto del "Send Email Hook" de Supabase Auth
+  (Authentication > Hooks > Send Email, en el dashboard del proyecto),
+  apuntando a `/api/auth/send-email`. Sustituye el SMTP de pruebas de
+  Supabase (límite de 4 correos/hora) para el magic link del equipo.
+
+El magic link ya no vuelve por `/auth/callback?code=...` (plantilla por
+defecto de Supabase): el hook construye el enlace hacia `/auth/confirm`
+con `token_hash`, verificado con `supabase.auth.verifyOtp`. `/auth/callback`
+se mantiene por compatibilidad con cualquier flujo basado en `code`.
+
+No verificado contra un hook real de Supabase en este entorno de desarrollo
+(sin proyecto conectado, ver más abajo): la forma del payload sigue la
+documentación de Supabase Auth Hooks. Conviene una prueba manual tras
+configurar el hook en el proyecto real.
 
 ## Cómo está organizado el motor
 
@@ -89,11 +115,14 @@ y el catálogo, y devuelve el cálculo con su traza.
 
 - `app/(internal)/proposals/new/` — creación de presupuesto (requiere sesión)
 - `app/p/[token]/` — pantalla pública comparativa + aceptación + rechazo
-- `app/api/proposals/` — crea y envía un presupuesto (recalcula con el motor en el servidor)
+- `app/api/proposals/` — crea un presupuesto, lo manda por email con Resend y solo entonces lo marca `SENT`
 - `app/api/public/proposals/[token]/{accept,reject}/` — flujo público
+- `app/api/auth/send-email/` — "Send Email Hook" de Supabase Auth: manda el magic link del equipo por Resend
+- `app/auth/confirm/` — vuelta del magic link (`token_hash` + `verifyOtp`), en vez de `/auth/callback`
 - `lib/pricing-context.ts` — puente entre las tablas de Supabase y el motor puro
 - `lib/vies.ts` — verificación VIES (llamada de servidor, la función SQL no tiene salida de red)
-- `lib/i18n.ts` — textos de la pantalla pública en el idioma del cliente
+- `lib/i18n.ts` — textos de la pantalla pública y de los emails en el idioma del cliente
+- `lib/email/` — contenido de los emails (presupuesto, magic link), cliente de Resend y verificación de firma del webhook — todo puro salvo `resend-client.ts`, que hace la llamada HTTP
 
 **Ningún precio que ve el cliente se calcula en el navegador y se guarda tal
 cual.** El navegador solo usa el motor para la vista previa en vivo; al

@@ -25,6 +25,8 @@ export interface LoadedPricingContext {
   readonly parameters: PricingParameters;
   readonly catalog: Catalog;
   readonly holidays: readonly PublicHoliday[];
+  /** Validez de la oferta en días (CLAUDE.md §7). No es un parámetro del motor puro: solo lo usa el email de envío. */
+  readonly offerValidityDays: number;
 }
 
 export async function loadPricingContext(
@@ -32,7 +34,7 @@ export async function loadPricingContext(
 ): Promise<LoadedPricingContext> {
   const { data: paramSet, error: paramError } = await supabase
     .from('pricing_parameter_sets')
-    .select('id, hourly_rate_cents, min_margin_rate, media_fee_rate')
+    .select('id, hourly_rate_cents, min_margin_rate, media_fee_rate, offer_validity_days')
     .eq('is_active', true)
     .maybeSingle();
 
@@ -146,5 +148,5 @@ export async function loadPricingContext(
     name: h.name,
   }));
 
-  return { parameters, catalog, holidays };
+  return { parameters, catalog, holidays, offerValidityDays: paramSet.offer_validity_days };
 }

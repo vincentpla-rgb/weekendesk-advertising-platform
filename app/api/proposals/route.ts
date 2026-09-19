@@ -5,6 +5,12 @@ import { euros, priceOption, type OptionInput, type OptionLineInput, type Priced
 import { loadPricingContext } from '@/lib/pricing-context';
 import { createClient } from '@/lib/supabase/server';
 import type { Json } from '@/lib/supabase/database.types.js';
+import type { ContentLanguage } from '@/lib/domain';
+import { buildProposalEmailContent } from '@/lib/email/proposal-email';
+import { sendEmail } from '@/lib/email/resend-client';
+
+/** Weekendesk SAS, 28 rue de Londres, 75009 Paris (CLAUDE.md §7) — CCO fija de todo envío. */
+const CONTRACTING_BCC = 'contracting@weekendesk.fr';
 
 interface RawLine {
   supportId: string;
@@ -53,9 +59,10 @@ export async function POST(request: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) {
+  if (!user || !user.email) {
     return NextResponse.json({ error: 'No autenticado' }, { status: 401 });
   }
+  const ownerEmail = user.email;
 
   let body: RawBody;
   try {
@@ -173,6 +180,20 @@ export async function POST(request: Request) {
     options: optionsJson,
   };
 
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromAddress = process.env.RESEND_FROM_EMAIL;
+  if (!apiKey || !fromAddress) {
+    return NextResponse.json(
+      { error: 'Falta configuración de email (RESEND_API_KEY / RESEND_FROM_EMAIL)' },
+      { status: 500 },
+    );
+  }
+
+  // Crea el envío en DRAFT (congelado, con enlace público ya generado, pero
+  // todavía invisible: get_public_proposal descarta DRAFT). Solo se marca
+  // SENT más abajo, si Resend confirma el email — así, si el email falla, el
+  // presupuesto no queda marcado como enviado (ver la migración
+  // 20260919100000_email_send.sql).
   const { data, error } = await supabase.rpc('create_and_send_proposal', {
     payload: payload as unknown as Json,
   });
@@ -180,8 +201,60 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 
+  const created = data as {
+    proposal_id: string;
+    public_token: string;
+    contact_email: string;
+    contact_language: ContentLanguage;
+    account_legal_name: string;
+  };
+
+  const publicUrl = `${new URL(request.url).origin}/p/${created.public_token}`;
+
+  const { subject, html, text } = buildProposalEmailContent({
+    advertiserName: created.account_legal_name,
+    brief: body.brief || null,
+    publicUrl,
+    validityDays: ctx.offerValidityDays,
+    language: created.contact_language,
+  });
+
+  const recipients = {
+    to: [created.contact_email],
+    cc: [ownerEmail],
+    bcc: [CONTRACTING_BCC],
+    replyTo: ownerEmail,
+    from: fromAddress,
+  };
+
+  const sendResult = await sendEmail(
+    { ...recipients, subject, html, text },
+    apiKey,
+  );
+
+  if (!sendResult.ok) {
+    await supabase.rpc('log_proposal_send_failure', {
+      p_proposal_id: created.proposal_id,
+      p_email: { ...recipients, error: sendResult.error } as unknown as Json,
+    });
+    return NextResponse.json(
+      {
+        error: `El envío no se pudo mandar por email (${sendResult.error}). El presupuesto no queda marcado como enviado.`,
+      },
+      { status: 502 },
+    );
+  }
+
+  const { error: markError } = await supabase.rpc('mark_proposal_sent', {
+    p_proposal_id: created.proposal_id,
+    p_email: { ...recipients, resendMessageId: sendResult.id } as unknown as Json,
+  });
+  if (markError) {
+    return NextResponse.json({ error: markError.message }, { status: 500 });
+  }
+
   return NextResponse.json({
-    proposalId: (data as { proposal_id: string }).proposal_id,
-    publicToken: (data as { public_token: string }).public_token,
+    proposalId: created.proposal_id,
+    publicToken: created.public_token,
   });
 }

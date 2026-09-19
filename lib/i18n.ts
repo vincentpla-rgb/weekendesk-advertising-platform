@@ -219,6 +219,83 @@ export function getPublicCopy(language: string): PublicCopy {
  * aprobado en español; en el resto de idiomas se omite a propósito hasta
  * tener la traducción real (no se inventa texto fiscal).
  */
+/**
+ * Textos del email de envío (CLAUDE.md §2): microcopy sin riesgo de negocio,
+ * traducida igual que `PublicCopy`. La mención de IVA sigue viviendo solo en
+ * `getVatNotice` — aquí no se repite ni se traduce.
+ */
+export interface EmailCopy {
+  readonly subject: (advertiserName: string) => string;
+  readonly greeting: string;
+  readonly intro: string;
+  readonly briefHeading: string;
+  readonly cta: string;
+  readonly validity: (days: number) => string;
+  readonly signOff: string;
+}
+
+const emailEs: EmailCopy = {
+  subject: (advertiser) => `Tu propuesta publicitaria Weekendesk — ${advertiser}`,
+  greeting: 'Hola,',
+  intro: 'Te enviamos la propuesta publicitaria de Weekendesk para tu campaña.',
+  briefHeading: 'Sobre la campaña',
+  cta: 'Ver la propuesta',
+  validity: (days) => `Esta oferta es válida durante ${days} días desde hoy.`,
+  signOff: 'Un saludo,\nEquipo Weekendesk Advertising',
+};
+
+const emailEn: EmailCopy = {
+  subject: (advertiser) => `Your Weekendesk advertising proposal — ${advertiser}`,
+  greeting: 'Hello,',
+  intro: "Here's the Weekendesk advertising proposal for your campaign.",
+  briefHeading: 'About the campaign',
+  cta: 'View the proposal',
+  validity: (days) => `This offer is valid for ${days} days from today.`,
+  signOff: 'Best regards,\nWeekendesk Advertising Team',
+};
+
+const emailFr: EmailCopy = {
+  subject: (advertiser) => `Votre proposition publicitaire Weekendesk — ${advertiser}`,
+  greeting: 'Bonjour,',
+  intro: 'Voici la proposition publicitaire Weekendesk pour votre campagne.',
+  briefHeading: 'À propos de la campagne',
+  cta: 'Voir la proposition',
+  validity: (days) => `Cette offre est valable ${days} jours à compter d'aujourd'hui.`,
+  signOff: "Cordialement,\nL'équipe Weekendesk Advertising",
+};
+
+const emailIt: EmailCopy = {
+  subject: (advertiser) => `La tua proposta pubblicitaria Weekendesk — ${advertiser}`,
+  greeting: 'Ciao,',
+  intro: 'Ecco la proposta pubblicitaria Weekendesk per la tua campagna.',
+  briefHeading: 'Informazioni sulla campagna',
+  cta: 'Vedi la proposta',
+  validity: (days) => `Questa offerta è valida per ${days} giorni da oggi.`,
+  signOff: 'Cordiali saluti,\nTeam Weekendesk Advertising',
+};
+
+const emailNl: EmailCopy = {
+  subject: (advertiser) => `Je Weekendesk-advertentievoorstel — ${advertiser}`,
+  greeting: 'Hallo,',
+  intro: 'Hierbij het Weekendesk-advertentievoorstel voor je campagne.',
+  briefHeading: 'Over de campagne',
+  cta: 'Bekijk het voorstel',
+  validity: (days) => `Dit aanbod is ${days} dagen geldig vanaf vandaag.`,
+  signOff: 'Met vriendelijke groet,\nWeekendesk Advertising Team',
+};
+
+const EMAIL_COPY: Record<ContentLanguage, EmailCopy> = {
+  ES: emailEs,
+  EN: emailEn,
+  FR: emailFr,
+  IT: emailIt,
+  NL: emailNl,
+};
+
+export function getEmailCopy(language: string): EmailCopy {
+  return EMAIL_COPY[language as ContentLanguage] ?? emailEn;
+}
+
 export function getVatNotice(language: string): string | null {
   if (language !== 'ES') return null;
   return (

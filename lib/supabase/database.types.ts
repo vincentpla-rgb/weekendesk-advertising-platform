@@ -251,6 +251,14 @@ export interface Database {
         Args: { p_token: string; p_reason: string | null };
         Returns: Json;
       };
+      mark_proposal_sent: {
+        Args: { p_proposal_id: string; p_email: Json };
+        Returns: Json;
+      };
+      log_proposal_send_failure: {
+        Args: { p_proposal_id: string; p_email: Json };
+        Returns: undefined;
+      };
     };
     Enums: {
       market: Market;
