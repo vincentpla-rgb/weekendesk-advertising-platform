@@ -175,6 +175,7 @@ begin
     'proposal_id', v_proposal_id,
     'public_token', v_token,
     'contact_email', (select email from contacts where id = v_contact_id),
+    'contact_full_name', (select full_name from contacts where id = v_contact_id),
     'contact_language', (select language from contacts where id = v_contact_id),
     'account_legal_name', (select legal_name from accounts where id = v_account_id)
   );

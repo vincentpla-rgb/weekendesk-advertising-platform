@@ -58,7 +58,7 @@ Desarrollo en solitario, sin equipo técnico. Fecha objetivo del MVP: **martes**
 
 **Restricción central del proyecto:** nada que dependa del proceso IT interno de Weekendesk (una semana). Eso excluye del MVP: Google SSO, dominio propio, DNS, API de Docusign, GCP, y **enviar desde una dirección `@weekendesk.fr` real** (necesitaría verificar ese dominio en Resend, que sí depende de DNS/IT).
 
-El envío de email **sí es automático**: la aplicación manda el presupuesto directamente por Resend al aceptar "Enviar" — ya no es un borrador que el comercial abre y manda a mano. El remitente usa el dominio de pruebas de Resend (`onboarding@resend.dev`) con el nombre visible "Weekendesk Advertising", configurable por variable de entorno (`RESEND_FROM_EMAIL`) para poder pasar al dominio propio sin tocar código el día que esté verificado. El seguimiento de apertura lo sigue capturando la página pública, no el email. Si el envío de email falla, el presupuesto **no** queda marcado como enviado (ver §5.3 y §10.3).
+El envío de email **sí es automático**: la aplicación manda el presupuesto directamente por Resend al aceptar "Enviar" — ya no es un borrador que el comercial abre y manda a mano. El remitente usa el dominio de pruebas de Resend (`onboarding@resend.dev`) con el nombre visible "Weekendesk Advertising", configurable por variable de entorno (`RESEND_FROM_EMAIL`) para poder pasar al dominio propio sin tocar código el día que esté verificado. El seguimiento de apertura lo sigue capturando la página pública, no el email. Si el envío de email falla, el presupuesto **no** queda marcado como enviado (ver §5.3 y §10.3). El contenido de ese email — plantilla por idioma, sin precios ni mención de IVA — está en §5.6.
 
 El magic link del equipo también sale por Resend, no por el SMTP de pruebas de Supabase (límite de 4 correos/hora que bloqueaba al equipo): un "Send Email Hook" de Supabase Auth (`app/api/auth/send-email/`) intercepta el envío y lo manda con el mismo remitente configurable.
 
@@ -313,6 +313,148 @@ La **contrapropuesta solo aparece detrás del botón de rechazo**, nunca junto a
 
 `rechazado` puede generar una versión nueva en estado `borrador` (contrapropuesta).
 
+### 5.6 Plantillas del email de envío
+
+El email que manda la aplicación (§2) tiene una plantilla por idioma del cliente, en ficheros de traducción (`lib/email/templates/proposal-email.<idioma>.ts`), no incrustada en la lógica de envío (`lib/email/proposal-email.ts`): se puede retocar el texto sin tocar cómo se envía.
+
+**Tres reglas de contenido, fijadas por Vincent:**
+
+1. **Sin mención de IVA.** Va en la pantalla comparativa, donde están los precios (§7). En el email solo añade ruido.
+2. **Ningún precio en el email.** Ni total, ni "desde", ni rango. El cliente tiene que abrir la pantalla pública para verlos.
+3. **El asunto no lleva el nombre de la campaña**, solo el anunciante (razón social de la cuenta).
+
+**Formato**: texto sobrio, sin maquetación pesada ni imágenes — estos destinatarios son organismos públicos y los filtros corporativos tratan mejor el texto simple. Un único enlace destacado como botón, nada más. Se manda siempre versión en texto plano además de HTML.
+
+**Variables**, con su origen:
+
+| Variable | Origen |
+|---|---|
+| Anunciante / ciudad u organismo | `accounts.legal_name` de la cuenta del presupuesto |
+| Nombre de pila del contacto | Primera palabra de `contacts.full_name` |
+| Brief de campaña | `proposals.brief`, tal cual lo escribió el comercial (texto plano, §5.2) — si está vacío, se omite el párrafo, no se deja un hueco |
+| Número de opciones | Recuento de opciones del envío (2 o 3, §5.1); la plantilla concuerda en género y número en cada idioma |
+| Enlace único | La pantalla pública (`/p/[token]`) |
+| Fecha de caducidad | `sent_at + offer_validity_days`, formateada en el idioma del cliente |
+| Nombre del comercial | `profiles.full_name` de quien creó el presupuesto |
+| Cargo del comercial | **No se incluye**: no hay ese dato por persona en `profiles` (solo nombre, email, activo). Inventar un cargo por comercial violaría "no inventar cifras/datos nunca" (§8), así que la firma lleva el departamento fijo ("Régie publicitaire" / "Publicidad" / "Pubblicità" / "Advertising"), no un cargo personal. Ver §10.3 |
+
+**Plantillas** (contenido de referencia; el texto vivo está en `lib/email/templates/`):
+
+**FR** — Asunto: `Proposition de visibilité Weekendesk — {anunciante}`
+```
+Bonjour {prénom_contact},
+
+{brief_campagne}
+
+Vous trouverez ci-dessous notre proposition, qui présente {n} formule(s) au choix. Chacune détaille les supports retenus, les marchés concernés et les périodes de diffusion.
+
+[ Consulter la proposition ]
+
+Vous pouvez y accepter la formule qui vous convient ou nous faire part de vos remarques directement depuis la page.
+
+Cette proposition est valable jusqu'au {date_expiration}.
+
+Je reste à votre disposition pour en échanger.
+
+Bien cordialement,
+
+{nom_commercial}
+Régie publicitaire
+Weekendesk SAS
+```
+
+**ES** — Asunto: `Propuesta de visibilidad Weekendesk — {anunciante}`
+```
+Hola {nombre_contacto}:
+
+{brief_campaña}
+
+A continuación encontrarás nuestra propuesta, con {n} fórmula(s) entre la(s) que elegir. Cada una detalla los soportes incluidos, los mercados y los periodos de difusión.
+
+[ Ver la propuesta ]
+
+Desde la misma página puedes aceptar la fórmula que prefieras o enviarnos tus comentarios.
+
+La propuesta es válida hasta el {fecha_caducidad}.
+
+Quedo a tu disposición para cualquier consulta.
+
+Un saludo,
+
+{nombre_comercial}
+Publicidad
+Weekendesk SAS
+```
+
+**IT** — Asunto: `Proposta di visibilità Weekendesk — {anunciante}`
+```
+Gentile {nome_contatto},
+
+{brief_campagna}
+
+Di seguito trova la nostra proposta, che presenta {n} formula/e tra cui scegliere. Ciascuna indica i supporti previsti, i mercati interessati e i periodi di diffusione.
+
+[ Consulta la proposta ]
+
+Dalla stessa pagina può accettare la formula che preferisce oppure inviarci le sue osservazioni.
+
+La proposta è valida fino al {data_scadenza}.
+
+Resto a disposizione per qualsiasi chiarimento.
+
+Cordiali saluti,
+
+{nome_commerciale}
+Pubblicità
+Weekendesk SAS
+```
+
+**NL** — Asunto: `Zichtbaarheidsvoorstel Weekendesk — {anunciante}`
+```
+Beste {voornaam_contact},
+
+{brief_campagne}
+
+Hieronder vindt u ons voorstel met {n} formule(s) om uit te kiezen. Bij elke formule staan de opgenomen kanalen, de betrokken markten en de looptijd vermeld.
+
+[ Bekijk het voorstel ]
+
+Op dezelfde pagina kunt u de gewenste formule aanvaarden of ons uw opmerkingen bezorgen.
+
+Dit voorstel is geldig tot {vervaldatum}.
+
+Ik sta tot uw beschikking voor verdere vragen.
+
+Met vriendelijke groet,
+
+{naam_verkoper}
+Advertising
+Weekendesk SAS
+```
+
+**EN** — Subject: `Weekendesk visibility proposal — {advertiser}`
+```
+Dear {contact_first_name},
+
+{campaign_brief}
+
+Below you will find our proposal, setting out {n} package(s) to choose from. Each one lists the placements included, the markets covered and the campaign periods.
+
+[ View the proposal ]
+
+You can accept your preferred package or send us your comments directly from the page.
+
+This proposal is valid until {expiry_date}.
+
+I remain available should you have any questions.
+
+Kind regards,
+
+{sales_name}
+Advertising
+Weekendesk SAS
+```
+
 ---
 
 ## 6. Pantalla pública
@@ -412,7 +554,7 @@ Entidad facturadora: Weekendesk SAS, 28 rue de Londres, 75009 Paris.
 | Esquema PostgreSQL / Supabase | `supabase/migrations/` | Hecho |
 | Motor de precios | `src/pricing/` | Hecho |
 | Envío de email real (Resend) | `app/api/proposals/`, `app/api/auth/send-email/`, `lib/email/` | Hecho — presupuesto al cliente y magic link del equipo |
-| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts` | Hecho — 111 tests |
+| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts` | Hecho — 128 tests |
 | Interfaz (Next.js) | `app/`, `lib/`, `components/` | Hecho — 3 pantallas del MVP |
 
 El motor es **puro**: no lee de la base de datos. Recibe el juego de parámetros y el catálogo como argumentos, para que los valores editables en admin (tarifa hora, suelo, coeficientes, escalas) lleguen desde `pricing_parameter_sets` y nunca estén hardcodeados en la lógica. Los valores de la sección 3 viven en `src/pricing/parameters.ts` y en la migración de seed únicamente como **estado inicial**, no como constantes de cálculo.
@@ -465,6 +607,7 @@ Confirmado por Vincent, ya no son supuestos: el fee mínimo mensual resiste los 
 Un quinto punto, al implementar el envío real por Resend:
 
 5. **"Enviado" se marca al confirmar el email, no al persistir el cálculo.** `create_and_send_proposal` dejó de poner `SENT` — ahora deja el envío en `DRAFT` (calculado, congelado, con enlace público ya generado, pero invisible: `get_public_proposal` sigue descartando `DRAFT`). Solo `mark_proposal_sent` pone `SENT` + `sent_at` + `expires_at`, y solo se llama si Resend confirma la entrega; si falla, `log_proposal_send_failure` registra el intento y el envío se queda en `DRAFT`. Es la única forma de cumplir a la vez la inmutabilidad de §5.4 (el cálculo se congela en un solo paso, no se recalcula después) y la regla nueva de que un email fallido no puede dejar un envío marcado como enviado.
+6. **Sin cargo personal en la firma del email (§5.6).** Las plantillas de Vincent llevan un `{cargo}` por comercial, pero `profiles` no guarda ese dato (solo nombre, email, activo) y no se ha pedido añadirlo. Inventarlo violaría "no inventar cifras/datos nunca" (§8) igual que inventar una cifra de negocio. La firma usa el departamento fijo ("Régie publicitaire" / "Publicidad" / "Pubblicità" / "Advertising", según idioma) en vez del cargo personal. Si hace falta el cargo real, es una columna nueva en `profiles` y una pantalla para editarla — no está en esta pasada.
 
 ---
 

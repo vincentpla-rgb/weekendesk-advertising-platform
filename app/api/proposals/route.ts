@@ -205,17 +205,31 @@ export async function POST(request: Request) {
     proposal_id: string;
     public_token: string;
     contact_email: string;
+    contact_full_name: string;
     contact_language: ContentLanguage;
     account_legal_name: string;
   };
 
   const publicUrl = `${new URL(request.url).origin}/p/${created.public_token}`;
+  const expiresAtIso = new Date(Date.now() + ctx.offerValidityDays * 86_400_000).toISOString();
+
+  const { data: ownerProfile, error: ownerProfileError } = await supabase
+    .from('profiles')
+    .select('full_name')
+    .eq('id', user.id)
+    .single();
+  if (ownerProfileError) {
+    return NextResponse.json({ error: ownerProfileError.message }, { status: 500 });
+  }
 
   const { subject, html, text } = buildProposalEmailContent({
     advertiserName: created.account_legal_name,
+    contactFullName: created.contact_full_name,
     brief: body.brief || null,
+    numberOfOptions: body.options.length,
     publicUrl,
-    validityDays: ctx.offerValidityDays,
+    expiresAtIso,
+    salesName: ownerProfile.full_name,
     language: created.contact_language,
   });
 

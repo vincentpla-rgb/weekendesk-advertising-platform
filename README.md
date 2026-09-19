@@ -14,7 +14,7 @@ no esté ahí, preguntar antes de inventar.
 | Esquema PostgreSQL / Supabase | `supabase/migrations/` | Hecho |
 | Motor de precios | `src/pricing/` | Hecho |
 | Envío de email real (Resend) | `app/api/proposals/`, `lib/email/` | Hecho — presupuesto al cliente y magic link del equipo |
-| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts` | Hecho — 111 tests |
+| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts` | Hecho — 128 tests |
 | Interfaz (Next.js) | `app/`, `lib/`, `components/` | Hecho — 3 pantallas del MVP |
 
 Ver CLAUDE.md §10 para el detalle de qué pantallas existen y qué queda
@@ -121,8 +121,9 @@ y el catálogo, y devuelve el cálculo con su traza.
 - `app/auth/confirm/` — vuelta del magic link (`token_hash` + `verifyOtp`), en vez de `/auth/callback`
 - `lib/pricing-context.ts` — puente entre las tablas de Supabase y el motor puro
 - `lib/vies.ts` — verificación VIES (llamada de servidor, la función SQL no tiene salida de red)
-- `lib/i18n.ts` — textos de la pantalla pública y de los emails en el idioma del cliente
+- `lib/i18n.ts` — textos de la pantalla pública en el idioma del cliente (mención de IVA incluida)
 - `lib/email/` — contenido de los emails (presupuesto, magic link), cliente de Resend y verificación de firma del webhook — todo puro salvo `resend-client.ts`, que hace la llamada HTTP
+- `lib/email/templates/` — una plantilla por idioma del email de presupuesto (`proposal-email.<idioma>.ts`), separada de la lógica de envío para poder retocar el texto sin tocarla
 
 **Ningún precio que ve el cliente se calcula en el navegador y se guarda tal
 cual.** El navegador solo usa el motor para la vista previa en vivo; al
