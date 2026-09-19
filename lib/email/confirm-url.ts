@@ -18,13 +18,20 @@ export function buildConfirmUrl(emailData: SendEmailHookData): string {
   const base = (emailData.site_url || emailData.redirect_to || '').replace(/\/$/, '');
 
   // redirect_to viaja como URL absoluta (viene de `emailRedirectTo` en
-  // signInWithOtp) — nos quedamos solo con la ruta: el destino sigue siendo
-  // este mismo sitio, nunca uno externo.
-  let next = emailData.redirect_to || '/proposals/new';
+  // signInWithOtp, app/login/page.tsx), que apunta a
+  // /auth/callback?next=<destino> — /auth/callback es la ruta del flujo PKCE
+  // normal, no la de este hook, así que el destino real para /auth/confirm
+  // sigue siendo ese `next` anidado, nunca la propia ruta /auth/callback. Por
+  // eso se lee el parámetro `next` de redirect_to en vez de su `pathname` a
+  // secas: usar solo el pathname mandaría al usuario a /auth/callback sin
+  // código, que rebota a /login (bug real, ver app/login/page.tsx).
+  let next = '/proposals/new';
   try {
-    next = new URL(emailData.redirect_to).pathname;
+    const redirectUrl = new URL(emailData.redirect_to);
+    next = redirectUrl.searchParams.get('next') || redirectUrl.pathname;
   } catch {
     // No era una URL absoluta: se usa tal cual como ruta relativa.
+    next = emailData.redirect_to || next;
   }
 
   const params = new URLSearchParams({

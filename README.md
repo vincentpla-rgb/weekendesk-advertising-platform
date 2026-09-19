@@ -14,7 +14,7 @@ no esté ahí, preguntar antes de inventar.
 | Esquema PostgreSQL / Supabase | `supabase/migrations/` | Hecho |
 | Motor de precios | `src/pricing/` | Hecho |
 | Envío de email real (Resend) | `app/api/proposals/`, `lib/email/` | Hecho — presupuesto al cliente y magic link del equipo |
-| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts` | Hecho — 128 tests |
+| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts` | Hecho — 132 tests |
 | Interfaz (Next.js) | `app/`, `lib/`, `components/` | Hecho — 3 pantallas del MVP |
 
 Ver CLAUDE.md §10 para el detalle de qué pantallas existen y qué queda
@@ -84,10 +84,17 @@ funciones `Functions` (`create_and_send_proposal`, `get_public_proposal`,
   apuntando a `/api/auth/send-email`. Sustituye el SMTP de pruebas de
   Supabase (límite de 4 correos/hora) para el magic link del equipo.
 
-El magic link ya no vuelve por `/auth/callback?code=...` (plantilla por
-defecto de Supabase): el hook construye el enlace hacia `/auth/confirm`
-con `token_hash`, verificado con `supabase.auth.verifyOtp`. `/auth/callback`
-se mantiene por compatibilidad con cualquier flujo basado en `code`.
+**El "Send Email Hook" no está activo en el proyecto real todavía** (es una
+configuración del dashboard de Supabase, no de este repo). Hasta que se
+active, Supabase manda su propio email con su plantilla por defecto, y la
+vuelta real en producción es siempre `/auth/callback?code=...` (PKCE) —
+`emailRedirectTo` (`lib/supabase/login-redirect.ts`) apunta siempre ahí,
+nunca directo a la página destino: apuntar directo fue un bug real (el
+enlace se quedaba en `otp_expired` sin crear sesión nunca, porque el código
+PKCE no se llegaba a canjear). Si el hook se activa algún día, la vuelta pasa
+a ser `/auth/confirm` (`token_hash` + `verifyOtp`) en vez de `/auth/callback`
+— ambas rutas comparten la comprobación de lista blanca
+(`lib/supabase/authorize-session.ts`).
 
 No verificado contra un hook real de Supabase en este entorno de desarrollo
 (sin proyecto conectado, ver más abajo): la forma del payload sigue la
@@ -117,8 +124,9 @@ y el catálogo, y devuelve el cálculo con su traza.
 - `app/p/[token]/` — pantalla pública comparativa + aceptación + rechazo
 - `app/api/proposals/` — crea un presupuesto, lo manda por email con Resend y solo entonces lo marca `SENT`
 - `app/api/public/proposals/[token]/{accept,reject}/` — flujo público
-- `app/api/auth/send-email/` — "Send Email Hook" de Supabase Auth: manda el magic link del equipo por Resend
-- `app/auth/confirm/` — vuelta del magic link (`token_hash` + `verifyOtp`), en vez de `/auth/callback`
+- `app/api/auth/send-email/` — "Send Email Hook" de Supabase Auth: manda el magic link del equipo por Resend (no activo en el proyecto real todavía, ver más abajo)
+- `app/auth/callback/` — vuelta real del magic link hoy (`code` + `exchangeCodeForSession`); `app/auth/confirm/` es la vuelta que usaría el hook (`token_hash` + `verifyOtp`) si se activa
+- `lib/supabase/login-redirect.ts` — construye la URL de `emailRedirectTo`, siempre hacia `/auth/callback`
 - `lib/pricing-context.ts` — puente entre las tablas de Supabase y el motor puro
 - `lib/vies.ts` — verificación VIES (llamada de servidor, la función SQL no tiene salida de red)
 - `lib/i18n.ts` — textos de la pantalla pública en el idioma del cliente (mención de IVA incluida)
