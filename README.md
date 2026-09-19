@@ -14,7 +14,7 @@ no esté ahí, preguntar antes de inventar.
 | Esquema PostgreSQL / Supabase | `supabase/migrations/` | Hecho |
 | Motor de precios | `src/pricing/` | Hecho |
 | Envío de email real (Resend) | `app/api/proposals/`, `lib/email/` | Hecho — presupuesto al cliente y magic link del equipo |
-| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts` | Hecho — 132 tests |
+| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts` | Hecho — 135 tests |
 | Interfaz (Next.js) | `app/`, `lib/`, `components/` | Hecho — 3 pantallas del MVP |
 
 Ver CLAUDE.md §10 para el detalle de qué pantallas existen y qué queda
