@@ -1,13 +1,22 @@
 import { NextResponse } from 'next/server';
 
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
+import { createSupabaseTeamAccessGateway, resolveTeamAccess } from '@/lib/supabase/team-access';
 
 /**
  * Vuelta del magic link. Intercambia el código por sesión y comprueba la
- * lista blanca: un email autenticado pero sin perfil de equipo activo se
- * desconecta y se redirige a /no-autorizado. RLS ya bloquea el acceso a los
- * datos en cualquier caso (`is_team_member()`); esto es además para no dejar
- * ver la interfaz vacía a quien no debería estar aquí.
+ * lista blanca (`allowed_emails`): un email autenticado que no esté ahí se
+ * desconecta y se redirige a /no-autorizado.
+ *
+ * La comprobación usa la clave de servicio (`resolveTeamAccess`), no la
+ * sesión del propio usuario: tanto `allowed_emails` como `profiles` tienen
+ * una política RLS que exige `is_team_member()`, y `is_team_member()` exige
+ * un `profiles` activo — el mismo que un usuario en su primer login todavía
+ * no tiene. Con la sesión del usuario esa comprobación es circular y se
+ * queda fuera para siempre aunque su email esté en la lista blanca; con la
+ * clave de servicio no lo es, y de paso crea el `profiles` que falta la
+ * primera vez.
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
@@ -28,18 +37,14 @@ export async function GET(request: Request) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  if (!user || !user.email) {
     return NextResponse.redirect(`${origin}/login`);
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('id')
-    .eq('id', user.id)
-    .eq('is_active', true)
-    .maybeSingle();
+  const gateway = createSupabaseTeamAccessGateway(createServiceClient());
+  const authorized = await resolveTeamAccess(gateway, { id: user.id, email: user.email });
 
-  if (!profile) {
+  if (!authorized) {
     await supabase.auth.signOut();
     return NextResponse.redirect(`${origin}/no-autorizado`);
   }

@@ -42,6 +42,17 @@ export interface Database {
         Update: Partial<Database['public']['Tables']['profiles']['Row']>;
         Relationships: [];
       };
+      allowed_emails: {
+        Row: {
+          email: string;
+          note: string | null;
+          added_at: string;
+          added_by: string | null;
+        };
+        Insert: Partial<Database['public']['Tables']['allowed_emails']['Row']> & { email: string };
+        Update: Partial<Database['public']['Tables']['allowed_emails']['Row']>;
+        Relationships: [];
+      };
       accounts: {
         Row: {
           id: string;

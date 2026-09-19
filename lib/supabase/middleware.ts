@@ -7,7 +7,10 @@ import type { Database } from './database.types.js';
  * Refresca la sesión de Supabase en cada petición y protege las rutas
  * internas con la lista blanca de emails (CLAUDE.md §2): magic link, sin
  * Google SSO. `allowed_emails` es la lista blanca; `profiles` es el perfil
- * de equipo activo. Se exige pertenecer a ambas.
+ * de equipo activo que crea automáticamente /auth/callback en el primer
+ * login de un email permitido (ver `lib/supabase/team-access.ts`). Aquí solo
+ * se comprueba que haya sesión — la lista blanca ya se resolvió al volver
+ * del magic link.
  */
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
