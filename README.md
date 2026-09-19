@@ -48,13 +48,20 @@ Verificadas ejecutándolas contra un PostgreSQL 16 real, no solo por sintaxis.
 8. `..._allowed_emails_full_name.sql` — nombre opcional en la lista blanca, para el `profiles` que se autoprovisiona en el primer login (ver `lib/supabase/team-access.ts`)
 9. `..._email_send.sql` — separa "crear el presupuesto" de "marcarlo enviado": `create_and_send_proposal` ahora deja el envío en `DRAFT`, y `mark_proposal_sent` / `log_proposal_send_failure` lo confirman o registran el fallo según la respuesta de Resend (ver `app/api/proposals/route.ts`)
 10. `..._self_read_policies.sql` — permite a un usuario autenticado leer su propia fila de `profiles` y de `allowed_emails` sin pasar por `is_team_member()` (defensa en profundidad, CLAUDE.md §10.3; `loginWithPassword` no depende de ella, sigue usando la clave de servicio)
+11. `..._service_role_grants.sql` — **bloqueante para el login en producción**: concede a `service_role` los privilegios de tabla que `grants.sql` (punto 7) ya concedía a `authenticated`. Sin esta migración, `service_role` da `permission denied for table allowed_emails` (un error de GRANT, no de RLS) y el login siempre deniega el acceso aunque las filas sean correctas. Ver CLAUDE.md §10.3
 
-`scripts/verify-rls-self-read.sh` reproduce y verifica la dependencia
-circular de RLS del punto 10 contra un PostgreSQL 16 real (crea y borra su
-propia base de datos de prueba): sin la migración, un usuario recién creado
-no puede leer su propia fila de `allowed_emails` con su propia sesión; con
-ella, sí, y sin que vea filas de nadie más. Ejecutar con
-`bash scripts/verify-rls-self-read.sh`.
+**Aplicar los puntos 10 y 11 en el proyecto Supabase real** (dashboard SQL
+editor o `supabase db push`) — hacer `git push`/desplegar en Vercel no
+aplica migraciones de base de datos por sí solo, son dos pasos
+independientes.
+
+`scripts/verify-rls-self-read.sh` reproduce y verifica, contra un
+PostgreSQL 16 real (crea y borra su propia base de datos de prueba), los dos
+bugs de acceso de los puntos 10 y 11: sin el punto 11, `service_role` no
+puede leer `allowed_emails` (`permission denied for table`); sin el punto
+10, un usuario recién creado no puede leer su propia fila con su propia
+sesión. Con ambas migraciones aplicadas, los dos casos funcionan, y sin que
+nadie vea filas ajenas. Ejecutar con `bash scripts/verify-rls-self-read.sh`.
 
 ### Variables de entorno
 
