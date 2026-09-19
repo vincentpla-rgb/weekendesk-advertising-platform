@@ -419,7 +419,7 @@ El motor es **puro**: no lee de la base de datos. Recibe el juego de parámetros
 | Pantalla pública comparativa | `/p/[token]` | `get_public_proposal` (SECURITY DEFINER), reach solo con dato medido, caduca a los 14 días, idioma del cliente |
 | Aceptación con datos fiscales | Modal en `/p/[token]` | VIES verificado en servidor (`app/api/public/proposals/[token]/accept`), régimen de IVA decidido en `accept_public_proposal` |
 | Rechazo | Modal en `/p/[token]` | Registra motivo; **no** construye la contrapropuesta (ver más abajo) |
-| Login | `/login` | Magic link (Supabase Auth), lista blanca comprobada en `/auth/callback` contra `profiles` |
+| Login | `/login` | Magic link (Supabase Auth), lista blanca comprobada en `/auth/callback` contra `allowed_emails` con la clave de servicio (`lib/supabase/team-access.ts`), que crea el `profiles` que falta en el primer login para evitar la dependencia circular con RLS (`is_team_member()` exige un `profiles` que aún no existe) |
 
 **Arquitectura de cálculo:** el navegador ejecuta el mismo motor (`src/pricing/`) para la vista previa en vivo mientras el comercial edita, pero esos números **nunca se persisten**. Al pulsar "Enviar", `app/api/proposals/route.ts` recibe los datos crudos (soportes, mercados, cantidades, descuentos) y **vuelve a calcular en el servidor** con los parámetros vivos de la base de datos — eso es lo único que se guarda, vía `create_and_send_proposal` (una función SQL `SECURITY INVOKER`, atómica: opción + líneas + descuentos + checks de disponibilidad en una sola transacción, con el envío ya congelado).
 

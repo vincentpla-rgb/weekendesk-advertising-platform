@@ -5,7 +5,7 @@ export default function NoAutorizadoPage() {
         <h1 style={{ fontSize: 20 }}>Acceso no autorizado</h1>
         <p style={{ color: 'var(--wk-text-muted)', fontSize: 14 }}>
           Tu email no está en la lista de acceso al equipo. Pide a Vincent que te añada
-          en <code>allowed_emails</code> y <code>profiles</code>.
+          en <code>allowed_emails</code>.
         </p>
         <a className="wk-btn wk-btn-secondary" href="/login" style={{ marginTop: 12 }}>
           Volver al login
