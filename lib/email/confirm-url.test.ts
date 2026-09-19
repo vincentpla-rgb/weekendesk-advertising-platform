@@ -40,4 +40,20 @@ describe('buildConfirmUrl', () => {
     const parsed = new URL(url);
     expect(parsed.searchParams.get('next')).toBe('/proposals/new');
   });
+
+  it('desanida el next de una redirect_to que apunta a /auth/callback?next=..., en vez de usar /auth/callback como destino', () => {
+    // emailRedirectTo (app/login/page.tsx) ahora siempre apunta a
+    // /auth/callback?next=<destino> — si el "Send Email Hook" estuviera
+    // activo, tomar el pathname a secas mandaría al usuario a /auth/callback
+    // sin código (bug real que motivó este fix).
+    const url = buildConfirmUrl({
+      token_hash: 'abc123',
+      redirect_to: 'https://weekendesk-advertising.vercel.app/auth/callback?next=%2Fproposals%2Fnew',
+      email_action_type: 'magiclink',
+      site_url: 'https://weekendesk-advertising.vercel.app',
+    });
+
+    const parsed = new URL(url);
+    expect(parsed.searchParams.get('next')).toBe('/proposals/new');
+  });
 });

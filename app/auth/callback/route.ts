@@ -4,12 +4,18 @@ import { createClient } from '@/lib/supabase/server';
 import { authorizeTeamSession } from '@/lib/supabase/authorize-session';
 
 /**
- * Vuelta de un flujo de auth basado en código PKCE (`?code=`). El magic link
- * del equipo ya no pasa por aquí — usa `/auth/confirm` con `token_hash`
- * (CLAUDE.md §2: el email del enlace ahora lo construye el "Send Email Hook"
- * de Supabase con Resend, no la plantilla por defecto de Supabase que
- * generaba un `code`). Se deja esta ruta por si algún flujo futuro (o un
- * enlace ya enviado antes del cambio) todavía trae un `code`.
+ * Vuelta del magic link del equipo (CLAUDE.md §2): canjea el código PKCE
+ * (`?code=`) por una sesión con `exchangeCodeForSession` **antes** de
+ * comprobar nada, y solo entonces resuelve la lista blanca y redirige a
+ * `next`. Es la ruta a la que `emailRedirectTo` (`app/login/page.tsx`,
+ * `lib/supabase/login-redirect.ts`) apunta siempre — apuntar directo a la
+ * página destino, saltándose este canje, fue un bug real (el enlace se
+ * quedaba en `otp_expired` sin crear sesión nunca).
+ *
+ * `/auth/confirm` (con `token_hash` en vez de `code`) es la vuelta que usaría
+ * el "Send Email Hook" de Supabase (`app/api/auth/send-email/`) si algún día
+ * se activa en el dashboard; hoy no lo está, así que esta es la única vuelta
+ * real en producción.
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
