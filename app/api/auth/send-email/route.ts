@@ -22,6 +22,10 @@ import { buildConfirmUrl } from '@/lib/email/confirm-url';
  * desarrollo (sin proyecto Supabase conectado, CLAUDE.md §10.1.2): la forma
  * del payload sigue la documentación de Supabase Auth Hooks. Conviene una
  * prueba manual tras configurar el hook en el proyecto real.
+ *
+ * Infraestructura del magic link, sin usar en la app hoy: el login pasó a
+ * email + contraseña (CLAUDE.md §10.3, el enlace se consumía antes de que la
+ * persona lo abriera). Se deja tal cual por si se recupera más adelante.
  */
 interface SendEmailHookPayload {
   readonly user: { readonly email: string };
