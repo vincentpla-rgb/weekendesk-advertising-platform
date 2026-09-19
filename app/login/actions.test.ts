@@ -4,15 +4,24 @@ const signInWithPassword = vi.fn();
 const getUser = vi.fn();
 const signOut = vi.fn();
 const resolveTeamAccess = vi.fn();
+const createSupabaseTeamAccessGateway = vi.fn(() => ({}));
+
+// Objetos distintos y reconocibles a propósito: si loginWithPassword alguna
+// vez construyera el gateway con el cliente de sesión en vez de con el de
+// servicio (la dependencia circular de RLS de CLAUDE.md §10.3 — un usuario
+// nuevo no puede leer su propia fila de allowed_emails con su propia
+// sesión, reproducido contra un PostgreSQL 16 real en
+// scripts/verify-rls-self-read.sh), este test lo detecta comparando qué
+// objeto llega a createSupabaseTeamAccessGateway.
+const sessionClient = { auth: { signInWithPassword, getUser, signOut } };
+const serviceClient = { marker: 'service-role-client' };
 
 vi.mock('@/lib/supabase/server', () => ({
-  createClient: vi.fn(async () => ({
-    auth: { signInWithPassword, getUser, signOut },
-  })),
+  createClient: vi.fn(async () => sessionClient),
 }));
 
 vi.mock('@/lib/supabase/service', () => ({
-  createServiceClient: vi.fn(() => ({})),
+  createServiceClient: vi.fn(() => serviceClient),
 }));
 
 // `resolveTeamAccess` en sí ya tiene su propia batería de tests
@@ -20,7 +29,7 @@ vi.mock('@/lib/supabase/service', () => ({
 // loginWithPassword la llama con lo correcto y actúa bien según su
 // resultado, no se reimplementa esa lógica.
 vi.mock('@/lib/supabase/team-access', () => ({
-  createSupabaseTeamAccessGateway: vi.fn(() => ({})),
+  createSupabaseTeamAccessGateway,
   resolveTeamAccess,
 }));
 
@@ -32,6 +41,7 @@ describe('loginWithPassword', () => {
     getUser.mockReset();
     signOut.mockReset();
     resolveTeamAccess.mockReset();
+    createSupabaseTeamAccessGateway.mockClear();
   });
 
   it('rechaza credenciales incorrectas sin comprobar la lista blanca', async () => {
@@ -91,4 +101,20 @@ describe('loginWithPassword', () => {
     expect(result.ok).toBe(false);
     expect(resolveTeamAccess).not.toHaveBeenCalled();
   });
+
+  it(
+    'construye el gateway de la lista blanca con el cliente de SERVICIO, nunca con el de sesión ' +
+      '(la dependencia circular de RLS solo se evita así, CLAUDE.md §10.3)',
+    async () => {
+      signInWithPassword.mockResolvedValue({ error: null });
+      getUser.mockResolvedValue({ data: { user: { id: 'u1', email: 'vincent.pla@weekendesk.fr' } } });
+      resolveTeamAccess.mockResolvedValue(true);
+
+      await loginWithPassword('vincent.pla@weekendesk.fr', 'correcta');
+
+      expect(createSupabaseTeamAccessGateway).toHaveBeenCalledTimes(1);
+      expect(createSupabaseTeamAccessGateway).toHaveBeenCalledWith(serviceClient);
+      expect(createSupabaseTeamAccessGateway).not.toHaveBeenCalledWith(sessionClient);
+    },
+  );
 });

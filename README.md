@@ -15,7 +15,7 @@ no esté ahí, preguntar antes de inventar.
 | Motor de precios | `src/pricing/` | Hecho |
 | Envío de email real (Resend) | `app/api/proposals/`, `lib/email/` | Hecho — presupuesto al cliente |
 | Login | `app/login/` | Hecho — email + contraseña, no magic link (ver CLAUDE.md §10.3) |
-| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts`, `app/**/*.test.ts` | Hecho — 142 tests |
+| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts`, `app/**/*.test.ts` | Hecho — 143 tests + scripts/verify-rls-self-read.sh (contra PostgreSQL 16 real) |
 | Interfaz (Next.js) | `app/`, `lib/`, `components/` | Hecho — 3 pantallas del MVP |
 
 Ver CLAUDE.md §10 para el detalle de qué pantallas existen y qué queda
@@ -47,6 +47,14 @@ Verificadas ejecutándolas contra un PostgreSQL 16 real, no solo por sintaxis.
 7. `..._grants.sql` — privilegios de tabla explícitos para `authenticated`
 8. `..._allowed_emails_full_name.sql` — nombre opcional en la lista blanca, para el `profiles` que se autoprovisiona en el primer login (ver `lib/supabase/team-access.ts`)
 9. `..._email_send.sql` — separa "crear el presupuesto" de "marcarlo enviado": `create_and_send_proposal` ahora deja el envío en `DRAFT`, y `mark_proposal_sent` / `log_proposal_send_failure` lo confirman o registran el fallo según la respuesta de Resend (ver `app/api/proposals/route.ts`)
+10. `..._self_read_policies.sql` — permite a un usuario autenticado leer su propia fila de `profiles` y de `allowed_emails` sin pasar por `is_team_member()` (defensa en profundidad, CLAUDE.md §10.3; `loginWithPassword` no depende de ella, sigue usando la clave de servicio)
+
+`scripts/verify-rls-self-read.sh` reproduce y verifica la dependencia
+circular de RLS del punto 10 contra un PostgreSQL 16 real (crea y borra su
+propia base de datos de prueba): sin la migración, un usuario recién creado
+no puede leer su propia fila de `allowed_emails` con su propia sesión; con
+ella, sí, y sin que vea filas de nadie más. Ejecutar con
+`bash scripts/verify-rls-self-read.sh`.
 
 ### Variables de entorno
 
