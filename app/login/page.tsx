@@ -8,7 +8,12 @@ import { createClient } from '@/lib/supabase/client';
  * Login con magic link (CLAUDE.md §2): sin contraseña, sin Google SSO. La
  * lista blanca (`allowed_emails`) no se comprueba aquí — comprobarla antes de
  * enviar el enlace revelaría qué emails están en la lista. Se comprueba al
- * volver del enlace, en /auth/callback.
+ * volver del enlace, en /auth/confirm.
+ *
+ * El propio email lo manda Resend, no el SMTP de pruebas de Supabase (ver
+ * app/api/auth/send-email/route.ts): `emailRedirectTo` aquí es el destino
+ * final tras entrar, no una URL de Supabase — el "Send Email Hook" lo usa
+ * para construir el enlace hacia /auth/confirm.
  */
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -23,7 +28,7 @@ export default function LoginPage() {
     const supabase = createClient();
     const { error: authError } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      options: { emailRedirectTo: `${window.location.origin}/proposals/new` },
     });
 
     if (authError) {
