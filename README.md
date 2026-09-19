@@ -43,6 +43,7 @@ Verificadas ejecutándolas contra un PostgreSQL 16 real, no solo por sintaxis.
 5. `..._seed_market_holidays.sql` — festivos FR/ES/IT/BE-FR/BE-NL 2026-2027
 6. `..._create_and_send_proposal.sql` — creación atómica de presupuestos, aceptación y rechazo públicos
 7. `..._grants.sql` — privilegios de tabla explícitos para `authenticated`
+8. `..._allowed_emails_full_name.sql` — nombre opcional en la lista blanca, para el `profiles` que se autoprovisiona en el primer login (ver `lib/supabase/team-access.ts`)
 
 ### Variables de entorno
 
