@@ -2,6 +2,10 @@
  * URL de retorno del magic link (CLAUDE.md §2): **siempre** `/auth/callback`,
  * con el destino final como `next`, nunca la página destino en sí.
  *
+ * Infraestructura del magic link, sin usar en la app hoy: el login pasó a
+ * email + contraseña (CLAUDE.md §10.3, el enlace se consumía antes de que la
+ * persona lo abriera). Se deja tal cual por si se recupera más adelante.
+ *
  * Bug real corregido aquí: `emailRedirectTo` apuntaba directamente a
  * `/proposals/new`. Supabase incrusta esa URL en el enlace del email como el
  * sitio que debe canjear el código PKCE (`exchangeCodeForSession`,

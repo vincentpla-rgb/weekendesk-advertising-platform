@@ -4,6 +4,10 @@
  * ya no genera su propio `?code=` — hay que montar el enlace a mano con el
  * `token_hash` que trae `email_data`.
  *
+ * Infraestructura del magic link, sin usar en la app hoy: el login pasó a
+ * email + contraseña (CLAUDE.md §10.3, el enlace se consumía antes de que la
+ * persona lo abriera). Se deja tal cual por si se recupera más adelante.
+ *
  * Puro, sin I/O, para poder probarlo sin un hook real de Supabase (que no se
  * puede reproducir en este entorno de desarrollo, ver CLAUDE.md §10.1.2).
  */

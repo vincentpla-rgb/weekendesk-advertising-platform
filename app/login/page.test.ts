@@ -3,38 +3,37 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 /**
- * Guarda de regresión para el bug real de producción: `emailRedirectTo`
- * apuntaba directo a `/proposals/new` en vez de a `/auth/callback`, y el
- * enlace mágico se quedaba en `otp_expired` sin crear sesión nunca (el
- * código PKCE nunca se canjeaba).
- *
- * `lib/supabase/login-redirect.test.ts` ya prueba `buildLoginRedirectUrl`
- * en aislamiento — eso demuestra que la función es correcta, pero no que
- * `/login` la use de verdad: la primera vez que se corrigió este bug, el
- * commit del arreglo llegó a esta misma rama pero no se fusionó a `main` a
- * tiempo (un problema de proceso, no de código), y la página en producción
- * siguió construyendo `emailRedirectTo` a mano durante otro ciclo completo.
- * Esta prueba lee el código fuente real de la página para que un futuro
- * revert — a mano o por un cambio automatizado que reintroduzca el patrón
- * antiguo sin darse cuenta — falle aquí, no en producción.
+ * Guarda de regresión para el cambio de login por email/contraseña
+ * (CLAUDE.md §10.3): el magic link se quitó de `/login` porque el enlace se
+ * consumía antes de que la persona lo abriera (rastreador de clics de
+ * Resend/SES), un problema que no depende de este código y no se pudo
+ * arreglar. Esta prueba lee el código fuente real de la página para que un
+ * futuro revert — a mano o por un cambio automatizado que reintroduzca
+ * `signInWithOtp` sin darse cuenta — falle aquí, no en producción otra vez.
  */
 const SOURCE = readFileSync(fileURLToPath(new URL('./page.tsx', import.meta.url)), 'utf-8');
 
-describe('app/login/page.tsx — construcción de emailRedirectTo', () => {
-  it('importa y usa buildLoginRedirectUrl para emailRedirectTo', () => {
-    expect(SOURCE).toContain("from '@/lib/supabase/login-redirect'");
-    expect(SOURCE).toMatch(/emailRedirectTo:\s*buildLoginRedirectUrl\(/);
+describe('app/login/page.tsx — login con email y contraseña, sin magic link', () => {
+  it('no llama a signInWithOtp: el magic link se quitó del login', () => {
+    expect(SOURCE).not.toContain('signInWithOtp');
   });
 
-  it('no reintroduce el patrón que causó el bug: una plantilla que apunta directo a la página destino', () => {
-    // El bug real: `emailRedirectTo: \`${window.location.origin}/proposals/new\``
-    // — cualquier literal de plantilla que combine el origin con una ruta
-    // que NO sea /auth/callback, asignado directamente a emailRedirectTo.
-    expect(SOURCE).not.toMatch(/emailRedirectTo:\s*`\$\{[^}]*origin[^}]*\}\/(?!auth\/callback)/);
+  it('usa loginWithPassword (Server Action) para autenticar', () => {
+    expect(SOURCE).toContain("from './actions'");
+    expect(SOURCE).toMatch(/loginWithPassword\(/);
   });
 
-  it('llama a signInWithOtp exactamente una vez (un único punto de construcción del enlace)', () => {
-    const matches = SOURCE.match(/signInWithOtp/g) ?? [];
-    expect(matches).toHaveLength(1);
+  it('tiene un campo de contraseña real, no solo de email', () => {
+    expect(SOURCE).toMatch(/type="password"/);
+  });
+
+  it('no ofrece recuperación de contraseña por email (fuera de alcance en esta versión)', () => {
+    expect(SOURCE.toLowerCase()).not.toContain('recuperar');
+    expect(SOURCE.toLowerCase()).not.toContain('forgot');
+    expect(SOURCE.toLowerCase()).not.toContain('reset');
+  });
+
+  it('no ofrece registro público: no llama a signUp, solo a signInWith*', () => {
+    expect(SOURCE).not.toMatch(/\.signUp\(/);
   });
 });

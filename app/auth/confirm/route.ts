@@ -14,6 +14,10 @@ import { authorizeTeamSession } from '@/lib/supabase/authorize-session';
  * `verifyOtp` con `token_hash` es independiente del flujo PKCE de
  * `/auth/callback`: no hace falta un `code_verifier` guardado en el
  * navegador, solo el hash que ya viaja en el propio enlace.
+ *
+ * Infraestructura del magic link, sin usar en la app hoy: el login pasó a
+ * email + contraseña (CLAUDE.md §10.3, el enlace se consumía antes de que la
+ * persona lo abriera). Se deja tal cual por si se recupera más adelante.
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);

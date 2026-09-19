@@ -13,8 +13,9 @@ no esté ahí, preguntar antes de inventar.
 |---|---|---|
 | Esquema PostgreSQL / Supabase | `supabase/migrations/` | Hecho |
 | Motor de precios | `src/pricing/` | Hecho |
-| Envío de email real (Resend) | `app/api/proposals/`, `lib/email/` | Hecho — presupuesto al cliente y magic link del equipo |
-| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts` | Hecho — 135 tests |
+| Envío de email real (Resend) | `app/api/proposals/`, `lib/email/` | Hecho — presupuesto al cliente |
+| Login | `app/login/` | Hecho — email + contraseña, no magic link (ver CLAUDE.md §10.3) |
+| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts`, `app/**/*.test.ts` | Hecho — 142 tests |
 | Interfaz (Next.js) | `app/`, `lib/`, `components/` | Hecho — 3 pantallas del MVP |
 
 Ver CLAUDE.md §10 para el detalle de qué pantallas existen y qué queda
@@ -71,35 +72,36 @@ funciones `Functions` (`create_and_send_proposal`, `get_public_proposal`,
 `accept_public_proposal`, `reject_public_proposal`, `mark_public_proposal_viewed`,
 `mark_proposal_sent`, `log_proposal_send_failure`).
 
-### Email (Resend) y magic link del equipo
+### Login: email y contraseña, no magic link
 
-`RESEND_API_KEY` ya está configurada en Vercel. Además hace falta:
+El login del equipo usa `supabase.auth.signInWithPassword` (`app/login/`),
+comprobando la lista blanca (`allowed_emails`) en el mismo paso
+(`app/login/actions.ts`). Se probó primero un magic link enviado por Resend
+vía un "Send Email Hook" de Supabase Auth, y se abandonó tras dos días de
+bucle en producción: el rastreador de clics de Resend consumía el token de
+un solo uso antes de que la persona lo abriera, y eso no se puede desactivar
+en el dominio de pruebas de Resend. El detalle completo está en
+**CLAUDE.md §10.3** — es la fuente de verdad de esta decisión.
 
-- `RESEND_FROM_EMAIL` — remitente de todos los emails salientes (presupuestos
-  y magic link), con nombre visible. Dominio de pruebas de Resend por ahora
-  (`onboarding@resend.dev`); el dominio propio llegará más adelante y solo
-  hará falta cambiar esta variable.
-- `SEND_EMAIL_HOOK_SECRET` — secreto del "Send Email Hook" de Supabase Auth
-  (Authentication > Hooks > Send Email, en el dashboard del proyecto),
-  apuntando a `/api/auth/send-email`. Sustituye el SMTP de pruebas de
-  Supabase (límite de 4 correos/hora) para el magic link del equipo.
+Sin registro público (los usuarios los da de alta un administrador en
+Authentication > Users del dashboard de Supabase, además de añadirlos a
+`allowed_emails`) ni recuperación de contraseña por email en esta versión.
 
-**El "Send Email Hook" no está activo en el proyecto real todavía** (es una
-configuración del dashboard de Supabase, no de este repo). Hasta que se
-active, Supabase manda su propio email con su plantilla por defecto, y la
-vuelta real en producción es siempre `/auth/callback?code=...` (PKCE) —
-`emailRedirectTo` (`lib/supabase/login-redirect.ts`) apunta siempre ahí,
-nunca directo a la página destino: apuntar directo fue un bug real (el
-enlace se quedaba en `otp_expired` sin crear sesión nunca, porque el código
-PKCE no se llegaba a canjear). Si el hook se activa algún día, la vuelta pasa
-a ser `/auth/confirm` (`token_hash` + `verifyOtp`) en vez de `/auth/callback`
-— ambas rutas comparten la comprobación de lista blanca
-(`lib/supabase/authorize-session.ts`).
+El código del magic link (`app/api/auth/send-email/`, `app/auth/confirm/`,
+`lib/supabase/login-redirect.ts`, `lib/email/magic-link-email.ts`,
+`lib/email/confirm-url.ts`) se queda en el repo sin usar, por si se recupera
+más adelante — `app/auth/callback/` sigue siendo una ruta válida (el canje
+PKCE no cambió), simplemente nada genera ya un enlace hacia ella.
 
-No verificado contra un hook real de Supabase en este entorno de desarrollo
-(sin proyecto conectado, ver más abajo): la forma del payload sigue la
-documentación de Supabase Auth Hooks. Conviene una prueba manual tras
-configurar el hook en el proyecto real.
+### Email (Resend) para el envío de presupuestos
+
+`RESEND_API_KEY` ya está configurada en Vercel. Además hace falta
+`RESEND_FROM_EMAIL` — remitente de los emails de presupuesto, con nombre
+visible. Dominio de pruebas de Resend por ahora (`onboarding@resend.dev`);
+el dominio propio llegará más adelante y solo hará falta cambiar esta
+variable. `SEND_EMAIL_HOOK_SECRET` sigue documentada en `.env.example` por
+si se recupera el magic link, pero no hace falta configurarla mientras el
+login sea por contraseña.
 
 ## Cómo está organizado el motor
 
@@ -124,9 +126,8 @@ y el catálogo, y devuelve el cálculo con su traza.
 - `app/p/[token]/` — pantalla pública comparativa + aceptación + rechazo
 - `app/api/proposals/` — crea un presupuesto, lo manda por email con Resend y solo entonces lo marca `SENT`
 - `app/api/public/proposals/[token]/{accept,reject}/` — flujo público
-- `app/api/auth/send-email/` — "Send Email Hook" de Supabase Auth: manda el magic link del equipo por Resend (no activo en el proyecto real todavía, ver más abajo)
-- `app/auth/callback/` — vuelta real del magic link hoy (`code` + `exchangeCodeForSession`); `app/auth/confirm/` es la vuelta que usaría el hook (`token_hash` + `verifyOtp`) si se activa
-- `lib/supabase/login-redirect.ts` — construye la URL de `emailRedirectTo`, siempre hacia `/auth/callback`
+- `app/login/` + `app/login/actions.ts` — login con email y contraseña; `loginWithPassword` autentica y comprueba la lista blanca en el mismo paso
+- `app/api/auth/send-email/`, `app/auth/confirm/`, `lib/supabase/login-redirect.ts`, `lib/email/magic-link-email.ts`, `lib/email/confirm-url.ts` — infraestructura del magic link, sin usar desde que el login pasó a contraseña (CLAUDE.md §10.3); `app/auth/callback/` sigue activa como ruta de vuelta del canje PKCE, aunque nada la invoca ya
 - `lib/pricing-context.ts` — puente entre las tablas de Supabase y el motor puro
 - `lib/vies.ts` — verificación VIES (llamada de servidor, la función SQL no tiene salida de red)
 - `lib/i18n.ts` — textos de la pantalla pública en el idioma del cliente (mención de IVA incluida)

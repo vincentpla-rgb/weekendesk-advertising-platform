@@ -7,15 +7,20 @@ import { authorizeTeamSession } from '@/lib/supabase/authorize-session';
  * Vuelta del magic link del equipo (CLAUDE.md §2): canjea el código PKCE
  * (`?code=`) por una sesión con `exchangeCodeForSession` **antes** de
  * comprobar nada, y solo entonces resuelve la lista blanca y redirige a
- * `next`. Es la ruta a la que `emailRedirectTo` (`app/login/page.tsx`,
- * `lib/supabase/login-redirect.ts`) apunta siempre — apuntar directo a la
- * página destino, saltándose este canje, fue un bug real (el enlace se
- * quedaba en `otp_expired` sin crear sesión nunca).
+ * `next`.
  *
- * `/auth/confirm` (con `token_hash` en vez de `code`) es la vuelta que usaría
- * el "Send Email Hook" de Supabase (`app/api/auth/send-email/`) si algún día
- * se activa en el dashboard; hoy no lo está, así que esta es la única vuelta
- * real en producción.
+ * Infraestructura del magic link, sin usar en la app hoy: el login pasó a
+ * email + contraseña (`app/login/actions.ts`, `loginWithPassword`) porque el
+ * enlace se consumía antes de que la persona lo abriera — el rastreador de
+ * clics de Resend/SES abría el `code` de un solo uso antes del clic real, un
+ * problema de infraestructura ajeno a este código (CLAUDE.md §10.3). Nada
+ * genera ya un enlace hacia aquí, pero se deja tal cual por si se recupera
+ * más adelante: sigue siendo la ruta a la que apuntaría `emailRedirectTo`
+ * (`lib/supabase/login-redirect.ts`) si el magic link volviera.
+ *
+ * `/auth/confirm` (con `token_hash` en vez de `code`) sería la vuelta si el
+ * "Send Email Hook" de Supabase (`app/api/auth/send-email/`) se activara en
+ * el dashboard — tampoco está en uso.
  */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
