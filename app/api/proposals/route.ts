@@ -14,11 +14,9 @@ const CONTRACTING_BCC = 'contracting@weekendesk.fr';
 
 interface RawLine {
   supportId: string;
-  market: string;
   quantity: number;
   mediaBudgetEuros: number | null;
   mediaMonths: number | null;
-  availabilityConfirmedWith: string | null;
 }
 
 interface RawDiscount {
@@ -30,19 +28,24 @@ interface RawOption {
   code: 'A' | 'B' | 'C';
   name: string;
   pitch: string;
+  /** Mercados elegidos UNA VEZ para la opción entera (CLAUDE.md §4.2, ronda 2). */
+  markets: string[];
+  campaignStart: string | null;
+  campaignEnd: string | null;
+  /** Modo "solo duración, sin fecha de inicio" (CLAUDE.md §5.3 bis). */
+  campaignDurationCount: number | null;
+  campaignDurationUnit: 'WEEK' | 'MONTH' | null;
   lines: RawLine[];
   discounts: RawDiscount[];
 }
 
 interface RawBody {
   accountId: string | null;
-  newAccount: { legal_name: string; country_code: string; primary_market: string } | null;
+  newAccount: { legal_name: string; country_code: string } | null;
   contactId: string | null;
   newContact: { full_name: string; email: string; language: string } | null;
   language: string;
   brief: string;
-  campaignStart: string | null;
-  campaignEnd: string | null;
   options: RawOption[];
 }
 
@@ -87,14 +90,21 @@ export async function POST(request: Request) {
 
   const optionsJson: unknown[] = [];
   for (const raw of body.options) {
+    if (!Array.isArray(raw.markets) || raw.markets.length === 0) {
+      return NextResponse.json(
+        { error: `Opción ${raw.code}: elige al menos un mercado` },
+        { status: 400 },
+      );
+    }
+
     const input: OptionInput = {
       id: raw.code,
       name: raw.name,
+      markets: raw.markets as OptionInput['markets'],
       lines: raw.lines.map((l): OptionLineInput => {
         const support = ctx.catalog.get(l.supportId);
         return {
           supportId: l.supportId,
-          market: l.market as OptionLineInput['market'],
           quantity: l.quantity,
           ...(support?.isMediaBuy
             ? {
@@ -124,15 +134,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const availabilityByKey = new Map(
-      raw.lines.map((l) => [`${l.supportId}|${l.market}`, l.availabilityConfirmedWith]),
-    );
-
     optionsJson.push({
       code: raw.code,
       name: priced.name ?? raw.code,
       pitch: raw.pitch,
       sort_order: optionsJson.length,
+      markets: raw.markets,
+      campaign_start: raw.campaignStart,
+      campaign_end: raw.campaignEnd,
+      campaign_duration_count: raw.campaignDurationCount,
+      campaign_duration_unit: raw.campaignDurationUnit,
       gross_net_of_media_cents: priced.grossNetOfMediaCents,
       effective_discount_cents: priced.effectiveDiscountCents,
       net_revenue_cents: priced.netRevenueCents,
@@ -159,8 +170,6 @@ export async function POST(request: Request) {
         net_price_cents: l.netPriceCents,
         billed_total_cents: l.billedTotalCents,
         sort_order: idx,
-        availability_confirmed_with: availabilityByKey.get(`${l.supportId}|${l.market}`) ?? null,
-        availability_confirmed_at: availabilityByKey.get(`${l.supportId}|${l.market}`) ? new Date().toISOString() : null,
       })),
       discounts: priced.discounts.map((d) => ({
         kind: d.kind,
@@ -175,8 +184,6 @@ export async function POST(request: Request) {
     ...(body.contactId ? { contact_id: body.contactId } : { contact: body.newContact }),
     language: body.language,
     brief: body.brief,
-    campaign_start: body.campaignStart,
-    campaign_end: body.campaignEnd,
     options: optionsJson,
   };
 
@@ -206,7 +213,6 @@ export async function POST(request: Request) {
     public_token: string;
     contact_email: string;
     contact_full_name: string;
-    contact_language: ContentLanguage;
     account_legal_name: string;
   };
 
@@ -230,7 +236,12 @@ export async function POST(request: Request) {
     publicUrl,
     expiresAtIso,
     salesName: ownerProfile.full_name,
-    language: created.contact_language,
+    // El idioma del EMAIL es el mismo que el de la pantalla pública: el que
+    // el comercial elige para ESTE envío en "Idioma del cliente"
+    // (CLAUDE.md §5.6, ronda 2), no `contacts.language` — ese es un dato
+    // persistente del contacto que puede venir de un envío anterior en otro
+    // idioma y desincronizarse de lo elegido aquí.
+    language: body.language as ContentLanguage,
   });
 
   const recipients = {

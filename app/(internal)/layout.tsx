@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 
 import { createClient } from '@/lib/supabase/server';
+import { InternalHeader } from '@/components/InternalHeader';
 
 export default async function InternalLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -20,21 +21,7 @@ export default async function InternalLayout({ children }: { children: React.Rea
 
   return (
     <>
-      <header className="wk-header">
-        <a href="/proposals/new">Weekendesk Advertising</a>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14, fontSize: 13 }}>
-          <span style={{ opacity: 0.85 }}>{profile?.full_name ?? user.email}</span>
-          <form action="/auth/signout" method="post">
-            <button
-              type="submit"
-              className="wk-btn wk-btn-ghost"
-              style={{ color: '#fff', padding: '4px 8px' }}
-            >
-              Salir
-            </button>
-          </form>
-        </div>
-      </header>
+      <InternalHeader displayName={profile?.full_name ?? user.email ?? ''} />
       {children}
     </>
   );

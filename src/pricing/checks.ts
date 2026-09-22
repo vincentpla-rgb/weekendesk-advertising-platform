@@ -11,7 +11,7 @@ import type { Market, PricedOption, PricingParameters } from './types.js';
 export type CheckCode =
   | 'MARGIN_BELOW_FLOOR'
   | 'LEAD_TIME_INSUFFICIENT'
-  | 'AVAILABILITY_NOT_CONFIRMED'
+  | 'LEAD_TIME_NOT_VERIFIABLE'
   | 'SUPPORT_NOT_SELLABLE'
   | 'EMPTY_BRIEF';
 
@@ -24,19 +24,25 @@ export interface CheckResult {
   readonly market?: Market;
 }
 
+/**
+ * Fechas de campaña de UNA opción (CLAUDE.md §5.3, ronda 2: por opción, no
+ * por envío). `campaignStart: null` con `durationOnly: true` es una campaña
+ * cotizada solo por duración ("1 mes"), sin fecha de inicio concreta — no se
+ * puede comprobar la antelación y se avisa de forma visible en vez de
+ * bloquear en silencio (§5.3 bis).
+ */
+export interface PreSendOptionContext {
+  readonly option: PricedOption;
+  readonly campaignStart: Date | null;
+  readonly durationOnly: boolean;
+}
+
 export interface PreSendContext {
   readonly today: Date;
-  readonly campaignStart: Date | null;
   readonly brief: string | null;
-  /** Claves `SUPPORT|MERCADO` con check manual de disponibilidad registrado. */
-  readonly confirmedAvailability: ReadonlySet<string>;
   readonly parameters: PricingParameters;
   /** Festivos por mercado (CLAUDE.md §9). Estado inicial: `DEFAULT_HOLIDAYS`. */
   readonly holidays: readonly PublicHoliday[];
-}
-
-export function availabilityKey(supportId: string, market: Market): string {
-  return `${supportId}|${market}`;
 }
 
 /**
@@ -81,13 +87,13 @@ export interface PreSendReport {
 }
 
 export function runPreSendChecks(
-  options: readonly PricedOption[],
+  options: readonly PreSendOptionContext[],
   ctx: PreSendContext,
 ): PreSendReport {
   const blockers: CheckResult[] = [];
   const warnings: CheckResult[] = [];
 
-  for (const option of options) {
+  for (const { option, campaignStart, durationOnly } of options) {
     // 1. Margen por debajo del 50 % en cualquier opción. No se compensa una
     //    opción floja con otra.
     if (!option.meetsMarginFloor) {
@@ -107,13 +113,8 @@ export function runPreSendChecks(
       //    festivos es por mercado, así que dos soportes con la misma
       //    antelación nominal pueden tener distinta fecha límite real según
       //    el mercado en el que se contraten.
-      if (ctx.campaignStart !== null) {
-        const available = businessDaysBetween(
-          ctx.today,
-          ctx.campaignStart,
-          line.market,
-          ctx.holidays,
-        );
+      if (campaignStart !== null) {
+        const available = businessDaysBetween(ctx.today, campaignStart, line.market, ctx.holidays);
         if (available < line.leadTimeBusinessDays) {
           blockers.push({
             code: 'LEAD_TIME_INSUFFICIENT',
@@ -127,19 +128,16 @@ export function runPreSendChecks(
             market: line.market,
           });
         }
-      }
-
-      // 3. Disponibilidad no confirmada con Marketing.
-      if (
-        line.requiresAvailabilityCheck &&
-        !ctx.confirmedAvailability.has(availabilityKey(line.supportId, line.market))
-      ) {
-        blockers.push({
-          code: 'AVAILABILITY_NOT_CONFIRMED',
-          severity: 'BLOCKER',
+      } else if (durationOnly) {
+        // Cotizada solo por duración, sin fecha de inicio concreta (§5.3 bis):
+        // no se puede comprobar la antelación. Aviso visible, no bloqueo.
+        warnings.push({
+          code: 'LEAD_TIME_NOT_VERIFIABLE',
+          severity: 'WARNING',
           message:
-            `${line.supportId} en ${line.market}: falta el check manual de disponibilidad ` +
-            `con Marketing (con quién y cuándo).`,
+            `Opción ${option.name ?? option.id ?? '—'}: cotizada solo por duración, sin fecha de ` +
+            `inicio. No se puede comprobar la antelación de ${line.supportId} en ${line.market} ` +
+            `(exige ${line.leadTimeBusinessDays} días laborables).`,
           optionId: option.id,
           supportId: line.supportId,
           market: line.market,

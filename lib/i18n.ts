@@ -19,6 +19,8 @@ import type { ContentLanguage } from './domain';
 
 export interface PublicCopy {
   readonly offerPeriod: string;
+  /** Modo "solo duración, sin fecha de inicio" (CLAUDE.md §5.3 bis). */
+  readonly duration: (count: number, unit: 'WEEK' | 'MONTH') => string;
   readonly validUntil: string;
   readonly daysRemaining: (n: number) => string;
   readonly expired: string;
@@ -52,6 +54,8 @@ export interface PublicCopy {
 
 const es: PublicCopy = {
   offerPeriod: 'Periodo de campaña',
+  duration: (n, unit) =>
+    `Duración: ${n} ${unit === 'WEEK' ? (n === 1 ? 'semana' : 'semanas') : (n === 1 ? 'mes' : 'meses')} (fecha de inicio por confirmar)`,
   validUntil: 'Válida hasta',
   daysRemaining: (n) => (n <= 0 ? 'Caduca hoy' : `Caduca en ${n} día${n === 1 ? '' : 's'}`),
   expired: 'Esta oferta ha caducado.',
@@ -85,6 +89,8 @@ const es: PublicCopy = {
 
 const en: PublicCopy = {
   offerPeriod: 'Campaign period',
+  duration: (n, unit) =>
+    `Duration: ${n} ${unit === 'WEEK' ? (n === 1 ? 'week' : 'weeks') : (n === 1 ? 'month' : 'months')} (start date to be confirmed)`,
   validUntil: 'Valid until',
   daysRemaining: (n) => (n <= 0 ? 'Expires today' : `Expires in ${n} day${n === 1 ? '' : 's'}`),
   expired: 'This offer has expired.',
@@ -121,6 +127,8 @@ const en: PublicCopy = {
 const fr: PublicCopy = {
   ...en,
   offerPeriod: 'Période de campagne',
+  duration: (n, unit) =>
+    `Durée : ${n} ${unit === 'WEEK' ? (n === 1 ? 'semaine' : 'semaines') : (n === 1 ? 'mois' : 'mois')} (date de début à confirmer)`,
   validUntil: "Valable jusqu'au",
   daysRemaining: (n) => (n <= 0 ? "Expire aujourd'hui" : `Expire dans ${n} jour${n === 1 ? '' : 's'}`),
   expired: 'Cette offre a expiré.',
@@ -151,6 +159,8 @@ const fr: PublicCopy = {
 const it: PublicCopy = {
   ...en,
   offerPeriod: 'Periodo della campagna',
+  duration: (n, unit) =>
+    `Durata: ${n} ${unit === 'WEEK' ? (n === 1 ? 'settimana' : 'settimane') : (n === 1 ? 'mese' : 'mesi')} (data di inizio da confermare)`,
   validUntil: 'Valido fino al',
   daysRemaining: (n) => (n <= 0 ? 'Scade oggi' : `Scade tra ${n} giorno${n === 1 ? '' : 'i'}`),
   expired: 'Questa offerta è scaduta.',
@@ -181,6 +191,8 @@ const it: PublicCopy = {
 const nl: PublicCopy = {
   ...en,
   offerPeriod: 'Campagneperiode',
+  duration: (n, unit) =>
+    `Duur: ${n} ${unit === 'WEEK' ? (n === 1 ? 'week' : 'weken') : (n === 1 ? 'maand' : 'maanden')} (startdatum nog te bevestigen)`,
   validUntil: 'Geldig tot',
   daysRemaining: (n) => (n <= 0 ? 'Verloopt vandaag' : `Verloopt over ${n} dag${n === 1 ? '' : 'en'}`),
   expired: 'Dit aanbod is verlopen.',

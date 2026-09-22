@@ -107,16 +107,13 @@ export function PublicProposalClient({
 
   return (
     <div className="wk-shell">
+      <img
+        src="/LOGO_Weekendesk_color.png"
+        alt="Weekendesk"
+        style={{ height: 28, width: 'auto', marginBottom: 24 }}
+      />
       <div style={{ marginBottom: 20 }}>
         <h1 style={{ marginBottom: 4 }}>{proposal.advertiser}</h1>
-        {(proposal.campaign_start || proposal.campaign_end) && (
-          <p style={{ color: 'var(--wk-text-muted)', margin: 0 }}>
-            {copy.offerPeriod}:{' '}
-            {proposal.campaign_start ? formatDate(proposal.campaign_start) : '—'}
-            {' – '}
-            {proposal.campaign_end ? formatDate(proposal.campaign_end) : '—'}
-          </p>
-        )}
         {proposal.expired ? (
           <span className="wk-badge wk-badge-danger" style={{ marginTop: 8 }}>
             {copy.expired}
@@ -150,6 +147,22 @@ export function PublicProposalClient({
             <div className="wk-card" key={option.code} style={{ display: 'flex', flexDirection: 'column' }}>
               <h3>{option.name}</h3>
               {option.pitch && <p style={{ color: 'var(--wk-text-muted)', fontSize: 14 }}>{option.pitch}</p>}
+
+              <p style={{ color: 'var(--wk-text-muted)', fontSize: 13, margin: '0 0 4px' }}>
+                {option.markets.map((m) => MARKET_LABELS[m] ?? m).join(' + ')}
+              </p>
+              {option.campaign_start || option.campaign_end ? (
+                <p style={{ color: 'var(--wk-text-muted)', fontSize: 13, margin: '0 0 10px' }}>
+                  {copy.offerPeriod}:{' '}
+                  {option.campaign_start ? formatDate(option.campaign_start) : '—'}
+                  {' – '}
+                  {option.campaign_end ? formatDate(option.campaign_end) : '—'}
+                </p>
+              ) : option.campaign_duration_count && option.campaign_duration_unit ? (
+                <p style={{ color: 'var(--wk-text-muted)', fontSize: 13, margin: '0 0 10px' }}>
+                  {copy.duration(option.campaign_duration_count, option.campaign_duration_unit)}
+                </p>
+              ) : null}
 
               <div style={{ fontFamily: 'var(--wk-font-display)', fontSize: 26, fontWeight: 700, color: 'var(--wk-navy)' }}>
                 {formatCents(option.billed_total_cents)}

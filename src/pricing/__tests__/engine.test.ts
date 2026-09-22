@@ -32,7 +32,7 @@ function line(option: ReturnType<typeof priceOption>, supportId: string, market:
 
 describe('casos límite de CLAUDE.md', () => {
   it('SOC-02 Story activa el suelo de margen incluso en Francia: mínimo 305 €', () => {
-    const option = priceOption({ lines: [{ supportId: 'SOC-02', market: 'FR' }] }, ctx);
+    const option = priceOption({ markets: ['FR'], lines: [{ supportId: 'SOC-02' }] }, ctx);
     const soc02 = line(option, 'SOC-02', 'FR');
 
     // Coste: (0,5 + 1,0) h × 35 € + 100 € de boost = 152,50 €
@@ -50,16 +50,15 @@ describe('casos límite de CLAUDE.md', () => {
     expect(soc02.warnings.map((w) => w.code)).toContain('MARGIN_FLOOR_APPLIED');
   });
 
-  it('ON-01 cuesta 140 € en Francia y 70 € en un segundo mercado', () => {
-    const option = priceOption(
-      { lines: [{ supportId: 'ON-01', market: 'FR' }, { supportId: 'ON-01', market: 'ES' }] },
-      ctx,
-    );
+  it('ON-01 cuesta 140 € en Francia y 70 € en un segundo mercado de la misma opción', () => {
+    // Los mercados se eligen UNA VEZ por opción (CLAUDE.md §4.2, ronda 2): el
+    // soporte se vende automáticamente en los dos.
+    const option = priceOption({ markets: ['FR', 'ES'], lines: [{ supportId: 'ON-01' }] }, ctx);
 
     const fr = line(option, 'ON-01', 'FR');
     const es = line(option, 'ON-01', 'ES');
 
-    // FR es el mercado de coeficiente más alto: paga el diseño.
+    // FR es el mercado de coeficiente más alto de la opción: paga el diseño.
     expect(fr.isLeadMarket).toBe(true);
     expect(eur(fr.costCents)).toBe(140); // (2 + 2) h × 35 €
 
@@ -69,10 +68,7 @@ describe('casos límite de CLAUDE.md', () => {
   });
 
   it('SOC-01 pasa de 310 € a 170 € en un segundo mercado: se ahorra el diseño, el boost se paga igual', () => {
-    const option = priceOption(
-      { lines: [{ supportId: 'SOC-01', market: 'FR' }, { supportId: 'SOC-01', market: 'ES' }] },
-      ctx,
-    );
+    const option = priceOption({ markets: ['FR', 'ES'], lines: [{ supportId: 'SOC-01' }] }, ctx);
 
     // FR: (2 + 4) h × 35 € + 100 € = 310 €
     expect(eur(line(option, 'SOC-01', 'FR').costCents)).toBe(310);
@@ -88,7 +84,7 @@ describe('casos límite de CLAUDE.md', () => {
     expect(fee.minimumApplied).toBe(true);
 
     const option = priceOption(
-      { lines: [{ supportId: 'ADS-02', market: 'FR', mediaBudgetCents: 300_000, mediaMonths: 3 }] },
+      { markets: ['FR'], lines: [{ supportId: 'ADS-02', mediaBudgetCents: 300_000, mediaMonths: 3 }] },
       ctx,
     );
     const pmax = line(option, 'ADS-02', 'FR');
@@ -112,7 +108,7 @@ describe('casos límite de CLAUDE.md', () => {
 
 describe('coste interno', () => {
   it('escala con la cantidad: 3 stories son 3 boosts', () => {
-    const option = priceOption({ lines: [{ supportId: 'SOC-02', market: 'FR', quantity: 3 }] }, ctx);
+    const option = priceOption({ markets: ['FR'], lines: [{ supportId: 'SOC-02', quantity: 3 }] }, ctx);
     const soc02 = line(option, 'SOC-02', 'FR');
 
     expect(eur(soc02.unitCostCents)).toBe(152.5);
@@ -124,43 +120,30 @@ describe('coste interno', () => {
     expect(eur(soc02.netPriceCents)).toBe(915);
   });
 
-  it('el mercado líder se decide por soporte, no por opción', () => {
-    // Opción FR + ES en la que CRM-01 solo se contrata en ES.
+  it('el mercado líder es el de mayor coeficiente de la OPCIÓN, igual para todos sus soportes', () => {
+    // Mercado líder por soporte (CLAUDE.md §4.2, primera versión) ya no
+    // aplica: al elegirse los mercados por opción, todo soporte de la opción
+    // aparece automáticamente en todos ellos, así que el líder es uno solo.
     const option = priceOption(
-      {
-        lines: [
-          { supportId: 'ON-01', market: 'FR' },
-          { supportId: 'ON-01', market: 'ES' },
-          { supportId: 'CRM-01', market: 'ES' },
-        ],
-      },
+      { markets: ['FR', 'ES'], lines: [{ supportId: 'ON-01' }, { supportId: 'CRM-01' }] },
       ctx,
     );
 
-    // No hay diseño previo de CRM-01 que reutilizar: ES lo paga entero.
-    const crm = line(option, 'CRM-01', 'ES');
-    expect(crm.isLeadMarket).toBe(true);
-    expect(eur(crm.costCents)).toBe(210); // (3 + 3) h × 35 €
-
-    // ON-01 sí tiene FR delante.
     expect(line(option, 'ON-01', 'FR').isLeadMarket).toBe(true);
     expect(line(option, 'ON-01', 'ES').isLeadMarket).toBe(false);
+    expect(line(option, 'CRM-01', 'FR').isLeadMarket).toBe(true);
+    expect(line(option, 'CRM-01', 'ES').isLeadMarket).toBe(false);
   });
 
-  it('el orden de las líneas no cambia quién paga el diseño', () => {
-    const esPrimero = priceOption(
-      { lines: [{ supportId: 'ON-01', market: 'ES' }, { supportId: 'ON-01', market: 'FR' }] },
-      ctx,
-    );
+  it('el orden de los mercados de la opción no cambia quién paga el diseño', () => {
+    const esPrimero = priceOption({ markets: ['ES', 'FR'], lines: [{ supportId: 'ON-01' }] }, ctx);
     expect(line(esPrimero, 'ON-01', 'FR').isLeadMarket).toBe(true);
     expect(eur(line(esPrimero, 'ON-01', 'ES').costCents)).toBe(70);
   });
 
   it('con tres mercados solo el líder paga el diseño', () => {
     const option = priceOption(
-      {
-        lines: (['ES', 'IT', 'FR'] as const).map((market) => ({ supportId: 'SOC-01', market })),
-      },
+      { markets: ['ES', 'IT', 'FR'], lines: [{ supportId: 'SOC-01' }] },
       ctx,
     );
     expect(option.lines.filter((l) => l.isLeadMarket)).toHaveLength(1);
@@ -182,18 +165,7 @@ describe('coste interno', () => {
 
 describe('precio de venta', () => {
   it('aplica el coeficiente de mercado', () => {
-    const option = priceOption(
-      {
-        lines: [
-          { supportId: 'CRM-01', market: 'FR' },
-          { supportId: 'CRM-01', market: 'ES' },
-          { supportId: 'CRM-01', market: 'BE_FR' },
-          { supportId: 'CRM-01', market: 'BE_NL' },
-          { supportId: 'CRM-01', market: 'IT' },
-        ],
-      },
-      ctx,
-    );
+    const option = priceOption({ markets: MARKETS, lines: [{ supportId: 'CRM-01' }] }, ctx);
 
     expect(eur(line(option, 'CRM-01', 'FR').grossPriceCents)).toBe(2000);
     expect(eur(line(option, 'CRM-01', 'ES').grossPriceCents)).toBe(1760);
@@ -203,7 +175,7 @@ describe('precio de venta', () => {
   });
 
   it('multiplica por la cantidad', () => {
-    const option = priceOption({ lines: [{ supportId: 'ON-01', market: 'FR', quantity: 4 }] }, ctx);
+    const option = priceOption({ markets: ['FR'], lines: [{ supportId: 'ON-01', quantity: 4 }] }, ctx);
     expect(eur(line(option, 'ON-01', 'FR').grossPriceCents)).toBe(1720); // 4 semanas × 430 €
   });
 
@@ -213,7 +185,7 @@ describe('precio de venta', () => {
     for (const [id, support] of DEFAULT_CATALOG) {
       if (support.isMediaBuy) continue; // fuera de la fórmula general
       for (const market of MARKETS) {
-        const option = priceOption({ lines: [{ supportId: id, market }] }, ctx);
+        const option = priceOption({ markets: [market], lines: [{ supportId: id }] }, ctx);
         if (line(option, id, market).floorApplied) activan.add(id);
       }
     }
@@ -229,8 +201,8 @@ describe('precio de venta', () => {
   });
 
   it('no existe coeficiente de duración: más semanas es más cantidad, no otra tarifa', () => {
-    const una = priceOption({ lines: [{ supportId: 'ON-03', market: 'FR' }] }, ctx);
-    const cuatro = priceOption({ lines: [{ supportId: 'ON-03', market: 'FR', quantity: 4 }] }, ctx);
+    const una = priceOption({ markets: ['FR'], lines: [{ supportId: 'ON-03' }] }, ctx);
+    const cuatro = priceOption({ markets: ['FR'], lines: [{ supportId: 'ON-03', quantity: 4 }] }, ctx);
 
     expect(cuatro.lines[0]!.grossPriceCents).toBe(una.lines[0]!.grossPriceCents * 4);
   });
@@ -244,7 +216,7 @@ describe('media buy', () => {
   it('cobra el fee porcentual cuando supera el mínimo mensual', () => {
     // Meta, 10.000 € de medios en 1 mes: 4.000 € > 1.200 €
     const option = priceOption(
-      { lines: [{ supportId: 'ADS-01', market: 'FR', mediaBudgetCents: 1_000_000, mediaMonths: 1 }] },
+      { markets: ['FR'], lines: [{ supportId: 'ADS-01', mediaBudgetCents: 1_000_000, mediaMonths: 1 }] },
       ctx,
     );
     const ads = line(option, 'ADS-01', 'FR');
@@ -260,7 +232,7 @@ describe('media buy', () => {
 
   it('los medios no entran en la base del margen: el margen se mide neto de medios', () => {
     const option = priceOption(
-      { lines: [{ supportId: 'ADS-01', market: 'FR', mediaBudgetCents: 1_000_000, mediaMonths: 1 }] },
+      { markets: ['FR'], lines: [{ supportId: 'ADS-01', mediaBudgetCents: 1_000_000, mediaMonths: 1 }] },
       ctx,
     );
 
@@ -281,7 +253,7 @@ describe('media buy', () => {
       expect(DEFAULT_CATALOG.get(supportId)!.minMonthlyFeeCents).toBeNull();
 
       const option = priceOption(
-        { lines: [{ supportId, market: 'FR', mediaBudgetCents: 100_000, mediaMonths: 1 }] },
+        { markets: ['FR'], lines: [{ supportId, mediaBudgetCents: 100_000, mediaMonths: 1 }] },
         ctx,
       );
       const l = line(option, supportId, 'FR');
@@ -294,7 +266,7 @@ describe('media buy', () => {
 
   it('una línea de media buy con fee bajo no lleva suelo propio, pero tumba el margen de la opción', () => {
     const option = priceOption(
-      { lines: [{ supportId: 'ADS-03', market: 'FR', mediaBudgetCents: 100_000, mediaMonths: 1 }] },
+      { markets: ['FR'], lines: [{ supportId: 'ADS-03', mediaBudgetCents: 100_000, mediaMonths: 1 }] },
       ctx,
     );
     const ads = line(option, 'ADS-03', 'FR');
@@ -324,18 +296,35 @@ describe('media buy', () => {
   });
 
   it('rechaza una línea de media buy sin presupuesto o sin meses', () => {
-    expect(() => priceOption({ lines: [{ supportId: 'ADS-01', market: 'FR' }] }, ctx)).toThrow(
-      PricingError,
-    );
     expect(() =>
-      priceOption({ lines: [{ supportId: 'ADS-01', market: 'FR', mediaBudgetCents: 100_000 }] }, ctx),
+      priceOption({ markets: ['FR'], lines: [{ supportId: 'ADS-01' }] }, ctx),
+    ).toThrow(PricingError);
+    expect(() =>
+      priceOption(
+        { markets: ['FR'], lines: [{ supportId: 'ADS-01', mediaBudgetCents: 100_000 }] },
+        ctx,
+      ),
     ).toThrow(/mediaMonths/);
   });
 
   it('rechaza presupuesto de medios en un soporte que no es media buy', () => {
     expect(() =>
-      priceOption({ lines: [{ supportId: 'ON-01', market: 'FR', mediaBudgetCents: 100_000 }] }, ctx),
+      priceOption({ markets: ['FR'], lines: [{ supportId: 'ON-01', mediaBudgetCents: 100_000 }] }, ctx),
     ).toThrow(/no es un soporte de media buy/);
+  });
+
+  it('un soporte de media buy multimercado replica presupuesto y meses en cada mercado', () => {
+    // Interpretación adoptada (CLAUDE.md §10.3, ronda 2): "todos los soportes
+    // de la opción se calculan automáticamente sobre" los mercados elegidos,
+    // sin excepción para media buy — el presupuesto y los meses dados se
+    // aplican igual en cada mercado (una campaña de Meta por país, CLAUDE.md §3).
+    const option = priceOption(
+      { markets: ['FR', 'ES'], lines: [{ supportId: 'ADS-01', mediaBudgetCents: 1_000_000, mediaMonths: 1 }] },
+      ctx,
+    );
+    expect(eur(line(option, 'ADS-01', 'FR').mediaBudgetCents)).toBe(10_000);
+    expect(eur(line(option, 'ADS-01', 'ES').mediaBudgetCents)).toBe(10_000);
+    expect(eur(option.mediaBudgetCents)).toBe(20_000);
   });
 });
 
@@ -359,9 +348,10 @@ describe('descuentos', () => {
   it('el presupuesto de medios ni sube el tramo ni se descuenta', () => {
     const option = priceOption(
       {
+        markets: ['FR'],
         lines: [
-          { supportId: 'ADS-02', market: 'FR', mediaBudgetCents: 1_000_000, mediaMonths: 1 },
-          { supportId: 'ON-01', market: 'FR' },
+          { supportId: 'ADS-02', mediaBudgetCents: 1_000_000, mediaMonths: 1 },
+          { supportId: 'ON-01' },
         ],
       },
       ctx,
@@ -381,9 +371,10 @@ describe('descuentos', () => {
   it('reaplica el suelo tras el descuento y no redistribuye el exceso', () => {
     const option = priceOption(
       {
+        markets: ['FR'],
         lines: [
-          { supportId: 'CRM-01', market: 'FR', quantity: 2 }, // 4.000 €
-          { supportId: 'SOC-02', market: 'FR' }, // 305 €, justo en su suelo
+          { supportId: 'CRM-01', quantity: 2 }, // 4.000 €
+          { supportId: 'SOC-02' }, // 305 €, justo en su suelo
         ],
       },
       ctx,
@@ -408,7 +399,8 @@ describe('descuentos', () => {
   it('suma el descuento manual al de volumen y exige motivo', () => {
     const option = priceOption(
       {
-        lines: [{ supportId: 'CRM-01', market: 'FR', quantity: 2 }],
+        markets: ['FR'],
+        lines: [{ supportId: 'CRM-01', quantity: 2 }],
         manualDiscounts: [
           { rate: 0.1, reason: 'Multimercado, 2 mercados — acordado con dirección', author: 'vincent' },
         ],
@@ -424,7 +416,7 @@ describe('descuentos', () => {
   it('rechaza un descuento manual sin motivo', () => {
     expect(() =>
       priceOption(
-        { lines: [{ supportId: 'ON-01', market: 'FR' }], manualDiscounts: [{ rate: 0.1, reason: '  ' }] },
+        { markets: ['FR'], lines: [{ supportId: 'ON-01' }], manualDiscounts: [{ rate: 0.1, reason: '  ' }] },
         ctx,
       ),
     ).toThrow(/motivo/);
@@ -433,11 +425,12 @@ describe('descuentos', () => {
   it('el reparto a prorrata cuadra al céntimo', () => {
     const option = priceOption(
       {
+        markets: ['FR', 'ES', 'IT', 'BE_FR'],
         lines: [
-          { supportId: 'CRM-01', market: 'FR', quantity: 3 },
-          { supportId: 'CRM-02', market: 'ES' },
-          { supportId: 'CON-01', market: 'IT' },
-          { supportId: 'ON-03', market: 'BE_FR', quantity: 2 },
+          { supportId: 'CRM-01', quantity: 3 },
+          { supportId: 'CRM-02' },
+          { supportId: 'CON-01' },
+          { supportId: 'ON-03', quantity: 2 },
         ],
       },
       ctx,
@@ -456,31 +449,37 @@ describe('descuentos', () => {
 
 describe('validación', () => {
   it('rechaza un soporte desconocido', () => {
-    expect(() => priceOption({ lines: [{ supportId: 'XX-99', market: 'FR' }] }, ctx)).toThrow(
+    expect(() => priceOption({ markets: ['FR'], lines: [{ supportId: 'XX-99' }] }, ctx)).toThrow(
       /Soporte desconocido/,
     );
   });
 
-  it('rechaza el mismo soporte dos veces en el mismo mercado', () => {
+  it('rechaza el mismo soporte dos veces en la misma opción', () => {
     expect(() =>
       priceOption(
-        { lines: [{ supportId: 'ON-01', market: 'FR' }, { supportId: 'ON-01', market: 'FR' }] },
+        { markets: ['FR'], lines: [{ supportId: 'ON-01' }, { supportId: 'ON-01' }] },
         ctx,
       ),
     ).toThrow(/dos veces/);
   });
 
+  it('rechaza una opción sin ningún mercado', () => {
+    expect(() => priceOption({ markets: [], lines: [{ supportId: 'ON-01' }] }, ctx)).toThrow(
+      /ningún mercado/,
+    );
+  });
+
   it('rechaza cantidades no positivas', () => {
     expect(() =>
-      priceOption({ lines: [{ supportId: 'ON-01', market: 'FR', quantity: 0 }] }, ctx),
+      priceOption({ markets: ['FR'], lines: [{ supportId: 'ON-01', quantity: 0 }] }, ctx),
     ).toThrow(/cantidad/);
   });
 
   it('marca SOC-05 como no vendible fuera de Francia, sin dejar de calcularlo', () => {
-    const fr = priceOption({ lines: [{ supportId: 'SOC-05', market: 'FR' }] }, ctx);
+    const fr = priceOption({ markets: ['FR'], lines: [{ supportId: 'SOC-05' }] }, ctx);
     expect(line(fr, 'SOC-05', 'FR').sellable).toBe(true);
 
-    const es = priceOption({ lines: [{ supportId: 'SOC-05', market: 'ES' }] }, ctx);
+    const es = priceOption({ markets: ['ES'], lines: [{ supportId: 'SOC-05' }] }, ctx);
     const l = line(es, 'SOC-05', 'ES');
     expect(l.sellable).toBe(false);
     expect(l.warnings.map((w) => w.code)).toContain('NOT_SELLABLE_IN_MARKET');
@@ -491,9 +490,10 @@ describe('totales de opción', () => {
   it('separa importe facturado e importe neto de medios', () => {
     const option = priceOption(
       {
+        markets: ['FR'],
         lines: [
-          { supportId: 'ON-01', market: 'FR', quantity: 4 },
-          { supportId: 'ADS-01', market: 'FR', mediaBudgetCents: 500_000, mediaMonths: 2 },
+          { supportId: 'ON-01', quantity: 4 },
+          { supportId: 'ADS-01', mediaBudgetCents: 500_000, mediaMonths: 2 },
         ],
       },
       ctx,
@@ -510,9 +510,10 @@ describe('totales de opción', () => {
   it('la antelación de la opción es la del soporte más lento', () => {
     const option = priceOption(
       {
+        markets: ['FR'],
         lines: [
-          { supportId: 'CRM-03', market: 'FR' }, // 10 días
-          { supportId: 'INF-01', market: 'FR', mediaBudgetCents: 500_000, mediaMonths: 1 }, // 30 días
+          { supportId: 'CRM-03' }, // 10 días
+          { supportId: 'INF-01', mediaBudgetCents: 500_000, mediaMonths: 1 }, // 30 días
         ],
       },
       ctx,
@@ -520,14 +521,11 @@ describe('totales de opción', () => {
     expect(option.maxLeadTimeBusinessDays).toBe(30);
   });
 
-  it('recoge los mercados presentes en la opción', () => {
+  it('recoge exactamente los mercados elegidos para la opción', () => {
     const option = priceOption(
       {
-        lines: [
-          { supportId: 'ON-01', market: 'FR' },
-          { supportId: 'ON-01', market: 'ES' },
-          { supportId: 'CRM-01', market: 'ES' },
-        ],
+        markets: ['FR', 'ES'],
+        lines: [{ supportId: 'ON-01' }, { supportId: 'CRM-01' }],
       },
       ctx,
     );
@@ -535,12 +533,7 @@ describe('totales de opción', () => {
   });
 
   it('una opción normal sin descuento cumple el suelo por construcción', () => {
-    const option = priceOption(
-      {
-        lines: MARKETS.map((market) => ({ supportId: 'SOC-03', market })),
-      },
-      ctx,
-    );
+    const option = priceOption({ markets: MARKETS, lines: [{ supportId: 'SOC-03' }] }, ctx);
     expect(option.meetsMarginFloor).toBe(true);
     expect(option.marginRate!).toBeGreaterThanOrEqual(0.5);
   });

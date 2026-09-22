@@ -62,9 +62,11 @@ El envío de email **sí es automático**: la aplicación manda el presupuesto d
 
 **El login del equipo es email + contraseña, no magic link.** Se probó el magic link primero (por Resend, vía un "Send Email Hook" de Supabase Auth) y se abandonó tras dos días de bucle en producción sin arreglo posible desde este repo — el detalle completo está en §10.3. La infraestructura del magic link (`app/api/auth/send-email/`, `app/auth/confirm/`, `lib/supabase/login-redirect.ts`, `lib/email/magic-link-email.ts`, `lib/email/confirm-url.ts`) se deja en el código, sin usar, por si se recupera más adelante — nada la invoca desde `/login` hoy.
 
-Con email + contraseña: **sin registro público** — los usuarios los da de alta un administrador desde el dashboard de Supabase (Authentication > Users), nunca desde la app. **Sin recuperación de contraseña por email en esta versión** — depender del correo para entrar es exactamente el problema que este cambio resuelve, así que no se reintroduce por la puerta de la recuperación. La lista blanca (`allowed_emails`) se sigue comprobando igual que con el magic link, en el mismo momento del login (`app/login/actions.ts`, `loginWithPassword`): si el email autenticado no está en ella, se cierra la sesión que Supabase acaba de abrir y se muestra un mensaje claro, sin dejar una sesión sin perfil de equipo.
+Con email + contraseña: **sin registro público** — los usuarios se dan de alta desde `/admin/users` (ver §10.1.1, ronda 2 de correcciones), que crea el usuario en Supabase Auth y lo añade a `allowed_emails` en el mismo paso; el alta manual por SQL o por el dashboard de Supabase sigue funcionando como alternativa, pero ya no es el único camino. **Sin recuperación de contraseña por email en esta versión** — depender del correo para entrar es exactamente el problema que este cambio resuelve, así que no se reintroduce por la puerta de la recuperación. La lista blanca (`allowed_emails`) se sigue comprobando igual que con el magic link, en el mismo momento del login (`app/login/actions.ts`, `loginWithPassword`): si el email autenticado no está en ella, se cierra la sesión que Supabase acaba de abrir y se muestra un mensaje claro, sin dejar una sesión sin perfil de equipo.
 
-Marca: Host Grotesk + Inter, rojo `#f8443a`, azul marino `#001c4d`.
+Marca: Host Grotesk + Inter, rojo `#f8443a`, azul marino `#001c4d`. Logo (`LOGO_Weekendesk_color.png` / `LOGO_Weekendesk_white.png`, en `/public`): versión en color sobre fondo claro (login, pantalla pública), versión en blanco sobre el azul marino de la cabecera interna.
+
+**Interfaz interna en varios idiomas (ronda 2).** La UI del equipo (no la del cliente, ver §5.6/§6) tiene selector de idioma — español, francés, inglés — visible en la cabecera y en el login (`lib/i18n-internal.tsx`, `components/LanguageSwitcher.tsx`). Es una preferencia de navegador (`localStorage`), no un dato de negocio: nunca se guarda en la base de datos ni afecta a lo que ve el cliente. No confundir con el idioma DEL CLIENTE (`lib/i18n.ts`), que se elige por presupuesto y determina la pantalla pública y el email — ver §5.6.
 
 ---
 
@@ -160,17 +162,20 @@ coste_linea    = coste_unitario × cantidad
 
 **El coste escala con la cantidad.** Cada unidad consume sus horas y su coste externo: 3 stories son 3 boosts de 100 €, no uno. En consecuencia el suelo de margen de 4.3 también escala, y protege el margen igual en volumen que en unidad.
 
-### 4.2 Multimercado dentro de una misma opción
+### 4.2 Multimercado: mercados por opción, no por línea (ronda 2)
+
+**Los mercados se eligen UNA VEZ al configurar cada opción**, no soporte a soporte. Todo soporte de la opción se vende automáticamente en todos los mercados elegidos para ella — ya no existe "este soporte solo en ES dentro de una opción FR+ES". Cada opción del mismo envío puede tener mercados distintos entre sí (§5.1).
 
 El diseño se reutiliza entre mercados; el boost externo no.
 
-- **Primer mercado** (el de coeficiente más alto, normalmente FR): coste completo.
-- **Segundo mercado en adelante**: solo `h_neg × 35 € + ext`. Las horas de diseño no se recuentan.
+- **Mercado líder de la opción** (el de coeficiente más alto entre los elegidos para ELLA): coste completo en todos sus soportes.
+- **Resto de mercados de la opción**: solo `h_neg × 35 € + ext` en cada uno. Las horas de diseño no se recuentan.
 
-**El primer mercado se determina por soporte, no por opción.** Para cada soporte paga coste completo el mercado de coeficiente más alto **entre aquellos en los que ese soporte aparece**. Si un soporte solo se contrata en ES dentro de una opción FR+ES, ES paga el diseño: no existe diseño previo que reutilizar. Cuando todos los soportes están en todos los mercados, la regla coincide con el enunciado literal.
+**Simplificación respecto a la primera versión de esta regla:** antes el mercado líder se resolvía por soporte ("el de coeficiente más alto entre aquellos en los que ESE soporte aparece"), porque un soporte podía estar en unos mercados de la opción y no en otros. Con los mercados elegidos por opción esa situación ya no puede darse — todo soporte está, por construcción, en todos los mercados de su opción — así que el mercado líder es uno solo, igual para toda la opción.
 
-Ejemplo: ON-01 en FR = 140 €. El mismo ON-01 en ES dentro de la misma opción = 70 €.
-SOC-01 en FR = 310 €. En ES = 170 € (se ahorra el diseño, el boost se paga igual).
+Ejemplo: opción FR+ES con ON-01 y SOC-01. FR (coeficiente 1,00) es el líder: ON-01 = 140 €, SOC-01 = 310 €. En ES: ON-01 = 70 €, SOC-01 = 170 € (se ahorra el diseño, el boost se paga igual).
+
+**Media buy (ADS-*, INF-01) en una opción multimercado:** el presupuesto de medios y los meses dados en la línea se aplican igual en cada mercado de la opción — una campaña de Meta por país (§3), no un presupuesto repartido entre países. Es una interpretación adoptada al implementar, no una cifra del fichero origen: ver §10.3.
 
 ### 4.3 Precio de venta
 
@@ -271,7 +276,8 @@ Cuenta (anunciante)
 ```
 
 - Una **opción es un pack cerrado**: el cliente la acepta entera o no. No se combinan líneas entre opciones.
-- Cada opción puede ser **multimercado**, y los mercados se eligen al crear cada opción. Las opciones de un mismo envío pueden tener mercados distintos.
+- Cada opción puede ser **multimercado**, y los mercados se eligen UNA VEZ al crear cada opción (§4.2, ronda 2) — no por línea. Las opciones de un mismo envío pueden tener mercados distintos.
+- **Las fechas de campaña son de cada opción, no del envío** (ronda 2): cada opción tiene su propio periodo (`campaign_start`/`campaign_end`) o, si aún no hay fecha concreta, solo una duración (§5.3 bis). Antes eran del envío entero; se movieron porque dos opciones del mismo envío pueden proponer periodos distintos (p. ej. una entrada más corta, una premium más larga).
 - Cada opción calcula su propio precio, coste, margen, reach y CPM. **Todas deben pasar el suelo del 50 %**; no se compensa una opción floja con otra.
 - Los 7 packs históricos del fichero (Visit Wallonia, C. Valenciana, ARA Wellness, Global City Pass) se cargan como **plantillas** de opción: entrada / estándar / amplia / premium.
 
@@ -292,8 +298,7 @@ Bloquean el botón de envío (forzables con motivo registrado):
 
 1. Margen por debajo del 50 % en cualquier opción
 2. Antelación insuficiente: días laborables entre hoy y el inicio de campaña < antelación del soporte más lento
-3. Disponibilidad no confirmada con Marketing — checkbox manual con quién y cuándo, obligatorio para ON-01, ON-02, ON-03, CRM-03 y ADS-01
-4. Brief vacío (solo aviso)
+3. Brief vacío (solo aviso)
 
 **Días laborables, resuelto (CLAUDE.md §9).** El cálculo excluye sábados, domingos y los festivos nacionales del mercado de cada línea (tabla `market_holidays`, editable en admin, sembrada con FR/ES/IT/BE-FR/BE-NL 2026-2027). BE-FR y BE-NL comparten calendario: son festivos federales belgas, no de comunidad lingüística.
 
@@ -301,7 +306,15 @@ El control 2 se evalúa **por línea, no por opción**: el calendario de festivo
 
 No incluye festivos regionales o municipales (2 por comunidad autónoma en España, patronales en Italia): solo el calendario nacional. Añadir eso, si hace falta, es una fila más en `market_holidays`.
 
-**Un quinto control, técnico, no de negocio: el email tiene que salir de verdad.** El cálculo y las líneas se persisten en cuanto se pulsan los controles anteriores, pero el envío no se marca `enviado` hasta que Resend confirma la entrega. Si el email falla (Resend caído, dirección inválida, etc.), el comercial ve el error y el envío se queda internamente en `borrador` — no aparece como enviado en ningún sitio y el cliente no recibe nada. Ver §10.3.
+**§5.3 bis — Cotizar por duración, sin fecha de inicio concreta (ronda 2).** Cada opción se puede cotizar de dos formas:
+- **Fechas concretas**: `campaign_start`/`campaign_end`, igual que antes.
+- **Solo duración**: p. ej. "una campaña de 1 mes", sin comprometerse a una fecha de inicio. En este modo el control 2 (antelación) **no se puede evaluar** — no hay desde cuándo contar los días laborables — así que en vez de bloquear en silencio, el motor emite un aviso visible: `LEAD_TIME_NOT_VERIFIABLE` (warning, no bloqueo). La duración elegida (p. ej. "4 semanas") se guarda tal cual (`campaign_duration_count` + `campaign_duration_unit`, en `proposal_options`) y se muestra tanto en el checklist interno como en la pantalla pública ("Duración: 4 semanas — fecha de inicio por confirmar"), para que nadie confunda un aviso con una comprobación real.
+
+**Equivalencia periodo → unidades, y de dónde sale la cantidad sugerida.** Al introducir un periodo con fechas concretas, la interfaz muestra al lado su equivalencia en semanas y meses ("1 al 28 de octubre" → "4 semanas") con `computeDurationUnits` (`src/pricing/duration.ts`) — la MISMA función, no una aproximación aparte, que alimenta el botón "Usar duración" de cada línea (rellena la cantidad de un soporte semanal o mensual con `suggestedQuantity`). En modo "solo duración" la equivalencia es la que el comercial introdujo directamente.
+
+**Se quita el check manual de disponibilidad con Marketing (ronda 2).** Existía como bloqueo en la app (checkbox "confirmado con…", obligatorio para ON-01, ON-02, ON-03, CRM-03 y ADS-01). Se comprueba **antes de crear el presupuesto, fuera del sistema** — la app ya no lo pide ni lo bloquea. `supports.requires_availability_check` se conserva en el catálogo como recordatorio informativo (un badge no bloqueante en la línea, "Confirmar disponibilidad con Marketing antes de contratar"), y la tabla `availability_checks` se queda en el esquema sin que nada vuelva a escribir en ella — no se borra por si se quisiera recuperar el control más adelante.
+
+**Un control más, técnico, no de negocio: el email tiene que salir de verdad.** El cálculo y las líneas se persisten en cuanto se pulsan los controles anteriores, pero el envío no se marca `enviado` hasta que Resend confirma la entrega. Si el email falla (Resend caído, dirección inválida, etc.), el comercial ve el error y el envío se queda internamente en `borrador` — no aparece como enviado en ningún sitio y el cliente no recibe nada. Ver §10.3.
 
 ### 5.4 Inmutabilidad
 
@@ -318,6 +331,8 @@ La **contrapropuesta solo aparece detrás del botón de rechazo**, nunca junto a
 ### 5.6 Plantillas del email de envío
 
 El email que manda la aplicación (§2) tiene una plantilla por idioma del cliente, en ficheros de traducción (`lib/email/templates/proposal-email.<idioma>.ts`), no incrustada en la lógica de envío (`lib/email/proposal-email.ts`): se puede retocar el texto sin tocar cómo se envía.
+
+**El idioma del email es el mismo que el de la pantalla pública: `proposals.language`, el que el comercial elige al crear el presupuesto (§5.1) — nunca `contacts.language`.** Un contacto ya existente guarda su propio idioma (útil si se le vuelve a escribir en un presupuesto futuro), pero ese campo puede arrastrar el idioma de un envío anterior y no tiene por qué coincidir con el que se elige para ESTE envío. Antes de la ronda 2 el email sí usaba `contacts.language`: para un contacto reutilizado, la pantalla pública podía quedar en un idioma y el email en otro sin que nadie lo notara. Corregido en `app/api/proposals/route.ts` (guarda de regresión: `app/api/proposals/route.test.ts`).
 
 **Tres reglas de contenido, fijadas por Vincent:**
 
@@ -464,9 +479,9 @@ Weekendesk SAS
 Enlace con token largo, no adivinable. Sin indexación (`noindex`). **Caduca a los 14 días**, coincidiendo con la validez de la oferta; después deja de mostrar precios.
 
 Contenido:
-- Cabecera: anunciante, periodo de campaña, validez con cuenta atrás
+- Cabecera: anunciante, validez con cuenta atrás
 - Brief de campaña
-- Las 2–3 opciones en columnas: nombre, frase de opción, precio, detalle de soportes y mercados, reach cuando exista
+- Las 2–3 opciones en columnas: nombre, frase de opción, **mercados y periodo de campaña de ESA opción** (o su duración, en modo "solo duración", §5.3 bis — cada opción puede tener mercados y fechas distintos, ronda 2), precio, detalle de soportes, reach cuando exista
 - Botones: aceptar (por opción) · rechazar (el envío entero)
 
 Reglas:
@@ -544,9 +559,12 @@ Entidad facturadora: Weekendesk SAS, 28 rue de Londres, 75009 Paris.
 | **Fee mínimo mensual de ADS-03 (Display) e INF-01 (Influencer)** | Vincent / Quentin Heliot | Abierto. Parámetro nulo en base de datos, el motor avisa. Ver 4.4 |
 | Festivos regionales/municipales (ES, IT) en el cálculo de antelación | Vincent | Fuera de alcance por ahora. Solo calendario nacional en `market_holidays` |
 | ~~Comprobar Site URL y Redirect URLs / desactivar Click Tracking en Resend~~ | Vincent | **Superado**: el login dejó de depender del magic link (§10.3), así que estos dos puntos ya no bloquean nada. El código que los necesitaría (`app/api/auth/send-email/`, etc.) se queda sin usar por si se recupera el magic link — entonces sí volverían a hacer falta |
-| **Dar de alta en Supabase (Authentication > Users) a los usuarios del equipo con contraseña**: Vincent, Rémi, Mario | Vincent | Bloqueante para el login nuevo: sin esto nadie puede entrar. Ver §10.3 |
+| ~~Dar de alta en Supabase (Authentication > Users) a los usuarios del equipo con contraseña: Vincent, Rémi, Mario~~ | Vincent | **Ya no bloqueante**: `/admin/users` (ronda 2, §10.1.1) crea el usuario de Supabase Auth y lo añade a `allowed_emails` desde la app — no hace falta el dashboard de Supabase ni SQL a mano para dar de alta a Rémi y Mario. Sigue pendiente que Vincent los dé de alta de verdad, solo que ya puede hacerlo él mismo desde la app |
 | ~~Comprobar `SUPABASE_SERVICE_ROLE_KEY` en Vercel~~ | Vincent | **Resuelto**: la clave era correcta. El bug real era que `service_role` no tenía privilegios de tabla (GRANT, no RLS) sobre `allowed_emails`/`profiles` — arreglado en `20260919120000_service_role_grants.sql`. Ver §10.3 |
 | **Aplicar `20260919120000_service_role_grants.sql` en el proyecto Supabase real** (dashboard SQL editor o `supabase db push`) | Vincent | Bloqueante: sin esta migración, `service_role` sigue sin poder leer `allowed_emails`/`profiles`, y el login sigue dando "no tiene acceso" pase lo que pase con la clave. Ver §10.3 |
+| **Aplicar las 3 migraciones de la ronda 2** (`20260922100000_option_level_campaign.sql`, `20260922110000_create_and_send_proposal_v2.sql`, `20260922120000_public_proposal_access_v2.sql`) en el proyecto Supabase real | Vincent | Bloqueante para mercados/fechas por opción: sin ellas, `proposal_options` no tiene las columnas nuevas y `create_and_send_proposal`/`get_public_proposal` siguen con el comportamiento antiguo (fechas del envío, no de la opción) |
+| **Media buy en una opción multimercado: ¿presupuesto replicado por mercado, o repartido entre ellos?** | Vincent | Interpretación adoptada al implementar (§4.2, ronda 2): el presupuesto y los meses de la línea se aplican IGUAL en cada mercado de la opción (una campaña de Meta por país). No es una cifra confirmada por nadie — es la lectura más simple de "todos los soportes... se calculan automáticamente sobre" los mercados elegidos. Confirmar o corregir |
+| **Permisos de `/admin/users`: ¿cualquier miembro de equipo, o solo un rol de administrador?** | Vincent | Hoy cualquier miembro autenticado puede dar de alta o quitar acceso a otro — no existe un rol "admin" en `profiles` (§10.3, ronda 2). Aceptable para 3 personas; si hiciera falta restringirlo, es una columna nueva y una comprobación en `app/(internal)/admin/users/actions.ts` |
 
 
 ---
@@ -560,8 +578,8 @@ Entidad facturadora: Weekendesk SAS, 28 rue de Londres, 75009 Paris.
 | Esquema PostgreSQL / Supabase | `supabase/migrations/` | Hecho |
 | Motor de precios | `src/pricing/` | Hecho |
 | Envío de email real (Resend) | `app/api/proposals/`, `lib/email/` | Hecho — presupuesto al cliente. `app/api/auth/send-email/` (magic link del equipo) queda en el código sin usar, ver §2 y §10.3 |
-| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts`, `app/**/*.test.ts` | Hecho — 143 tests + scripts/verify-rls-self-read.sh (contra PostgreSQL 16 real) |
-| Interfaz (Next.js) | `app/`, `lib/`, `components/` | Hecho — 3 pantallas del MVP |
+| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts`, `app/**/*.test.ts` | Hecho — 152 tests + scripts/verify-rls-self-read.sh (contra PostgreSQL 16 real) |
+| Interfaz (Next.js) | `app/`, `lib/`, `components/` | Hecho — 4 pantallas del MVP, interfaz interna en ES/FR/EN |
 
 El motor es **puro**: no lee de la base de datos. Recibe el juego de parámetros y el catálogo como argumentos, para que los valores editables en admin (tarifa hora, suelo, coeficientes, escalas) lleguen desde `pricing_parameter_sets` y nunca estén hardcodeados en la lógica. Los valores de la sección 3 viven en `src/pricing/parameters.ts` y en la migración de seed únicamente como **estado inicial**, no como constantes de cálculo.
 
@@ -569,11 +587,12 @@ El motor es **puro**: no lee de la base de datos. Recibe el juego de parámetros
 
 | Pantalla | Ruta | Notas |
 |---|---|---|
-| Creación de presupuesto | `/proposals/new` | 2-3 opciones, líneas multimercado, descuentos manuales, vista previa en vivo con el motor, checklist de controles previos al envío |
-| Pantalla pública comparativa | `/p/[token]` | `get_public_proposal` (SECURITY DEFINER), reach solo con dato medido, caduca a los 14 días, idioma del cliente |
+| Creación de presupuesto | `/proposals/new` | 2-3 opciones, cada una con sus propios **mercados** (checkbox múltiple) y su propio **periodo** (fechas concretas o solo duración, §5.3 bis) — ronda 2, ya no por línea ni por envío. Desplegable de país (no texto ISO-2 libre) al crear cuenta nueva. Descuentos manuales, vista previa en vivo con el motor, checklist de controles previos al envío (ya sin el check de disponibilidad con Marketing, ronda 2) |
+| Alta de usuarios del equipo | `/admin/users` | Ronda 2. Crea el usuario en Supabase Auth (`auth.admin.createUser`, clave de servicio) y lo añade a `allowed_emails` en el mismo paso — sustituye el alta manual por SQL/dashboard como único camino (sigue funcionando como alternativa). Lista el estado de cada email (ha entrado / aún no) y permite quitar el acceso. Cualquier miembro de equipo autenticado puede usarla: no hay rol de administrador separado (§9) |
+| Pantalla pública comparativa | `/p/[token]` | `get_public_proposal` (SECURITY DEFINER), reach solo con dato medido, caduca a los 14 días, idioma del cliente. Mercados y periodo (o duración) **por opción**, ronda 2 |
 | Aceptación con datos fiscales | Modal en `/p/[token]` | VIES verificado en servidor (`app/api/public/proposals/[token]/accept`), régimen de IVA decidido en `accept_public_proposal` |
 | Rechazo | Modal en `/p/[token]` | Registra motivo; **no** construye la contrapropuesta (ver más abajo) |
-| Login | `/login` | Email + contraseña (`supabase.auth.signInWithPassword`), no magic link — ver §2 y §10.3 para por qué. `app/login/actions.ts` (`loginWithPassword`, Server Action) hace el login y comprueba la lista blanca en el mismo paso: si `signInWithPassword` falla, mensaje genérico de credenciales incorrectas sin revelar si el email existe; si tiene éxito pero el email no está en `allowed_emails`, cierra la sesión ahí mismo (`supabase.auth.signOut()`) y devuelve un motivo claro ("no tiene acceso... pide a Vincent"). Reutiliza `resolveTeamAccess` (`lib/supabase/team-access.ts`) sin cambios: mismo aprovisionamiento de `profiles` que con el magic link, que crea el `profiles` que falta en el primer login para evitar la dependencia circular con RLS (`is_team_member()` exige un `profiles` que aún no existe). `allowed_emails.full_name` es opcional: si no se rellena al dar de alta a alguien, se deriva del email. Un fallo al crear el `profiles` (constraint, RLS mal configurado, lo que sea) se registra explícitamente como fallo de aprovisionamiento y no como "no autorizado". Sin registro público (usuarios dados de alta por un admin en el dashboard de Supabase) ni recuperación de contraseña por email en esta versión. El código del magic link (`/auth/callback`, `/auth/confirm`, `lib/supabase/login-redirect.ts`, `lib/email/magic-link-email.ts`, `lib/email/confirm-url.ts`, `app/api/auth/send-email/`) sigue en el repo, sin usar, por si se recupera más adelante |
+| Login | `/login` | Email + contraseña (`supabase.auth.signInWithPassword`), no magic link — ver §2 y §10.3 para por qué. `app/login/actions.ts` (`loginWithPassword`, Server Action) hace el login y comprueba la lista blanca en el mismo paso: si `signInWithPassword` falla, mensaje genérico de credenciales incorrectas sin revelar si el email existe; si tiene éxito pero el email no está en `allowed_emails`, cierra la sesión ahí mismo (`supabase.auth.signOut()`) y devuelve un motivo claro ("no tiene acceso... pide a Vincent"). Reutiliza `resolveTeamAccess` (`lib/supabase/team-access.ts`) sin cambios: mismo aprovisionamiento de `profiles` que con el magic link, que crea el `profiles` que falta en el primer login para evitar la dependencia circular con RLS (`is_team_member()` exige un `profiles` que aún no existe). `allowed_emails.full_name` es opcional: si no se rellena al dar de alta a alguien, se deriva del email. Un fallo al crear el `profiles` (constraint, RLS mal configurado, lo que sea) se registra explícitamente como fallo de aprovisionamiento y no como "no autorizado". Sin registro público (usuarios dados de alta desde `/admin/users`, ronda 2, o a mano en el dashboard de Supabase) ni recuperación de contraseña por email en esta versión. El código del magic link (`/auth/callback`, `/auth/confirm`, `lib/supabase/login-redirect.ts`, `lib/email/magic-link-email.ts`, `lib/email/confirm-url.ts`, `app/api/auth/send-email/`) sigue en el repo, sin usar, por si se recupera más adelante |
 
 **Arquitectura de cálculo:** el navegador ejecuta el mismo motor (`src/pricing/`) para la vista previa en vivo mientras el comercial edita, pero esos números **nunca se persisten**. Al pulsar "Enviar", `app/api/proposals/route.ts` recibe los datos crudos (soportes, mercados, cantidades, descuentos) y **vuelve a calcular en el servidor** con los parámetros vivos de la base de datos — eso es lo único que se guarda, vía `create_and_send_proposal` (una función SQL `SECURITY INVOKER`, atómica: opción + líneas + descuentos + checks de disponibilidad en una sola transacción). El envío ya no se marca `SENT` dentro de esa misma función: queda en `DRAFT`, congelado (mismo `frozen_snapshot` de siempre) pero invisible en la pantalla pública, hasta que la ruta de servidor manda el email por Resend y llama a `mark_proposal_sent`. Si Resend falla, llama a `log_proposal_send_failure` en su lugar y el envío se queda en `DRAFT` — nunca se marca enviado sin que el cliente lo haya recibido (ver §5.3, §10.3).
 
@@ -657,6 +676,35 @@ Contrapartidas aceptadas, explícitamente, no descuidos:
 **Arreglado en `supabase/migrations/20260919120000_service_role_grants.sql`**: concede a `service_role` los mismos privilegios de tabla que `grants.sql` ya concedía a `authenticated`, sobre las mismas tablas. Verificado contra Postgres real que, tras esta migración, la misma consulta que antes daba `permission denied` funciona sin error.
 
 **El propio script de verificación (`scripts/verify-rls-self-read.sh`) escondía este bug sin darse cuenta.** Su primera versión incluía `grant all privileges on all tables in schema public to service_role` en su propio montaje de prueba, con el comentario "Supabase concede esto por defecto al aprovisionar el proyecto" — la misma suposición implícita que resultó falsa en el proyecto real. Ese grant de más hacía que el script pasara aunque las migraciones reales del repo NO concedieran nada a `service_role`, ocultando exactamente este bug. Corregido: el script ya no da por hecho ningún privilegio de `service_role` por su cuenta — todo tiene que venir de las migraciones reales, igual que en producción — y ahora tiene un primer bloque de pasos que reproduce el error de GRANT (Bug A) antes de comprobar la dependencia circular de RLS (Bug B, la de antes). Lección repetida: no dar por buena ninguna suposición sobre el comportamiento implícito de Supabase sin comprobarla contra Postgres real, ni siquiera en el propio arnés de pruebas.
+
+### 10.3 bis — Ronda 2 de correcciones (primera prueba real de la app)
+
+Primera tanda de correcciones tras probar el MVP de verdad (no solo tipado ni Postgres local), agrupada en el pedido original por prioridad: bloqueante, funcional, interfaz. Cada punto se verificó — el motor y las migraciones contra un PostgreSQL 16 real, igual que en las rondas anteriores — antes de darlo por resuelto.
+
+**1–2. "Nueva cuenta" y "Nuevo contacto" no funcionaban.** Diagnosticado en dos frentes:
+
+- **Capa de datos**: se reprodujo la creación de una cuenta y un contacto nuevos a través de `create_and_send_proposal` contra un PostgreSQL 16 real (payload completo, dos opciones) — funcionó sin error. La función SQL en sí nunca fue el problema.
+- **Interfaz**: `ProposalBuilder.tsx` tenía el desplegable de "Contacto" con `disabled={accountId === '__new__' && selectedAccount === null}`. Como `selectedAccount` se busca por `accounts.find(a => a.id === accountId)`, y ninguna cuenta real tiene id `'__new__'`, esa condición es **siempre** `accountId === '__new__' && true` — el desplegable de contacto queda bloqueado (gris, no interactivo) cada vez que se elige "+ Nueva cuenta". Los campos de texto de "Nuevo contacto" seguían renderizándose debajo y funcionando, pero un desplegable inutilizable justo encima parece, con razón, que "no funciona". Arreglado quitando esa condición al reconstruir el formulario (ver punto 9 más abajo): ya no hay ningún `disabled` espurio.
+
+**3. Alta de usuarios desde la app.** Hasta ahora había que crear el usuario en Supabase Auth (dashboard) y añadirlo a `allowed_emails` (SQL) por separado — dos pasos manuales que bloqueaban literalmente a Rémi y Mario. Nueva pantalla `/admin/users` (`app/(internal)/admin/users/`): un formulario llama a `auth.admin.createUser` con la clave de servicio (la única forma de crear un usuario con contraseña sin pasar por el registro público) y hace `upsert` en `allowed_emails` en el mismo paso; la lista de abajo muestra quién ya ha entrado (existe `profiles`) y permite quitar el acceso (borra de `allowed_emails` y desactiva el `profiles` si existe, sin borrar el usuario de Supabase Auth — revertirlo es volver a darlo de alta). No hay concepto de "administrador" en el modelo de datos (`is_team_member()` es binario: miembro de equipo o no), así que cualquier persona con sesión puede usar esta pantalla — documentado como decisión abierta en §9, no un descuido.
+
+**4. Mercados por opción, no por línea.** Cambio de fondo en el motor (§4.2): `OptionInput` pasa de tener `market` en cada línea a tener `markets: Market[]` una vez por opción; el motor expande automáticamente cada soporte a todos los mercados de la opción y calcula el mercado líder (el de mayor coeficiente entre los elegidos) una sola vez para toda la opción, no soporte a soporte. Esto **simplifica** la regla original de §4.2 ("el mercado líder se determina por soporte"): ese matiz solo existía porque antes un soporte podía estar en unos mercados de la opción y no en otros; con los mercados elegidos por opción eso ya no puede pasar. Los tests de `engine.test.ts` que cubrían ese caso concreto (`CRM-01` solo en ES dentro de una opción FR+ES) se sustituyeron por uno que confirma que ya no es posible expresarlo — todo soporte de una opción está, por construcción, en todos sus mercados.
+
+**5. Fechas de campaña por opción, no por presupuesto.** `proposals.campaign_start`/`campaign_end` se mueven a `proposal_options` (migración `20260922100000_option_level_campaign.sql`), junto con `markets market[]` (guardado explícito, no solo derivable de las líneas — para no recalcularlo cada vez que se muestra: cabecera de opción en la pantalla pública, futuro dashboard). `create_and_send_proposal` y `get_public_proposal` se reescriben en consecuencia (`_v2.sql`). Verificado end-to-end contra Postgres real: una opción con fechas concretas y otra con mercados distintos y solo duración, en el mismo envío, se crean y se leen correctamente por separado.
+
+**6. Equivalencia periodo → unidades, y de dónde sale la cantidad.** Nueva función pura `computeDurationUnits` (`src/pricing/duration.ts`, con sus propios tests): días naturales inclusive → semanas y meses, redondeando hacia arriba (una semana empezada cuenta entera). Es la MISMA función que alimenta el botón "Usar duración" de cada línea semanal o mensual (`suggestedQuantity`) — no una fórmula de mostrar distinta de la de calcular, que es justo lo que se pedía verificar.
+
+**7. Cotizar por duración sin fechas concretas.** Cada opción tiene ahora un modo — "Fechas concretas" o "Solo duración" — con radio buttons en la interfaz. En modo duración se guarda `campaign_duration_count`/`campaign_duration_unit` en vez de fechas, y el control de antelación (§5.3) no se evalúa: en su lugar, un aviso nuevo y explícito (`LEAD_TIME_NOT_VERIFIABLE`, warning no bloqueante) dice que la antelación no se pudo comprobar. La duración se muestra tanto en el checklist interno como en la pantalla pública del cliente ("Duración: 4 semanas — fecha de inicio por confirmar"), no solo puertas adentro.
+
+**8. Se quita el check manual de disponibilidad con Marketing.** Bloqueante (`AVAILABILITY_NOT_CONFIRMED`) y su checkbox correspondiente, eliminados de `checks.ts` y de `ProposalBuilder.tsx`. Se comprueba antes de crear el presupuesto, fuera del sistema (§5.3). `supports.requires_availability_check` se conserva como recordatorio informativo (badge no bloqueante en la línea) y la tabla `availability_checks` se queda en el esquema sin uso — ninguna migración destructiva.
+
+**9. Desplegable de país.** El campo de texto libre "País (ISO-2, ej. FR)" se sustituye por un `<select>` (`lib/countries.ts`, `COUNTRY_CODES`) con el nombre del país generado por `Intl.DisplayNames`, ya localizado al idioma de interfaz activo — evita mantener a mano tres traducciones de ~60 nombres de país. Esto también forzó a separar `country_code` (cualquier país, ahora de verdad seleccionable) de `primary_market` (uno de los 5 mercados de Weekendesk): el campo `primary_market` de `newAccount` nunca tuvo un control en la interfaz (siempre viajaba fijo a `'FR'`) y se ha quitado del todo en vez de intentar derivarlo de un país arbitrario que puede no ser ninguno de los 5.
+
+**10. Interfaz interna en varios idiomas.** `lib/i18n-internal.tsx`: contexto de React + diccionario ES/FR/EN + `localStorage` (preferencia de navegador, nunca en base de datos — no confundir con el idioma DEL CLIENTE, que sigue siendo un dato de `proposals`). Selector visible (`components/LanguageSwitcher.tsx`) en la cabecera interna y en el login. Aplicado a login, cabecera, `/admin/users`, `ProposalBuilder`, `PreSendChecklist` y `DiscountBanner` — el grueso de la interfaz que usa el equipo a diario.
+
+**11. Verificación del idioma del cliente — se encontró un bug real de sincronización.** Al trazar "el idioma se elige al crear el presupuesto y determina la pantalla pública y el email" de un extremo a otro se encontró que **no** era del todo cierto: la pantalla pública lee `proposals.language` (fijado por el selector "Idioma del cliente" de la interfaz), pero el email se construía con `contacts.language` — el idioma guardado en la ficha del contacto, que para un contacto YA EXISTENTE puede venir de un envío anterior en otro idioma y no tiene por qué coincidir con lo elegido para ESTE envío. Corregido en `app/api/proposals/route.ts`: el email usa ahora `body.language`, exactamente el mismo valor que alimenta `proposals.language`, con una guarda de regresión de texto fuente (`app/api/proposals/route.test.ts`) para que no vuelva a divergir sin que salte algo. De paso, el campo `newContact.language` de la interfaz (que existía en el estado pero nunca tuvo un control propio, y se quedaba fijo en `'FR'`) se quitó: un contacto nuevo hereda directamente el idioma elegido para el envío.
+
+**12. Logos.** `LOGO_Weekendesk_color.png` y `LOGO_Weekendesk_white.png` en `/public` (no estaban en la raíz del repo como se indicó — se localizaron entre los recursos de marca ya disponibles en este entorno, mismos ficheros). Sustituyen al texto "Weekendesk Advertising": versión en color en el login y en la pantalla pública (fondo claro), versión en blanco en la cabecera interna (fondo azul marino).
 
 ---
 

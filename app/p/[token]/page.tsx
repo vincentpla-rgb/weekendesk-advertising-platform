@@ -27,6 +27,12 @@ export interface PublicOption {
   code: string;
   name: string;
   pitch: string | null;
+  markets: string[];
+  campaign_start: string | null;
+  campaign_end: string | null;
+  /** Modo "solo duración, sin fecha de inicio" (CLAUDE.md §5.3 bis). */
+  campaign_duration_count: number | null;
+  campaign_duration_unit: 'WEEK' | 'MONTH' | null;
   net_revenue_cents: number;
   media_budget_cents: number;
   billed_total_cents: number;
@@ -37,8 +43,6 @@ export interface PublicProposal {
   brief: string | null;
   status: string;
   expired: boolean;
-  campaign_start: string | null;
-  campaign_end: string | null;
   advertiser: string | null;
   expires_at: string | null;
   language: string;
