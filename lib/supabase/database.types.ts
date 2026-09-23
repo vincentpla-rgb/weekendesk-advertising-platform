@@ -231,6 +231,9 @@ export interface Database {
           list_price_cents: number | null;
           discount_cents: number | null;
           net_price_cents: number | null;
+          manual_fee_cents: number | null;
+          manual_fee_reason: string | null;
+          media_real_spend_cents: number | null;
           billed_total_cents: number | null;
           sort_order: number;
         };
@@ -303,6 +306,7 @@ export interface Database {
           base_price_cents: number;
           is_media_buy: boolean;
           min_monthly_fee_cents: number | null;
+          always_manual_media_split: boolean;
           requires_availability_check: boolean;
           is_active: boolean;
           sort_order: number;

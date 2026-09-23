@@ -48,6 +48,16 @@ export interface LineDraft {
    * el fee de gestión no se puede calcular con sentido de negocio.
    */
   readonly mediaBudgetEuros: number | '';
+  /**
+   * Fee de gestión forzado a mano, en euros (CLAUDE.md §4.4, ronda 10) — en
+   * vez del reparto automático (40 % del presupuesto, o el mínimo mensual ×
+   * meses). Vacío = reparto automático (ADS-01/02/03) o, en INF-01
+   * (`alwaysManualMediaSplit`), envío bloqueado hasta rellenarlo: ese
+   * soporte nunca tiene reparto automático.
+   */
+  readonly manualFeeEuros: number | '';
+  /** Obligatorio junto con `manualFeeEuros` no vacío (CLAUDE.md §4.4, §8). */
+  readonly manualFeeReason: string;
 }
 
 export interface DiscountDraft {
@@ -162,6 +172,8 @@ export function createLineDraft(catalog: Catalog, schedule: OptionScheduleDraft,
     quantity: suggested ?? 1,
     quantityAutoSynced: true,
     mediaBudgetEuros: '',
+    manualFeeEuros: '',
+    manualFeeReason: '',
   };
 }
 
@@ -279,7 +291,11 @@ export function resyncLineQuantity(catalog: Catalog, draft: OptionDraft, lineKey
   };
 }
 
-export function updateLineDraft(draft: OptionDraft, lineKey: string, patch: Partial<Pick<LineDraft, 'mediaBudgetEuros'>>): OptionDraft {
+export function updateLineDraft(
+  draft: OptionDraft,
+  lineKey: string,
+  patch: Partial<Pick<LineDraft, 'mediaBudgetEuros' | 'manualFeeEuros' | 'manualFeeReason'>>,
+): OptionDraft {
   return {
     ...draft,
     lines: draft.lines.map((line) => (line.key === lineKey ? { ...line, ...patch } : line)),
@@ -334,6 +350,11 @@ export function toOptionInput(catalog: Catalog, draft: OptionDraft): OptionInput
                 // Nunca un campo manual: la duración de la opción, en meses
                 // (CLAUDE.md §4.4, ronda 9) — ver `suggestedMediaMonths`.
                 mediaMonths: suggestedMediaMonths(draft) ?? 1,
+                // Reparto forzado a mano (CLAUDE.md §4.4, ronda 10): fijo,
+                // inmune a descuentos posteriores. Vacío = automático.
+                ...(l.manualFeeEuros !== ''
+                  ? { manualFeeCents: euros(l.manualFeeEuros), manualFeeReason: l.manualFeeReason }
+                  : {}),
               }
             : {}),
         };

@@ -421,6 +421,52 @@ describe('media buy: presupuesto manual, meses derivados de la duración (ronda 
 });
 
 // =============================================================================
+// Reparto del fee forzado a mano (CLAUDE.md §4.4, ronda 10): vacío por
+// defecto = automático; relleno = manualFeeCents/manualFeeReason.
+// =============================================================================
+
+describe('media buy: reparto forzado a mano (ronda 10)', () => {
+  it('manualFeeEuros vacío por defecto: toOptionInput no manda manualFeeCents', () => {
+    let option = freshOption();
+    option = setLineSupport(DEFAULT_CATALOG, option, option.lines[0]!.key, 'ADS-01');
+    option = updateLineDraft(option, option.lines[0]!.key, { mediaBudgetEuros: 3000 });
+    expect(option.lines[0]!.manualFeeEuros).toBe('');
+
+    const input = toOptionInput(DEFAULT_CATALOG, option);
+    expect(input.lines[0]!.manualFeeCents).toBeUndefined();
+
+    const priced = priceOption(input, ctx);
+    const ads01 = priced.lines.find((l) => l.supportId === 'ADS-01' && l.market === 'FR')!;
+    expect(ads01.feeForced).toBe(false);
+  });
+
+  it('manualFeeEuros relleno: toOptionInput manda manualFeeCents/manualFeeReason y el motor fija el fee', () => {
+    let option = freshOption();
+    option = setLineSupport(DEFAULT_CATALOG, option, option.lines[0]!.key, 'ADS-01');
+    option = updateLineDraft(option, option.lines[0]!.key, {
+      mediaBudgetEuros: 2000,
+      manualFeeEuros: 900,
+      manualFeeReason: 'Fee negociado con el cliente.',
+    });
+
+    const input = toOptionInput(DEFAULT_CATALOG, option);
+    expect(input.lines[0]!.manualFeeCents).toBe(90_000);
+    expect(input.lines[0]!.manualFeeReason).toBe('Fee negociado con el cliente.');
+
+    const priced = priceOption(input, ctx);
+    const ads01 = priced.lines.find((l) => l.supportId === 'ADS-01' && l.market === 'FR')!;
+    expect(ads01.feeForced).toBe(true);
+    expect(ads01.netPriceCents).toBe(90_000);
+  });
+
+  it('createLineDraft/createOptionDraft empiezan siempre con manualFeeEuros/manualFeeReason vacíos', () => {
+    const option = freshOption();
+    expect(option.lines[0]!.manualFeeEuros).toBe('');
+    expect(option.lines[0]!.manualFeeReason).toBe('');
+  });
+});
+
+// =============================================================================
 // Interruptor "desactivar descuento por volumen" por opción (CLAUDE.md §4.5,
 // ronda 9): distinto de los descuentos manuales, que ya existían.
 // =============================================================================

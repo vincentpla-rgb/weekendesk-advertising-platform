@@ -81,7 +81,7 @@ export async function loadPricingContext(
       supabase
         .from('supports')
         .select(
-          'id, name, channel, unit, business_hours, design_hours, external_cost_cents, lead_time_business_days, base_price_cents, is_media_buy, min_monthly_fee_cents, requires_availability_check, is_active',
+          'id, name, channel, unit, business_hours, design_hours, external_cost_cents, lead_time_business_days, base_price_cents, is_media_buy, min_monthly_fee_cents, always_manual_media_split, requires_availability_check, is_active',
         )
         .eq('is_active', true),
       supabase
@@ -129,6 +129,7 @@ export async function loadPricingContext(
           basePriceCents: s.base_price_cents,
           isMediaBuy: s.is_media_buy,
           minMonthlyFeeCents: s.min_monthly_fee_cents,
+          alwaysManualMediaSplit: s.always_manual_media_split,
           requiresAvailabilityCheck: s.requires_availability_check,
           markets,
         },

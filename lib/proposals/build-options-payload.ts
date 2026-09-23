@@ -7,6 +7,9 @@ export interface RawLine {
   readonly quantity: number;
   readonly mediaBudgetEuros: number | null;
   readonly mediaMonths: number | null;
+  /** Reparto forzado a mano (CLAUDE.md §4.4, ronda 10). `null` = automático. */
+  readonly manualFeeEuros: number | null;
+  readonly manualFeeReason: string | null;
 }
 
 export interface RawDiscount {
@@ -71,6 +74,9 @@ export function buildProposalOptionsPayload(
             ? {
                 mediaBudgetCents: l.mediaBudgetEuros ? euros(l.mediaBudgetEuros) : 0,
                 mediaMonths: l.mediaMonths ?? 1,
+                ...(l.manualFeeEuros !== null
+                  ? { manualFeeCents: euros(l.manualFeeEuros), manualFeeReason: l.manualFeeReason ?? '' }
+                  : {}),
               }
             : {}),
         };
@@ -125,6 +131,14 @@ export function buildProposalOptionsPayload(
         list_price_cents: l.listPriceCents,
         discount_cents: l.discountCents,
         net_price_cents: l.netPriceCents,
+        // Reparto forzado a mano (CLAUDE.md §4.4, ronda 10): fijo, registrado
+        // en `overrides` por `create_and_send_proposal` cuando no es null.
+        manual_fee_cents: l.isMediaBuy && l.feeForced ? l.netPriceCents : null,
+        manual_fee_reason:
+          l.isMediaBuy && l.feeForced
+            ? (raw.lines.find((rl) => rl.supportId === l.supportId)?.manualFeeReason ?? '')
+            : null,
+        media_real_spend_cents: l.isMediaBuy ? l.mediaRealSpendCents : null,
         billed_total_cents: l.billedTotalCents,
         sort_order: idx,
       })),
