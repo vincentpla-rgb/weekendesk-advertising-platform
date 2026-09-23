@@ -187,26 +187,31 @@ export async function POST(request: Request) {
     options: optionsJson,
   };
 
-  const apiKey = process.env.RESEND_API_KEY;
-  const fromAddress = process.env.RESEND_FROM_EMAIL;
-  if (!apiKey || !fromAddress) {
-    return NextResponse.json(
-      { error: 'Falta configuración de email (RESEND_API_KEY / RESEND_FROM_EMAIL)' },
-      { status: 500 },
-    );
-  }
-
   // Crea el envío en DRAFT (congelado, con enlace público ya generado, pero
   // todavía invisible: get_public_proposal descarta DRAFT). Solo se marca
   // SENT más abajo, si Resend confirma el email — así, si el email falla, el
   // presupuesto no queda marcado como enviado (ver la migración
   // 20260919100000_email_send.sql).
+  //
+  // Esto pasa ANTES de comprobar la configuración de Resend, a propósito
+  // (CLAUDE.md §10.3, ronda 4): la cuenta, el contacto y el cálculo no
+  // dependen de que el email pueda salir — persistirlos es una cosa,
+  // mandarlos por correo es otra. Antes esta ruta comprobaba
+  // RESEND_API_KEY/RESEND_FROM_EMAIL primero y abortaba sin llamar aquí si
+  // faltaban: sin esas variables en Vercel, NINGÚN presupuesto se llegaba a
+  // crear nunca — ni la cuenta ni el contacto, aunque el comercial hubiera
+  // rellenado el formulario bien. Verificado que create_and_send_proposal en
+  // sí siempre ha funcionado (contra un PostgreSQL 16 real, varias rondas);
+  // el bug estaba en que esta ruta no la llegaba a llamar.
   const { data, error } = await supabase.rpc('create_and_send_proposal', {
     payload: payload as unknown as Json,
   });
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
+
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromAddress = process.env.RESEND_FROM_EMAIL;
 
   const created = data as {
     proposal_id: string;
@@ -215,6 +220,26 @@ export async function POST(request: Request) {
     contact_full_name: string;
     account_legal_name: string;
   };
+
+  // Falta configuración de Resend: se trata igual que un envío de email
+  // fallido (log_proposal_send_failure, el presupuesto se queda en DRAFT) —
+  // nunca como un motivo para no haber persistido nada, que es lo que hacía
+  // antes de moverse este chequeo (ver el comentario más arriba).
+  if (!apiKey || !fromAddress) {
+    await supabase.rpc('log_proposal_send_failure', {
+      p_proposal_id: created.proposal_id,
+      p_email: { error: 'Falta configuración de email (RESEND_API_KEY / RESEND_FROM_EMAIL)' } as unknown as Json,
+    });
+    return NextResponse.json(
+      {
+        error:
+          'El presupuesto se ha calculado y guardado, pero falta la configuración de email ' +
+          '(RESEND_API_KEY / RESEND_FROM_EMAIL) para mandarlo. El envío queda en borrador, sin ' +
+          'marcar como enviado.',
+      },
+      { status: 500 },
+    );
+  }
 
   const publicUrl = `${new URL(request.url).origin}/p/${created.public_token}`;
   const expiresAtIso = new Date(Date.now() + ctx.offerValidityDays * 86_400_000).toISOString();

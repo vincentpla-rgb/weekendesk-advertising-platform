@@ -118,10 +118,10 @@ export function ProposalBuilder({
   const [newContact, setNewContact] = useState({ full_name: '', email: '' });
   const [language, setLanguage] = useState<ContentLanguage>('FR');
   const [brief, setBrief] = useState('');
-  const [options, setOptions] = useState<OptionDraft[]>([
-    emptyOption('A', supports),
-    emptyOption('B', supports),
-  ]);
+  // Se empieza con una sola opción, sin pestañas visibles (CLAUDE.md §5.1,
+  // ronda 4): las pestañas solo aparecen al añadir la segunda.
+  const [options, setOptions] = useState<OptionDraft[]>(() => [emptyOption('A', supports)]);
+  const [activeOptionKey, setActiveOptionKey] = useState<string>(() => options[0]!.key);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<{ publicToken: string } | null>(null);
@@ -201,15 +201,21 @@ export function ProposalBuilder({
   }
 
   function addOption() {
-    setOptions((prev) => {
-      if (prev.length >= 3) return prev;
-      const nextCode = (['A', 'B', 'C'] as const)[prev.length]!;
-      return [...prev, emptyOption(nextCode, supports)];
-    });
+    if (options.length >= 3) return;
+    const nextCode = (['A', 'B', 'C'] as const)[options.length]!;
+    const next = emptyOption(nextCode, supports);
+    setOptions((prev) => [...prev, next]);
+    // La opción recién añadida es la que el comercial quiere editar.
+    setActiveOptionKey(next.key);
   }
 
   function removeOption(key: string) {
-    setOptions((prev) => (prev.length <= 2 ? prev : prev.filter((o) => o.key !== key)));
+    if (options.length <= 1) return;
+    const remaining = options.filter((o) => o.key !== key);
+    setOptions(remaining);
+    if (activeOptionKey === key) {
+      setActiveOptionKey(remaining[0]!.key);
+    }
   }
 
   // --- Cálculo en vivo, con el mismo motor puro que corre en el servidor ---
@@ -480,34 +486,58 @@ export function ProposalBuilder({
         />
       </section>
 
-      <div className="wk-grid-options">
-        {options.map((draft, idx) => {
-          const p = priced[idx];
-          return (
-            <OptionEditor
+      {/*
+        Pestañas por opción (CLAUDE.md §5.1, ronda 4): con una sola opción no
+        se muestran — nada que comparar todavía. Desde la segunda, cada
+        pestaña dobla como resumen fijo (precio + margen), así que la
+        comparación entre opciones no se pierde por estar dentro de otra.
+      */}
+      {options.length > 1 && (
+        <div className="wk-option-tabs">
+          {options.map((draft, idx) => (
+            <OptionSummaryTab
               key={draft.key}
-              draft={draft}
-              priced={p ?? null}
-              supports={supports}
-              catalog={catalog}
-              onUpdate={(patch) => updateOption(draft.key, patch)}
-              onToggleMarket={(m) => toggleMarket(draft.key, m)}
-              onUpdateLine={(lineKey, patch) => updateLine(draft.key, lineKey, patch)}
-              onAddLine={() => addLine(draft.key)}
-              onRemoveLine={(lineKey) => removeLine(draft.key, lineKey)}
-              onAddDiscount={() => addDiscount(draft.key)}
-              onUpdateDiscount={(dKey, patch) => updateDiscount(draft.key, dKey, patch)}
-              onRemoveDiscount={(dKey) => removeDiscount(draft.key, dKey)}
-              onRemoveOption={options.length > 2 ? () => removeOption(draft.key) : null}
+              label={`${t('proposalBuilder.option')} ${draft.code}${draft.name ? ` — ${draft.name}` : ''}`}
+              priced={priced[idx] ?? null}
+              active={draft.key === activeOptionKey}
+              onClick={() => setActiveOptionKey(draft.key)}
             />
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
+
+      {options.map((draft, idx) => {
+        if (options.length > 1 && draft.key !== activeOptionKey) return null;
+        const p = priced[idx];
+        return (
+          <OptionEditor
+            key={draft.key}
+            draft={draft}
+            priced={p ?? null}
+            supports={supports}
+            catalog={catalog}
+            onUpdate={(patch) => updateOption(draft.key, patch)}
+            onToggleMarket={(m) => toggleMarket(draft.key, m)}
+            onUpdateLine={(lineKey, patch) => updateLine(draft.key, lineKey, patch)}
+            onAddLine={() => addLine(draft.key)}
+            onRemoveLine={(lineKey) => removeLine(draft.key, lineKey)}
+            onAddDiscount={() => addDiscount(draft.key)}
+            onUpdateDiscount={(dKey, patch) => updateDiscount(draft.key, dKey, patch)}
+            onRemoveDiscount={(dKey) => removeDiscount(draft.key, dKey)}
+            onRemoveOption={options.length > 1 ? () => removeOption(draft.key) : null}
+          />
+        );
+      })}
 
       {options.length < 3 && (
         <button type="button" className="wk-btn wk-btn-secondary" onClick={addOption} style={{ alignSelf: 'flex-start' }}>
           {t('proposalBuilder.addOption')}
         </button>
+      )}
+      {options.length < 2 && (
+        <p style={{ fontSize: 12, color: 'var(--wk-text-muted)', margin: 0 }}>
+          {t('proposalBuilder.needsSecondOption')}
+        </p>
       )}
 
       <section className="wk-card">
@@ -520,13 +550,53 @@ export function ProposalBuilder({
       <button
         type="button"
         className="wk-btn wk-btn-primary"
-        disabled={!preSend.canSend || hasEngineErrors || submitting}
+        disabled={!preSend.canSend || hasEngineErrors || submitting || options.length < 2}
         onClick={handleSubmit}
         style={{ alignSelf: 'flex-start', fontSize: 15, padding: '12px 24px' }}
       >
         {submitting ? t('proposalBuilder.sending') : t('proposalBuilder.send')}
       </button>
     </div>
+  );
+}
+
+/**
+ * Pestaña de opción: además de cambiar de opción activa, hace de resumen
+ * fijo de precio y margen (CLAUDE.md §5.1, ronda 4) — visible mientras se
+ * está dentro de otra pestaña, para no perder la comparación de un vistazo.
+ */
+function OptionSummaryTab({
+  label,
+  priced,
+  active,
+  onClick,
+}: {
+  label: string;
+  priced: (PricedOption & { error?: string }) | null;
+  active: boolean;
+  onClick: () => void;
+}) {
+  const hasError = priced && 'error' in priced && priced.error;
+  return (
+    <button
+      type="button"
+      className={`wk-option-tab${active ? ' wk-option-tab-active' : ''}`}
+      onClick={onClick}
+    >
+      <span className="wk-option-tab-name">{label}</span>
+      {priced && !hasError ? (
+        <>
+          <span className="wk-option-tab-price">{formatCents(priced.billedTotalCents)}</span>
+          <span
+            className={`wk-badge ${priced.meetsMarginFloor ? 'wk-badge-success' : 'wk-badge-danger'}`}
+          >
+            {priced.marginRate === null ? '—' : formatPercent(priced.marginRate)}
+          </span>
+        </>
+      ) : (
+        <span className="wk-badge wk-badge-danger">!</span>
+      )}
+    </button>
   );
 }
 
