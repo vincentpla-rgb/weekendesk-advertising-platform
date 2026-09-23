@@ -145,9 +145,14 @@ CPM de Meta confirmado por Francesco Dellaca (Paid): 4–6 € según país y ti
 
 ### Inventario
 
-Fuera del sistema en el MVP. Solo se registra un check manual (ver 5.3).
+Fuera del sistema en el MVP: no hay calendario real de disponibilidad por soporte y mercado. En su lugar, una **regla de disponibilidad decidida (ronda 3, reemplaza a la restricción anterior que solo hablaba de Meta por país):**
 
-Restricción conocida (Francesco, Paid): **máximo una campaña de cliente por país en Meta durante toda la duración de la campaña**. Es decir, 5 slots simultáneos en todo el grupo. Pendiente saber si aplica también a Pmax y Display.
+**Mientras no haya inventario real, ningún soporte puede tener dos campañas de CLIENTES DISTINTOS aceptadas y activas a la vez, en el mismo mercado.** No es solo Meta (ADS-01): es la regla general para los 19 soportes del catálogo, incluidos CRM y Social, en este MVP (ver la nota de revisión pendiente en §9 — probablemente no todos necesiten la misma regla).
+
+- **El control se comprueba solo contra presupuestos YA ACEPTADOS.** Se pueden crear y enviar cuantos presupuestos se quiera con el mismo soporte, mercado y fechas, a distintos prospectos — compiten por el mismo hueco, y el primero en aceptar se lo lleva. Un choque entre dos envíos sin respuesta **no** bloquea nada y no genera aviso.
+- **Se activa en dos momentos**: (1) al enviar un presupuesto nuevo, si alguna de sus líneas choca con un presupuesto ya ACEPTADO de otro cliente — bloquea el envío entero, con aviso claro; (2) al aceptar un presupuesto, si para entonces ya existe otro ACEPTADO que choca — bloquea la aceptación. El caso (2) cubre la carrera entre dos presupuestos que compiten por el mismo hueco: el primero en aceptar se lo lleva, el segundo intento de aceptación choca aquí.
+- **"Clientes distintos"**: el mismo anunciante (`accounts.id`) puede tener dos presupuestos aceptados para el mismo soporte y las mismas fechas sin que se bloqueen entre sí — la regla protege el hueco frente a la competencia, no impide repetir con el mismo cliente.
+- **Límite conocido**: una opción cotizada solo por duración, sin fecha de inicio concreta (§5.3 bis), no tiene fechas con las que comprobar solapamiento — el control no se evalúa para ella y no bloquea. Documentado, no un descuido: implementado en `has_accepted_availability_conflict` (`supabase/migrations/20260923100000_accepted_availability_conflict.sql`), verificado contra un PostgreSQL 16 real (`scripts/verify-accepted-availability.sh`).
 
 ---
 
@@ -298,7 +303,8 @@ Bloquean el botón de envío (forzables con motivo registrado):
 
 1. Margen por debajo del 50 % en cualquier opción
 2. Antelación insuficiente: días laborables entre hoy y el inicio de campaña < antelación del soporte más lento
-3. Brief vacío (solo aviso)
+3. Disponibilidad: algún soporte de la opción, en su mercado y fechas, choca con un presupuesto ya ACEPTADO de otro cliente (§3, ronda 3) — se comprueba solo contra lo aceptado, nunca contra otros envíos sin respuesta
+4. Brief vacío (solo aviso)
 
 **Días laborables, resuelto (CLAUDE.md §9).** El cálculo excluye sábados, domingos y los festivos nacionales del mercado de cada línea (tabla `market_holidays`, editable en admin, sembrada con FR/ES/IT/BE-FR/BE-NL 2026-2027). BE-FR y BE-NL comparten calendario: son festivos federales belgas, no de comunidad lingüística.
 
@@ -551,7 +557,8 @@ Entidad facturadora: Weekendesk SAS, 28 rue de Londres, 75009 Paris.
 | Reach onsite real por mercado e inventario semanal | Marketing (Pauline Rabaux, Erika Odena) | Petición enviada, plazo 2 de octubre |
 | Datos regionales Francia (Hauts-de-France, Grand Est, Centre-Val de Loire) | Erika Odena | Petición enviada |
 | `promotional_bar` y `cards_block`: ¿comercializables? | Pauline Rabaux | Fuera del catálogo hasta tener horas, precio y reach |
-| ¿La regla de una campaña por país aplica a Pmax y Display? | Francesco Dellaca | Preguntado |
+| ~~¿La regla de una campaña por país aplica a Pmax y Display?~~ | Francesco Dellaca | **Superada** (ronda 3): la regla de disponibilidad dejó de ser específica de Meta — ahora es general para los 19 soportes (§3). Ya no queda pendiente por soporte |
+| **v2 — ¿CRM y Social necesitan una regla de disponibilidad distinta a la de §3?** | Vincent / dirección | Abierto. La regla actual de "un solo cliente aceptado a la vez por soporte y mercado" (§3) tiene sentido para un espacio físico limitado (ON-01 Marketing Block, ON-03 Ribbon). Una newsletter (CRM-01) o un post de Instagram (SOC-03) no tienen ese problema de espacio: varios clientes probablemente pueden compartirlos sin conflicto real. Aplicada tal cual, la regla puede bloquear envíos que en realidad no chocan con nada. Revisar en v2, no en este MVP |
 | ADS-01: los 35.000/mes, ¿impresiones o alcance neto? | Francesco Dellaca | Preguntado |
 | ¿Quién asume el coste de la gift card del concurso (SOC-04)? | Social | Abierto |
 | Coste de boost: ¿100 € en los 5 mercados? | Social | Abierto |
@@ -565,6 +572,7 @@ Entidad facturadora: Weekendesk SAS, 28 rue de Londres, 75009 Paris.
 | **Aplicar las 3 migraciones de la ronda 2** (`20260922100000_option_level_campaign.sql`, `20260922110000_create_and_send_proposal_v2.sql`, `20260922120000_public_proposal_access_v2.sql`) en el proyecto Supabase real | Vincent | Bloqueante para mercados/fechas por opción: sin ellas, `proposal_options` no tiene las columnas nuevas y `create_and_send_proposal`/`get_public_proposal` siguen con el comportamiento antiguo (fechas del envío, no de la opción) |
 | **Media buy en una opción multimercado: ¿presupuesto replicado por mercado, o repartido entre ellos?** | Vincent | Interpretación adoptada al implementar (§4.2, ronda 2): el presupuesto y los meses de la línea se aplican IGUAL en cada mercado de la opción (una campaña de Meta por país). No es una cifra confirmada por nadie — es la lectura más simple de "todos los soportes... se calculan automáticamente sobre" los mercados elegidos. Confirmar o corregir |
 | **Permisos de `/admin/users`: ¿cualquier miembro de equipo, o solo un rol de administrador?** | Vincent | Hoy cualquier miembro autenticado puede dar de alta o quitar acceso a otro — no existe un rol "admin" en `profiles` (§10.3, ronda 2). Aceptable para 3 personas; si hiciera falta restringirlo, es una columna nueva y una comprobación en `app/(internal)/admin/users/actions.ts` |
+| **Aplicar `20260923100000_accepted_availability_conflict.sql` en el proyecto Supabase real** | Vincent | Bloqueante para la regla de disponibilidad de §3 (ronda 3): sin esta migración, `create_and_send_proposal` y `accept_public_proposal` siguen sin comprobar conflictos con presupuestos ya aceptados |
 
 
 ---
@@ -705,6 +713,23 @@ Primera tanda de correcciones tras probar el MVP de verdad (no solo tipado ni Po
 **11. Verificación del idioma del cliente — se encontró un bug real de sincronización.** Al trazar "el idioma se elige al crear el presupuesto y determina la pantalla pública y el email" de un extremo a otro se encontró que **no** era del todo cierto: la pantalla pública lee `proposals.language` (fijado por el selector "Idioma del cliente" de la interfaz), pero el email se construía con `contacts.language` — el idioma guardado en la ficha del contacto, que para un contacto YA EXISTENTE puede venir de un envío anterior en otro idioma y no tiene por qué coincidir con lo elegido para ESTE envío. Corregido en `app/api/proposals/route.ts`: el email usa ahora `body.language`, exactamente el mismo valor que alimenta `proposals.language`, con una guarda de regresión de texto fuente (`app/api/proposals/route.test.ts`) para que no vuelva a divergir sin que salte algo. De paso, el campo `newContact.language` de la interfaz (que existía en el estado pero nunca tuvo un control propio, y se quedaba fijo en `'FR'`) se quitó: un contacto nuevo hereda directamente el idioma elegido para el envío.
 
 **12. Logos.** `LOGO_Weekendesk_color.png` y `LOGO_Weekendesk_white.png` en `/public` (no estaban en la raíz del repo como se indicó — se localizaron entre los recursos de marca ya disponibles en este entorno, mismos ficheros). Sustituyen al texto "Weekendesk Advertising": versión en color en el login y en la pantalla pública (fondo claro), versión en blanco en la cabecera interna (fondo azul marino).
+
+### 10.3 ter — Ronda 3: regla de disponibilidad real (sustituye a la de Meta por país)
+
+Vincent decidió la regla que sustituye a la restricción original de §3 ("máximo una campaña de cliente por país en Meta"), demasiado estrecha una vez el catálogo entero (19 soportes) puede chocar por falta de inventario real:
+
+**Mientras no haya inventario real, ningún soporte puede tener dos campañas de CLIENTES DISTINTOS aceptadas y activas a la vez, en el mismo mercado** — no solo Meta, todo el catálogo, CRM y Social incluidos en este MVP (con la salvedad de revisión pendiente para v2, ver §9: una newsletter o un post no compiten por un espacio físico limitado igual que un Marketing Block o un Ribbon, así que puede que no necesiten la misma regla — pero eso se decide en v2, no aquí).
+
+**Punto central de la especificación: el control solo mira presupuestos YA ACEPTADOS.** Se pueden crear y enviar cuantos presupuestos se quiera con el mismo soporte, mercado y fechas, a distintos prospectos: compiten por el mismo hueco y el primero en aceptar se lo lleva. Un choque entre dos envíos sin respuesta no bloquea nada y no genera aviso — bloquearlo ahí habría impedido a los comerciales ni siquiera COTIZAR en paralelo a dos prospectos por el mismo hueco, que es exactamente el comportamiento comercial normal mientras no hay inventario reservado.
+
+**Implementación** (`supabase/migrations/20260923100000_accepted_availability_conflict.sql`):
+
+- `has_accepted_availability_conflict(support_id, market, campaign_start, campaign_end, account_id, exclude_proposal_id)`: función SQL pura, `SECURITY DEFINER` (como `is_team_member()`, para funcionar igual la llame quien la llame). Comprueba si existe un presupuesto `ACCEPTED` de una cuenta **distinta** cuya opción aceptada tenga una línea con el mismo `support_id`+`market` y un periodo que se solape (`campaign_start <= otro.campaign_end and otro.campaign_start <= campaign_end`).
+- **`create_and_send_proposal`** (ronda 3): antes de insertar cada línea, comprueba el conflicto para esa opción; si lo hay, `raise exception` con el soporte y mercado exactos — aborta la transacción entera, nada se persiste, mensaje claro para el comercial (llega tal cual a `submitError` en `ProposalBuilder` vía `app/api/proposals/route.ts`).
+- **`accept_public_proposal`** (ronda 3): antes de registrar la aceptación, la misma comprobación sobre las líneas de la opción que se está aceptando — cubre la carrera entre dos presupuestos que compiten por el mismo hueco: el primero en aceptar pasa, el segundo choca aquí, ya con el primero como aceptado.
+- **Límite documentado, no un descuido**: una opción en modo "solo duración" (§5.3 bis) no tiene fechas concretas, así que el solapamiento no se puede determinar — la función simplemente no encuentra conflicto para ella (ni bloquea ni deja de bloquear con certeza: no se pronuncia). No se ha construido ningún aviso adicional para este caso en esta pasada — es una limitación real, documentada aquí para no repetir la sorpresa de una regla "que no hace nada" sin más explicación.
+
+**Verificado contra un PostgreSQL 16 real**, no solo tipado (`scripts/verify-accepted-availability.sh`, ejecutable y repetible): dos presupuestos `SENT` de cuentas distintas con el mismo soporte/mercado/fechas coexisten sin bloqueo; un presupuesto nuevo que choca con uno ya `ACCEPTED` de otra cuenta no se puede enviar; la MISMA cuenta que el ya aceptado sí puede enviar otro para el mismo hueco (la regla es "clientes distintos"); y, en la carrera entre dos `SENT` que compiten por el mismo hueco, el segundo en intentar aceptar choca contra el primero ya aceptado.
 
 ---
 

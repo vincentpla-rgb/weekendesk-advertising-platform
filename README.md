@@ -53,8 +53,9 @@ Verificadas ejecutándolas contra un PostgreSQL 16 real, no solo por sintaxis.
 12. `..._option_level_campaign.sql` — mueve `campaign_start`/`campaign_end` de `proposals` a `proposal_options` (cada opción tiene su propio periodo, CLAUDE.md §5.1) y añade `markets`, `campaign_duration_count`/`campaign_duration_unit` (modo "solo duración", §5.3 bis)
 13. `..._create_and_send_proposal_v2.sql` — `create_and_send_proposal` persiste mercados y fechas por opción; deja de escribir en `availability_checks` (el check manual de disponibilidad se quita de la app, §5.3, ronda 2)
 14. `..._public_proposal_access_v2.sql` — `get_public_proposal` devuelve mercados, fechas y duración por opción en vez de un único periodo de envío
+15. `..._accepted_availability_conflict.sql` — regla de disponibilidad real (CLAUDE.md §3, ronda 3): `create_and_send_proposal` y `accept_public_proposal` bloquean si un soporte, en su mercado y fechas, choca con un presupuesto ya `ACCEPTED` de otro cliente. Solo mira lo ya aceptado — nunca borradores ni envíos sin respuesta
 
-**Aplicar los puntos 10 a 14 en el proyecto Supabase real** (dashboard SQL
+**Aplicar los puntos 10 a 15 en el proyecto Supabase real** (dashboard SQL
 editor o `supabase db push`) — hacer `git push`/desplegar en Vercel no
 aplica migraciones de base de datos por sí solo, son dos pasos
 independientes.
@@ -66,6 +67,15 @@ puede leer `allowed_emails` (`permission denied for table`); sin el punto
 10, un usuario recién creado no puede leer su propia fila con su propia
 sesión. Con ambas migraciones aplicadas, los dos casos funcionan, y sin que
 nadie vea filas ajenas. Ejecutar con `bash scripts/verify-rls-self-read.sh`.
+
+`scripts/verify-accepted-availability.sh` reproduce y verifica, contra un
+PostgreSQL 16 real, la regla de disponibilidad del punto 15: dos envíos de
+cuentas distintas con el mismo soporte/mercado/fechas coexisten sin
+bloqueo; uno nuevo que choca con un `ACCEPTED` de otra cuenta no se puede
+enviar; la misma cuenta que el ya aceptado sí puede enviar otro para el
+mismo hueco; y, en la carrera entre dos envíos que compiten por el mismo
+hueco, el segundo en aceptar choca contra el primero. Ejecutar con
+`bash scripts/verify-accepted-availability.sh`.
 
 ### Variables de entorno
 
