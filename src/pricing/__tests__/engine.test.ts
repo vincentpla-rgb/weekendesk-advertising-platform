@@ -95,10 +95,13 @@ describe('casos límite de CLAUDE.md', () => {
     expect(eur(pmax.netPriceCents)).toBe(4500);
     expect(eur(option.effectiveDiscountCents)).toBe(0);
 
-    // Los medios se facturan aparte, a coste y sin margen.
+    // Ronda 10 (CLAUDE.md §4.4): el fee se resta del presupuesto de medios,
+    // nunca se suma encima — el cliente factura exactamente su presupuesto.
     expect(eur(option.mediaBudgetCents)).toBe(3000);
     expect(eur(option.netRevenueCents)).toBe(4500);
-    expect(eur(option.billedTotalCents)).toBe(7500);
+    expect(eur(option.billedTotalCents)).toBe(3000);
+    expect(eur(pmax.mediaRealSpendCents ?? 0)).toBe(3000 - 4500);
+    expect(pmax.feeForced).toBe(false);
   });
 });
 
@@ -223,11 +226,13 @@ describe('media buy', () => {
 
     expect(eur(ads.listPriceCents)).toBe(4000);
     expect(eur(ads.mediaBudgetCents)).toBe(10_000);
-    // El fee de 4.000 € dispara el tramo del 5 % y queda en 3.800 €; los medios
-    // salen intactos: 3.800 € + 10.000 €.
+    // El fee de 4.000 € dispara el tramo del 5 % y queda en 3.800 €. Ronda 10
+    // (CLAUDE.md §4.4): el fee se resta del presupuesto, nunca se suma
+    // encima — el cliente factura exactamente sus 10.000 €.
     expect(eur(ads.netPriceCents)).toBe(3800);
-    expect(eur(ads.billedTotalCents)).toBe(13_800);
-    expect(eur(option.billedTotalCents)).toBe(13_800);
+    expect(eur(ads.billedTotalCents)).toBe(10_000);
+    expect(eur(option.billedTotalCents)).toBe(10_000);
+    expect(eur(ads.mediaRealSpendCents ?? 0)).toBe(10_000 - 3800);
   });
 
   it('los medios no entran en la base del margen: el margen se mide neto de medios', () => {
@@ -329,6 +334,130 @@ describe('media buy', () => {
 });
 
 // =============================================================================
+// §4.4, ronda 10 — el fee se resta del presupuesto de medios, no se suma
+// =============================================================================
+
+describe('media buy — ronda 10: reparto del fee', () => {
+  it('reparto automático: el ejemplo de la especificación (2.000 € de medios, mínimo 1.200 €)', () => {
+    // Meta, 2.000 € de medios a 1 mes: 2.000 € × 40 % = 800 €, pero el
+    // mínimo mensual (1.200 €) es mayor → fee = 1.200 €, real al medio = 800 €.
+    const option = priceOption(
+      { markets: ['FR'], lines: [{ supportId: 'ADS-01', mediaBudgetCents: 200_000, mediaMonths: 1 }] },
+      ctx,
+    );
+    const ads = line(option, 'ADS-01', 'FR');
+
+    expect(eur(ads.netPriceCents)).toBe(1200);
+    expect(eur(ads.mediaRealSpendCents ?? 0)).toBe(800);
+    expect(ads.feeForced).toBe(false);
+    // El cliente factura exactamente sus 2.000 €, ni un euro más.
+    expect(eur(ads.billedTotalCents)).toBe(2000);
+    expect(eur(option.billedTotalCents)).toBe(2000);
+  });
+
+  it('reparto forzado a mano: fijo, inmune al descuento por volumen', () => {
+    // Un fee negociado de 900 € (por debajo del mínimo automático de 1.200 €),
+    // combinado con una línea normal para disparar el tramo de descuento.
+    const option = priceOption(
+      {
+        markets: ['FR'],
+        lines: [
+          {
+            supportId: 'ADS-01',
+            mediaBudgetCents: 200_000,
+            mediaMonths: 1,
+            manualFeeCents: 90_000,
+            manualFeeReason: 'Fee negociado con el cliente, por debajo del mínimo estándar.',
+          },
+          { supportId: 'CRM-01', quantity: 3 }, // 6.000 € — junto a los 900 € del fee, dispara el 10 %
+        ],
+      },
+      ctx,
+    );
+    const ads = line(option, 'ADS-01', 'FR');
+
+    expect(option.nominalDiscountRate).toBe(0.1);
+    // El fee forzado se mantiene EXACTO pese al descuento: suelo y techo a la vez.
+    expect(eur(ads.netPriceCents)).toBe(900);
+    expect(ads.feeForced).toBe(true);
+    expect(eur(ads.mediaRealSpendCents ?? 0)).toBe(2000 - 900);
+    expect(eur(ads.billedTotalCents)).toBe(2000);
+    // El descuento "pedido" contra esta línea se pierde, no se redistribuye
+    // (mismo patrón que cualquier otro suelo, CLAUDE.md §4.5).
+    expect(ads.warnings.map((w) => w.code)).toContain('DISCOUNT_ABSORBED_BY_FLOOR');
+  });
+
+  it('caso límite: presupuesto por debajo del mínimo deja el real al medio en negativo (el motor lo calcula, no bloquea)', () => {
+    // 800 € de medios, mínimo mensual 1.200 €: el reparto automático dejaría
+    // el importe real al medio en -400 €. El motor lo calcula igual —
+    // bloquear el envío es responsabilidad de checks.ts, no del motor.
+    const option = priceOption(
+      { markets: ['FR'], lines: [{ supportId: 'ADS-01', mediaBudgetCents: 80_000, mediaMonths: 1 }] },
+      ctx,
+    );
+    const ads = line(option, 'ADS-01', 'FR');
+
+    expect(eur(ads.netPriceCents)).toBe(1200);
+    expect(eur(ads.mediaRealSpendCents ?? 0)).toBe(-400);
+    expect(eur(ads.billedTotalCents)).toBe(800);
+  });
+
+  it('INF-01 nunca reparte automático: alwaysManualMediaSplit, y su fee no forzado se comporta igual que uno sin mínimo confirmado', () => {
+    expect(DEFAULT_CATALOG.get('INF-01')!.alwaysManualMediaSplit).toBe(true);
+    for (const id of ['ADS-01', 'ADS-02', 'ADS-03']) {
+      expect(DEFAULT_CATALOG.get(id)!.alwaysManualMediaSplit).toBe(false);
+    }
+
+    const option = priceOption(
+      { markets: ['FR'], lines: [{ supportId: 'INF-01', mediaBudgetCents: 500_000, mediaMonths: 1 }] },
+      ctx,
+    );
+    const inf = line(option, 'INF-01', 'FR');
+    expect(inf.alwaysManualMediaSplit).toBe(true);
+    expect(inf.feeForced).toBe(false);
+    // El motor no bloquea por sí solo: checks.ts es quien exige forzarlo.
+    expect(eur(inf.billedTotalCents)).toBe(5000);
+  });
+
+  it('un fee forzado en 0 € es una entrada válida: el importe íntegro va al medio real', () => {
+    const option = priceOption(
+      {
+        markets: ['FR'],
+        lines: [
+          {
+            supportId: 'INF-01',
+            mediaBudgetCents: 300_000,
+            mediaMonths: 1,
+            manualFeeCents: 0,
+            manualFeeReason: 'Colaboración sin fee: barter con el influencer.',
+          },
+        ],
+      },
+      ctx,
+    );
+    const inf = line(option, 'INF-01', 'FR');
+    expect(inf.feeForced).toBe(true);
+    expect(eur(inf.netPriceCents)).toBe(0);
+    expect(eur(inf.mediaRealSpendCents ?? 0)).toBe(3000);
+    expect(eur(inf.billedTotalCents)).toBe(3000);
+  });
+
+  it('exige un motivo para forzar el fee a mano', () => {
+    expect(() =>
+      priceOption(
+        {
+          markets: ['FR'],
+          lines: [
+            { supportId: 'ADS-01', mediaBudgetCents: 200_000, mediaMonths: 1, manualFeeCents: 90_000 },
+          ],
+        },
+        ctx,
+      ),
+    ).toThrow(/motivo/);
+  });
+});
+
+// =============================================================================
 // §4.5 — descuentos
 // =============================================================================
 
@@ -362,10 +491,15 @@ describe('descuentos', () => {
     expect(eur(option.grossNetOfMediaCents)).toBe(4430);
     expect(option.nominalDiscountRate).toBe(0.05);
 
-    // Los medios salen intactos.
+    // netRevenueCents (suma de fees + tarifas normales) no cambia — sigue
+    // siendo la base del objetivo anual. billedTotalCents sí cambia (ronda
+    // 10, CLAUDE.md §4.4): el fee de ADS-02 se resta de sus medios, no se
+    // suma — el total facturado es el medio (10.000 €) + la tarifa normal
+    // de ON-01, sin el fee aparte.
+    const on1 = line(option, 'ON-01', 'FR');
     expect(eur(option.mediaBudgetCents)).toBe(10_000);
     expect(eur(option.netRevenueCents)).toBe(4208.5);
-    expect(eur(option.billedTotalCents)).toBe(14_208.5);
+    expect(eur(option.billedTotalCents)).toBe(10_000 + eur(on1.netPriceCents));
   });
 
   it('reaplica el suelo tras el descuento y no redistribuye el exceso', () => {
@@ -536,9 +670,17 @@ describe('totales de opción', () => {
     // ON-01: 4 × 430 € = 1.720 €. ADS-01: max(5.000 € × 40 % ; 1.200 € × 2) = 2.400 €.
     expect(eur(option.grossNetOfMediaCents)).toBe(4120);
     expect(eur(option.mediaBudgetCents)).toBe(5000);
-    expect(option.billedTotalCents).toBe(option.netRevenueCents + option.mediaBudgetCents);
-    // El objetivo anual se mide sobre el neto, no sobre el facturado.
-    expect(option.netRevenueCents).toBeLessThan(option.billedTotalCents);
+
+    // Ronda 10 (CLAUDE.md §4.4): el fee de ADS-01 se resta de su presupuesto
+    // de medios, no se suma encima — billedTotalCents ya NO es
+    // `netRevenueCents + mediaBudgetCents` (esa identidad se rompió).
+    const on1 = line(option, 'ON-01', 'FR');
+    const ads1 = line(option, 'ADS-01', 'FR');
+    expect(option.billedTotalCents).toBe(on1.netPriceCents + ads1.mediaBudgetCents);
+    expect(option.billedTotalCents).not.toBe(option.netRevenueCents + option.mediaBudgetCents);
+    // El objetivo anual (importe_neto_de_medios) se sigue midiendo sobre la
+    // suma de fees + tarifas normales, no sobre lo facturado.
+    expect(option.netRevenueCents).toBeGreaterThan(0);
   });
 
   it('la antelación de la opción es la del soporte más lento', () => {

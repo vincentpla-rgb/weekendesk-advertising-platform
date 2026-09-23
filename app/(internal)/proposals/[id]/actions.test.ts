@@ -395,4 +395,70 @@ describe('duplicateProposal', () => {
     expect(result.ok).toBe(false);
     expect(rpc).not.toHaveBeenCalled();
   });
+
+  // ---------------------------------------------------------------------------
+  // Ronda 10 (CLAUDE.md §4.4): el reparto forzado a mano de una línea de
+  // media buy es una decisión de negocio, no un número derivado de
+  // parámetros vivos — se traslada tal cual, igual que el interruptor de
+  // descuento por volumen y los descuentos manuales.
+  // ---------------------------------------------------------------------------
+
+  it('el reparto de medios forzado a mano se traslada sin recalcular al duplicar', async () => {
+    maybeSingleProposal.mockResolvedValue({
+      data: frozenProposal({
+        frozen_snapshot: {
+          options: [
+            {
+              code: 'A',
+              name: 'Entrada',
+              pitch: 'p',
+              markets: ['FR'],
+              campaign_start: '2027-05-01',
+              campaign_end: '2027-05-31',
+              campaign_duration_count: null,
+              campaign_duration_unit: null,
+              lines: [
+                {
+                  support_id: 'ADS-01',
+                  quantity: 1,
+                  media_budget_cents: 200_000,
+                  media_months: 1,
+                  is_lead_market: true,
+                  manual_fee_cents: 90_000,
+                  manual_fee_reason: 'Fee negociado con el cliente.',
+                  cost_cents: 999_999_999,
+                },
+              ],
+              discounts: [],
+              volume_discount_disabled: false,
+            },
+          ],
+        },
+      }),
+      error: null,
+    });
+    rpc.mockResolvedValue({ data: { proposal_id: 'p2', proposal_number: '2026-002' }, error: null });
+
+    await duplicateProposal('p1');
+
+    const [, { payload }] = rpc.mock.calls[0] as [string, { payload: { options: Array<Record<string, unknown>> } }];
+    const lineA = (payload.options[0]!.lines as Array<Record<string, unknown>>)[0]!;
+
+    // El fee forzado se mantiene EXACTO — es fijo, inmune a cualquier
+    // recálculo — y el motivo se preserva tal cual.
+    expect(lineA.manual_fee_cents).toBe(90_000);
+    expect(lineA.manual_fee_reason).toBe('Fee negociado con el cliente.');
+    expect(lineA.billed_total_cents).toBe(200_000); // el presupuesto íntegro, no fee + medios
+  });
+
+  it('sin reparto forzado en el original, la copia sigue sin él (reparto automático)', async () => {
+    maybeSingleProposal.mockResolvedValue({ data: frozenProposal(), error: null });
+    rpc.mockResolvedValue({ data: { proposal_id: 'p2', proposal_number: '2026-002' }, error: null });
+
+    await duplicateProposal('p1');
+
+    const [, { payload }] = rpc.mock.calls[0] as [string, { payload: { options: Array<Record<string, unknown>> } }];
+    const lineA = (payload.options[0]!.lines as Array<Record<string, unknown>>)[0]!;
+    expect(lineA.manual_fee_cents).toBeNull();
+  });
 });

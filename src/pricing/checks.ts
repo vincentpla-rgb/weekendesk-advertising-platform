@@ -15,6 +15,8 @@ export type CheckCode =
   | 'LEAD_TIME_NOT_VERIFIABLE'
   | 'SUPPORT_NOT_SELLABLE'
   | 'MEDIA_BUDGET_MISSING'
+  | 'MEDIA_FEE_EXCEEDS_BUDGET'
+  | 'MEDIA_SPLIT_REQUIRED'
   | 'EMPTY_BRIEF';
 
 export interface CheckResult {
@@ -131,6 +133,16 @@ export function runPreSendChecks(
     // opción (§4.2), así que comprobarlo línea a línea repetiría el mismo
     // aviso una vez por mercado.
     const flaggedMediaBudget = new Set<string>();
+    // Caso límite (CLAUDE.md §4.4, ronda 10): el presupuesto del cliente no
+    // cubre el fee de gestión — el reparto automático dejaría el importe
+    // real al medio en negativo, lo cual es absurdo. Bloquea el envío: hay
+    // que forzar el reparto a mano o subir el presupuesto. Una vez por
+    // soporte, no por mercado (mismo presupuesto en todos los mercados de
+    // la opción, §4.2).
+    const flaggedFeeExceedsBudget = new Set<string>();
+    // Soportes con reparto SIEMPRE manual (INF-01, `alwaysManualMediaSplit`):
+    // el envío se bloquea mientras el fee no se haya forzado a mano.
+    const flaggedSplitRequired = new Set<string>();
     for (const line of option.lines) {
       if (line.isMediaBuy && line.mediaBudgetCents === 0 && !flaggedMediaBudget.has(line.supportId)) {
         flaggedMediaBudget.add(line.supportId);
@@ -138,6 +150,39 @@ export function runPreSendChecks(
           code: 'MEDIA_BUDGET_MISSING',
           severity: 'BLOCKER',
           message: `${line.supportId}: falta el presupuesto de medios (€). Es obligatorio para calcular el fee de gestión.`,
+          optionId: option.id,
+          supportId: line.supportId,
+        });
+      }
+      if (
+        line.isMediaBuy &&
+        line.mediaRealSpendCents !== null &&
+        line.mediaRealSpendCents < 0 &&
+        !flaggedFeeExceedsBudget.has(line.supportId)
+      ) {
+        flaggedFeeExceedsBudget.add(line.supportId);
+        blockers.push({
+          code: 'MEDIA_FEE_EXCEEDS_BUDGET',
+          severity: 'BLOCKER',
+          message:
+            `${line.supportId}: el presupuesto de medios del cliente no cubre el mínimo de gestión ` +
+            `(faltan ${(-line.mediaRealSpendCents / 100).toFixed(2)} €). Fuerza el reparto a mano ` +
+            `o sube el presupuesto.`,
+          optionId: option.id,
+          supportId: line.supportId,
+        });
+      }
+      if (
+        line.isMediaBuy &&
+        line.alwaysManualMediaSplit &&
+        !line.feeForced &&
+        !flaggedSplitRequired.has(line.supportId)
+      ) {
+        flaggedSplitRequired.add(line.supportId);
+        blockers.push({
+          code: 'MEDIA_SPLIT_REQUIRED',
+          severity: 'BLOCKER',
+          message: `${line.supportId}: el reparto entre el importe para el medio real y el fee de gestión nunca es automático. Confírmalo a mano antes de enviar.`,
           optionId: option.id,
           supportId: line.supportId,
         });

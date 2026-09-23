@@ -113,7 +113,11 @@ export function ProposalBuilder({
     );
   }
 
-  function updateLineMedia(optionKey: string, lineKey: string, patch: Partial<Pick<LineDraft, 'mediaBudgetEuros'>>) {
+  function updateLineMedia(
+    optionKey: string,
+    lineKey: string,
+    patch: Partial<Pick<LineDraft, 'mediaBudgetEuros' | 'manualFeeEuros' | 'manualFeeReason'>>,
+  ) {
     setOptions((prev) =>
       prev.map((o) =>
         o.key !== optionKey
@@ -262,6 +266,9 @@ export function ProposalBuilder({
                 // de la duración vigente de la opción, la MISMA función que
                 // alimenta la vista previa en vivo.
                 mediaMonths: suggestedMediaMonths(o),
+                // Reparto forzado a mano (CLAUDE.md §4.4, ronda 10): vacío = automático.
+                manualFeeEuros: l.manualFeeEuros === '' ? null : l.manualFeeEuros,
+                manualFeeReason: l.manualFeeEuros === '' ? null : l.manualFeeReason,
               })),
             discounts: o.discounts
               .filter((d) => d.ratePercent !== '' && d.reason.trim() !== '')
@@ -580,7 +587,10 @@ function OptionEditor({
   onChangeLineSupport: (lineKey: string, supportId: string) => void;
   onSetLineQuantity: (lineKey: string, quantity: number) => void;
   onResyncLine: (lineKey: string) => void;
-  onUpdateLineMedia: (lineKey: string, patch: Partial<Pick<LineDraft, 'mediaBudgetEuros'>>) => void;
+  onUpdateLineMedia: (
+    lineKey: string,
+    patch: Partial<Pick<LineDraft, 'mediaBudgetEuros' | 'manualFeeEuros' | 'manualFeeReason'>>,
+  ) => void;
   onAddLine: () => void;
   onRemoveLine: (lineKey: string) => void;
   onAddDiscount: () => void;
@@ -819,49 +829,58 @@ function OptionEditor({
                 </td>
                 <td>
                   {support?.isMediaBuy ? (
-                    <div style={{ display: 'flex', gap: 8 }}>
-                      <div>
-                        <label className="wk-label" style={{ fontSize: 10 }}>
-                          {t('proposalBuilder.mediaBudgetLabel')}
-                        </label>
-                        <input
-                          className="wk-input"
-                          type="number"
-                          placeholder={t('proposalBuilder.mediaBudgetPlaceholder')}
-                          value={line.mediaBudgetEuros}
-                          onChange={(e) =>
-                            onUpdateLineMedia(line.key, {
-                              mediaBudgetEuros: e.target.value === '' ? '' : Number(e.target.value),
-                            })
-                          }
-                          style={{
-                            width: 100,
-                            borderColor: line.mediaBudgetEuros === '' ? 'var(--wk-danger)' : undefined,
-                          }}
-                        />
-                        {line.mediaBudgetEuros === '' && (
-                          <div className="wk-badge wk-badge-danger" style={{ marginTop: 2, fontSize: 10 }}>
-                            {t('proposalBuilder.mediaBudgetRequired')}
-                          </div>
-                        )}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <div>
+                          <label className="wk-label" style={{ fontSize: 10 }}>
+                            {t('proposalBuilder.mediaBudgetLabel')}
+                          </label>
+                          <input
+                            className="wk-input"
+                            type="number"
+                            placeholder={t('proposalBuilder.mediaBudgetPlaceholder')}
+                            value={line.mediaBudgetEuros}
+                            onChange={(e) =>
+                              onUpdateLineMedia(line.key, {
+                                mediaBudgetEuros: e.target.value === '' ? '' : Number(e.target.value),
+                              })
+                            }
+                            style={{
+                              width: 100,
+                              borderColor: line.mediaBudgetEuros === '' ? 'var(--wk-danger)' : undefined,
+                            }}
+                          />
+                          {line.mediaBudgetEuros === '' && (
+                            <div className="wk-badge wk-badge-danger" style={{ marginTop: 2, fontSize: 10 }}>
+                              {t('proposalBuilder.mediaBudgetRequired')}
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <label className="wk-label" style={{ fontSize: 10 }}>
+                            {t('proposalBuilder.mediaMonthsAutoLabel')}
+                          </label>
+                          {/* Nunca manual (CLAUDE.md §4.4, ronda 9): se deriva de la
+                              duración de la opción, igual que la cantidad de las
+                              demás líneas — si el periodo cambia, este valor se
+                              actualiza solo. */}
+                          <input
+                            className="wk-input"
+                            type="number"
+                            disabled
+                            value={suggestedMediaMonths(draft) ?? ''}
+                            title={t('proposalBuilder.mediaMonthsAutoHint')}
+                            style={{ width: 64, color: 'var(--wk-text-muted)' }}
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="wk-label" style={{ fontSize: 10 }}>
-                          {t('proposalBuilder.mediaMonthsAutoLabel')}
-                        </label>
-                        {/* Nunca manual (CLAUDE.md §4.4, ronda 9): se deriva de la
-                            duración de la opción, igual que la cantidad de las
-                            demás líneas — si el periodo cambia, este valor se
-                            actualiza solo. */}
-                        <input
-                          className="wk-input"
-                          type="number"
-                          disabled
-                          value={suggestedMediaMonths(draft) ?? ''}
-                          title={t('proposalBuilder.mediaMonthsAutoHint')}
-                          style={{ width: 64, color: 'var(--wk-text-muted)' }}
-                        />
-                      </div>
+
+                      <MediaFeeSplit
+                        support={support}
+                        line={line}
+                        pricedLine={priced?.lines.find((l) => l.supportId === line.supportId) ?? null}
+                        onUpdateLineMedia={(patch) => onUpdateLineMedia(line.key, patch)}
+                      />
                     </div>
                   ) : (
                     <span style={{ color: 'var(--wk-text-muted)' }}>—</span>
@@ -985,6 +1004,144 @@ function OptionEditor({
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Reparto del presupuesto de medios entre el importe real al medio y el fee
+ * de gestión de Weekendesk (CLAUDE.md §4.4, ronda 10) — interno, nunca de
+ * cara al cliente (§6). Dos modos:
+ *
+ * - **ADS-01/02/03**: automático por defecto (40 % del presupuesto, o el
+ *   mínimo mensual × meses). Un checkbox permite forzarlo a mano para un
+ *   caso negociado — fijo, inmune a descuentos posteriores.
+ * - **INF-01** (`alwaysManualMediaSplit`): siempre manual, nunca automático
+ *   — cada colaboración se negocia caso por caso. El campo pide el importe
+ *   PARA EL INFLUENCER; el fee (lo que guarda el motor) es la resta contra
+ *   el presupuesto total, para no introducir un segundo modelo de datos.
+ */
+function MediaFeeSplit({
+  support,
+  line,
+  pricedLine,
+  onUpdateLineMedia,
+}: {
+  support: SupportDefinition;
+  line: LineDraft;
+  pricedLine: PricedOption['lines'][number] | null;
+  onUpdateLineMedia: (patch: Partial<Pick<LineDraft, 'mediaBudgetEuros' | 'manualFeeEuros' | 'manualFeeReason'>>) => void;
+}) {
+  const { t } = useI18n();
+  const budgetEuros = line.mediaBudgetEuros === '' ? null : line.mediaBudgetEuros;
+  const forced = line.manualFeeEuros !== '';
+
+  const exceedsBudget = pricedLine?.mediaRealSpendCents !== null &&
+    pricedLine?.mediaRealSpendCents !== undefined &&
+    pricedLine.mediaRealSpendCents < 0;
+
+  const desglose = pricedLine && pricedLine.isMediaBuy ? (
+    <p style={{ fontSize: 11, color: exceedsBudget ? 'var(--wk-danger)' : 'var(--wk-text-muted)', margin: 0 }}>
+      {t('proposalBuilder.mediaFeeLabel')}: {formatCents(pricedLine.netPriceCents)} ·{' '}
+      {t('proposalBuilder.mediaRealSpendLabel')}: {formatCents(pricedLine.mediaRealSpendCents ?? 0)}
+      {exceedsBudget ? ` — ${t('proposalBuilder.mediaFeeExceedsBudget')}` : ''}
+    </p>
+  ) : null;
+
+  if (support.alwaysManualMediaSplit) {
+    // INF-01: siempre manual. El campo visible es "importe para el
+    // influencer"; `manualFeeEuros` (lo que se manda al motor) es el resto
+    // del presupuesto total.
+    const influencerEuros = budgetEuros === null || !forced ? '' : budgetEuros - Number(line.manualFeeEuros);
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div>
+            <label className="wk-label" style={{ fontSize: 10 }}>
+              {t('proposalBuilder.influencerAmountLabel')}
+            </label>
+            <input
+              className="wk-input"
+              type="number"
+              disabled={budgetEuros === null}
+              value={influencerEuros}
+              onChange={(e) => {
+                if (budgetEuros === null) return;
+                const influencer = e.target.value === '' ? null : Number(e.target.value);
+                onUpdateLineMedia({
+                  manualFeeEuros: influencer === null ? '' : budgetEuros - influencer,
+                });
+              }}
+              style={{ width: 100 }}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label className="wk-label" style={{ fontSize: 10 }}>
+              {t('proposalBuilder.manualFeeReasonLabel')}
+            </label>
+            <input
+              className="wk-input"
+              value={line.manualFeeReason}
+              onChange={(e) => onUpdateLineMedia({ manualFeeReason: e.target.value })}
+              style={{ width: 160 }}
+            />
+          </div>
+        </div>
+        {!forced && (
+          <div className="wk-badge wk-badge-danger" style={{ fontSize: 10, width: 'fit-content' }}>
+            {t('proposalBuilder.mediaSplitRequired')}
+          </div>
+        )}
+        {desglose}
+      </div>
+    );
+  }
+
+  // ADS-01/02/03: automático por defecto, forzable a mano.
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11 }}>
+        <input
+          type="checkbox"
+          checked={forced}
+          onChange={(e) =>
+            onUpdateLineMedia(
+              e.target.checked ? { manualFeeEuros: 0, manualFeeReason: '' } : { manualFeeEuros: '', manualFeeReason: '' },
+            )
+          }
+        />
+        {t('proposalBuilder.forceMediaFee')}
+      </label>
+      {forced && (
+        <div style={{ display: 'flex', gap: 8 }}>
+          <div>
+            <label className="wk-label" style={{ fontSize: 10 }}>
+              {t('proposalBuilder.manualFeeLabel')}
+            </label>
+            <input
+              className="wk-input"
+              type="number"
+              value={line.manualFeeEuros}
+              onChange={(e) =>
+                onUpdateLineMedia({ manualFeeEuros: e.target.value === '' ? 0 : Number(e.target.value) })
+              }
+              style={{ width: 100 }}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label className="wk-label" style={{ fontSize: 10 }}>
+              {t('proposalBuilder.manualFeeReasonLabel')}
+            </label>
+            <input
+              className="wk-input"
+              value={line.manualFeeReason}
+              onChange={(e) => onUpdateLineMedia({ manualFeeReason: e.target.value })}
+              style={{ width: 160 }}
+            />
+          </div>
+        </div>
+      )}
+      {desglose}
     </div>
   );
 }

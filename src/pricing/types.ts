@@ -62,6 +62,15 @@ export interface SupportDefinition {
    * El motor calcula entonces el fee sin suelo y avisa. No se inventa.
    */
   readonly minMonthlyFeeCents: Cents | null;
+  /**
+   * Solo media buy (CLAUDE.md §4.4, ronda 10): el reparto entre el medio
+   * real y el fee de gestión nunca es automático para este soporte — cada
+   * caso se negocia aparte (INF-01: cada colaboración con un influencer es
+   * distinta). `true` solo en INF-01. Impone el bloqueo `MEDIA_SPLIT_REQUIRED`
+   * en `checks.ts` mientras `manualFeeCents` no se rellene, en vez de un ID
+   * de soporte hardcodeado dentro de ese módulo genérico.
+   */
+  readonly alwaysManualMediaSplit: boolean;
   readonly requiresAvailabilityCheck: boolean;
   readonly markets?: Readonly<Partial<Record<Market, SupportMarketSettings>>>;
 }
@@ -88,6 +97,18 @@ export interface OptionLineInput {
   readonly mediaBudgetCents?: Cents;
   /** Solo media buy: meses de campaña, para el fee mínimo mensual. */
   readonly mediaMonths?: number;
+  /**
+   * Solo media buy (CLAUDE.md §4.4, ronda 10): fuerza el fee de gestión a un
+   * importe negociado a mano, en vez del reparto automático (40 % del
+   * presupuesto, o el mínimo mensual × meses, el que sea mayor). Un fee
+   * forzado es FIJO — suelo y techo a la vez: ningún descuento (automático
+   * o manual) puede erosionarlo después, porque representa un importe ya
+   * cerrado con el cliente. Obligatorio para INF-01 (`alwaysManualMediaSplit`),
+   * donde nunca hay reparto automático.
+   */
+  readonly manualFeeCents?: Cents;
+  /** Obligatorio junto con `manualFeeCents`. Toda excepción se registra con motivo (CLAUDE.md §4.4, §8). */
+  readonly manualFeeReason?: string;
 }
 
 export interface OptionInput {
@@ -164,7 +185,25 @@ export interface PricedLine {
 
   readonly mediaBudgetCents: Cents;
   readonly mediaMonths: number | null;
-  /** Lo que se factura al cliente: neto + medios. */
+  /**
+   * Solo media buy (CLAUDE.md §4.4, ronda 10): lo que llega de verdad al
+   * medio real (Meta, Google, el influencer) = presupuesto de medios − fee.
+   * `null` en líneas normales. Puede salir NEGATIVO si el presupuesto del
+   * cliente no cubre el fee mínimo — el motor lo calcula igual, sin
+   * bloquear: el bloqueo es una regla de negocio de `checks.ts`
+   * (`MEDIA_FEE_EXCEEDS_BUDGET`), no del propio cálculo.
+   */
+  readonly mediaRealSpendCents: Cents | null;
+  /** `true` si el fee de esta línea se forzó a mano (`manualFeeCents`), no se calculó automáticamente. */
+  readonly feeForced: boolean;
+  /** Copiado del catálogo (`SupportDefinition.alwaysManualMediaSplit`). */
+  readonly alwaysManualMediaSplit: boolean;
+  /**
+   * Lo que se factura al cliente. Líneas normales: la tarifa neta tras
+   * descuento. Media buy (CLAUDE.md §4.4, ronda 10): el presupuesto de
+   * medios ÍNTEGRO, nunca más — el fee se resta por dentro, no se suma
+   * encima (antes de la ronda 10 era `netPriceCents + mediaBudgetCents`).
+   */
   readonly billedTotalCents: Cents;
 
   readonly marginCents: Cents;

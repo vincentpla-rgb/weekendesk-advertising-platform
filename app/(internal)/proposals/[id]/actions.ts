@@ -179,6 +179,9 @@ interface FrozenSnapshotLine {
   readonly media_budget_cents: number | null;
   readonly media_months: number | null;
   readonly is_lead_market: boolean;
+  /** Reparto forzado a mano (CLAUDE.md §4.4, ronda 10): decisión de negocio, se traslada sin recalcular. */
+  readonly manual_fee_cents: number | null;
+  readonly manual_fee_reason: string | null;
 }
 
 interface FrozenSnapshotDiscount {
@@ -251,6 +254,12 @@ export async function duplicateProposal(proposalId: string): Promise<DuplicatePr
         quantity: l.quantity,
         mediaBudgetEuros: l.media_budget_cents ? l.media_budget_cents / 100 : null,
         mediaMonths: l.media_months,
+        // El reparto forzado a mano es una decisión de negocio, no un
+        // número derivado de parámetros vivos (CLAUDE.md §4.4, ronda 10):
+        // se traslada tal cual, igual que el interruptor de descuento por
+        // volumen y los descuentos manuales.
+        manualFeeEuros: l.manual_fee_cents ? l.manual_fee_cents / 100 : null,
+        manualFeeReason: l.manual_fee_reason,
       })),
     // Solo los descuentos MANUALES sobreviven; los de volumen (VOLUME) se
     // recalculan solos a partir de la base nueva (CLAUDE.md §4.5).

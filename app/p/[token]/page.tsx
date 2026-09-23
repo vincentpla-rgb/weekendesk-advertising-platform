@@ -33,7 +33,12 @@ export interface PublicOption {
   /** Modo "solo duración, sin fecha de inicio" (CLAUDE.md §5.3 bis). */
   campaign_duration_count: number | null;
   campaign_duration_unit: 'WEEK' | 'MONTH' | null;
-  net_revenue_cents: number;
+  /**
+   * Solo el presupuesto de medios que dio el cliente, informativo (nunca el
+   * desglose real/fee — CLAUDE.md §4.4/§6, ronda 10). `get_public_proposal`
+   * ya no manda `net_revenue_cents`: revelaría el fee de una línea de media
+   * buy en una opción con una sola línea de ese tipo.
+   */
   media_budget_cents: number;
   billed_total_cents: number;
   lines: PublicLine[];

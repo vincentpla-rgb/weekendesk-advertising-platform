@@ -103,8 +103,22 @@ describe('controles previos al envío', () => {
 
   it('bloquea por antelación insuficiente frente al soporte más lento', () => {
     // INF-01 exige 30 días laborables; del 18/09 al 02/11 hay 31 (sin festivos FR en medio).
+    // El reparto de INF-01 se fuerza a mano (alwaysManualMediaSplit, ronda 10)
+    // para no mezclar el bloqueo MEDIA_SPLIT_REQUIRED con el que se prueba aquí.
     const option = priceOption(
-      { id: 'A', markets: ['FR'], lines: [{ supportId: 'INF-01', mediaBudgetCents: 500_000, mediaMonths: 1 }] },
+      {
+        id: 'A',
+        markets: ['FR'],
+        lines: [
+          {
+            supportId: 'INF-01',
+            mediaBudgetCents: 500_000,
+            mediaMonths: 1,
+            manualFeeCents: 200_000,
+            manualFeeReason: 'Negociado con el cliente.',
+          },
+        ],
+      },
       ctx,
     );
     expect(runPreSendChecks([withStart(option)], baseContext()).canSend).toBe(true);
@@ -116,7 +130,19 @@ describe('controles previos al envío', () => {
 
   it('sin fecha de inicio concreta (solo duración) avisa en vez de bloquear (§5.3 bis)', () => {
     const option = priceOption(
-      { id: 'A', markets: ['FR'], lines: [{ supportId: 'INF-01', mediaBudgetCents: 500_000, mediaMonths: 1 }] },
+      {
+        id: 'A',
+        markets: ['FR'],
+        lines: [
+          {
+            supportId: 'INF-01',
+            mediaBudgetCents: 500_000,
+            mediaMonths: 1,
+            manualFeeCents: 200_000,
+            manualFeeReason: 'Negociado con el cliente.',
+          },
+        ],
+      },
       ctx,
     );
     const informe = runPreSendChecks([withDurationOnly(option)], baseContext());
@@ -264,6 +290,95 @@ describe('controles previos al envío', () => {
     );
     const informe = runPreSendChecks([withStart(option)], baseContext());
     expect(informe.blockers.filter((b) => b.code === 'MEDIA_BUDGET_MISSING')).toHaveLength(1);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Ronda 10 (CLAUDE.md §4.4): el fee se resta del presupuesto de medios.
+  // ---------------------------------------------------------------------------
+
+  it('bloquea cuando el presupuesto del cliente no cubre el fee mínimo de gestión', () => {
+    // 800 € de medios, mínimo mensual de ADS-01 es 1.200 €.
+    const option = priceOption(
+      { id: 'A', markets: ['FR'], lines: [{ supportId: 'ADS-01', mediaBudgetCents: 80_000, mediaMonths: 1 }] },
+      ctx,
+    );
+    const informe = runPreSendChecks([withStart(option)], baseContext());
+
+    expect(informe.canSend).toBe(false);
+    expect(informe.blockers.map((b) => b.code)).toContain('MEDIA_FEE_EXCEEDS_BUDGET');
+    expect(informe.blockers.find((b) => b.code === 'MEDIA_FEE_EXCEEDS_BUDGET')?.supportId).toBe('ADS-01');
+  });
+
+  it('no bloquea por presupuesto insuficiente cuando el fee sí cabe', () => {
+    const option = priceOption(
+      { id: 'A', markets: ['FR'], lines: [{ supportId: 'ADS-01', mediaBudgetCents: 300_000, mediaMonths: 1 }] },
+      ctx,
+    );
+    const informe = runPreSendChecks([withStart(option)], baseContext());
+    expect(informe.blockers.map((b) => b.code)).not.toContain('MEDIA_FEE_EXCEEDS_BUDGET');
+  });
+
+  it('forzar el reparto a mano resuelve el bloqueo de presupuesto insuficiente', () => {
+    const option = priceOption(
+      {
+        id: 'A',
+        markets: ['FR'],
+        lines: [
+          {
+            supportId: 'ADS-01',
+            mediaBudgetCents: 80_000,
+            mediaMonths: 1,
+            manualFeeCents: 50_000,
+            manualFeeReason: 'Fee reducido, negociado con el cliente.',
+          },
+        ],
+      },
+      ctx,
+    );
+    const informe = runPreSendChecks([withStart(option)], baseContext());
+    expect(informe.blockers.map((b) => b.code)).not.toContain('MEDIA_FEE_EXCEEDS_BUDGET');
+  });
+
+  it('INF-01 bloquea el envío mientras el reparto no se fuerce a mano', () => {
+    const option = priceOption(
+      { id: 'A', markets: ['FR'], lines: [{ supportId: 'INF-01', mediaBudgetCents: 500_000, mediaMonths: 1 }] },
+      ctx,
+    );
+    const informe = runPreSendChecks([withStart(option)], baseContext());
+
+    expect(informe.canSend).toBe(false);
+    expect(informe.blockers.map((b) => b.code)).toContain('MEDIA_SPLIT_REQUIRED');
+    expect(informe.blockers.find((b) => b.code === 'MEDIA_SPLIT_REQUIRED')?.supportId).toBe('INF-01');
+  });
+
+  it('INF-01 con el reparto forzado a mano ya no bloquea por MEDIA_SPLIT_REQUIRED', () => {
+    const option = priceOption(
+      {
+        id: 'A',
+        markets: ['FR'],
+        lines: [
+          {
+            supportId: 'INF-01',
+            mediaBudgetCents: 500_000,
+            mediaMonths: 1,
+            manualFeeCents: 200_000,
+            manualFeeReason: 'Negociado con el influencer.',
+          },
+        ],
+      },
+      ctx,
+    );
+    const informe = runPreSendChecks([withStart(option)], baseContext());
+    expect(informe.blockers.map((b) => b.code)).not.toContain('MEDIA_SPLIT_REQUIRED');
+  });
+
+  it('un soporte con reparto automático (ADS-*) nunca dispara MEDIA_SPLIT_REQUIRED', () => {
+    const option = priceOption(
+      { id: 'A', markets: ['FR'], lines: [{ supportId: 'ADS-01', mediaBudgetCents: 300_000, mediaMonths: 1 }] },
+      ctx,
+    );
+    const informe = runPreSendChecks([withStart(option)], baseContext());
+    expect(informe.blockers.map((b) => b.code)).not.toContain('MEDIA_SPLIT_REQUIRED');
   });
 });
 

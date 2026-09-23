@@ -128,7 +128,23 @@ function validate(line: OptionLineInput, support: SupportDefinition): void {
         `${line.supportId}: mediaMonths debe ser un entero de al menos 1 mes`,
       );
     }
-  } else if (line.mediaBudgetCents !== undefined || line.mediaMonths !== undefined) {
+    if (line.manualFeeCents !== undefined) {
+      if (line.manualFeeCents < 0 || !Number.isInteger(line.manualFeeCents)) {
+        throw new PricingError(
+          `${line.supportId}: manualFeeCents debe ser un entero de céntimos no negativo`,
+        );
+      }
+      if (!line.manualFeeReason || line.manualFeeReason.trim() === '') {
+        throw new PricingError(
+          `${line.supportId}: forzar el fee de gestión a mano exige un motivo registrado (CLAUDE.md §4.4, §8)`,
+        );
+      }
+    }
+  } else if (
+    line.mediaBudgetCents !== undefined ||
+    line.mediaMonths !== undefined ||
+    line.manualFeeCents !== undefined
+  ) {
     throw new PricingError(
       `${line.supportId} no es un soporte de media buy: no admite presupuesto de medios`,
     );
@@ -142,7 +158,12 @@ function validate(line: OptionLineInput, support: SupportDefinition): void {
 interface PreDiscountLine {
   readonly base: Omit<
     PricedLine,
-    'discountCents' | 'netPriceCents' | 'billedTotalCents' | 'marginCents' | 'marginRate'
+    | 'discountCents'
+    | 'netPriceCents'
+    | 'billedTotalCents'
+    | 'marginCents'
+    | 'marginRate'
+    | 'mediaRealSpendCents'
   >;
   readonly warnings: PricingWarning[];
 }
@@ -191,34 +212,49 @@ function priceLineBeforeDiscount(
   let floorApplied = false;
   let mediaBudgetCents = 0;
   let mediaMonths: number | null = null;
+  let feeForced = false;
 
   if (support.isMediaBuy) {
-    // Fuera de la fórmula general. Los medios van a coste, sin margen.
+    // Fuera de la fórmula general. Los medios van a coste, sin margen. El
+    // cliente factura EXACTAMENTE su presupuesto de medios (CLAUDE.md §4.4,
+    // ronda 10): el fee se reparte POR DENTRO de ese importe, nunca se suma
+    // encima — ver `billedTotalCents` más abajo, tras el descuento.
     mediaBudgetCents = line.mediaBudgetCents ?? 0;
     mediaMonths = line.mediaMonths ?? 1;
 
-    if (support.minMonthlyFeeCents === null) {
-      warnings.push({
-        code: 'MISSING_MIN_MONTHLY_FEE',
-        message:
-          `${support.id}: sin fee mínimo mensual confirmado. El fee se calcula solo como ` +
-          `medios × ${(parameters.mediaFeeRate * 100).toFixed(0)} %, sin suelo. ` +
-          `Parámetro pendiente (CLAUDE.md §9).`,
-        supportId: support.id,
-        market,
-      });
-    }
+    if (line.manualFeeCents !== undefined) {
+      // Reparto forzado a mano (CLAUDE.md §4.4, ronda 10): fijo, suelo y
+      // techo a la vez — ningún descuento posterior puede erosionarlo, es
+      // un importe ya negociado con el cliente. Obligatorio en los soportes
+      // con `alwaysManualMediaSplit` (INF-01): ahí nunca hay automático.
+      feeForced = true;
+      listPriceCents = line.manualFeeCents;
+      enforcedFloorCents = line.manualFeeCents;
+      floorApplied = true;
+    } else {
+      if (support.minMonthlyFeeCents === null) {
+        warnings.push({
+          code: 'MISSING_MIN_MONTHLY_FEE',
+          message:
+            `${support.id}: sin fee mínimo mensual confirmado. El fee se calcula solo como ` +
+            `medios × ${(parameters.mediaFeeRate * 100).toFixed(0)} %, sin suelo. ` +
+            `Parámetro pendiente (CLAUDE.md §9).`,
+          supportId: support.id,
+          market,
+        });
+      }
 
-    const fee = mediaManagementFee(
-      parameters,
-      mediaBudgetCents,
-      mediaMonths,
-      support.minMonthlyFeeCents,
-    );
-    listPriceCents = fee.feeCents;
-    // El "mínimo" mensual es un mínimo también frente a los descuentos.
-    enforcedFloorCents = fee.minimumCents;
-    floorApplied = fee.minimumApplied;
+      const fee = mediaManagementFee(
+        parameters,
+        mediaBudgetCents,
+        mediaMonths,
+        support.minMonthlyFeeCents,
+      );
+      listPriceCents = fee.feeCents;
+      // El "mínimo" mensual es un mínimo también frente a los descuentos.
+      enforcedFloorCents = fee.minimumCents;
+      floorApplied = fee.minimumApplied;
+    }
   } else {
     grossPriceCents = Math.round(
       support.basePriceCents * coefficientFor(parameters, market) * quantity,
@@ -257,6 +293,8 @@ function priceLineBeforeDiscount(
       listPriceCents,
       mediaBudgetCents,
       mediaMonths,
+      feeForced,
+      alwaysManualMediaSplit: support.alwaysManualMediaSplit,
       leadTimeBusinessDays: support.leadTimeBusinessDays,
       requiresAvailabilityCheck: support.requiresAvailabilityCheck,
       warnings,
@@ -380,13 +418,25 @@ export function priceOption(input: OptionInput, ctx: PricingContext): PricedOpti
       warnings,
       discountCents,
       netPriceCents,
-      billedTotalCents: netPriceCents + p.base.mediaBudgetCents,
+      // Media buy: lo que llega de verdad al medio real, tras descuento y
+      // suelo (CLAUDE.md §4.4, ronda 10). Puede salir negativo si el
+      // presupuesto no cubre el fee — `checks.ts` lo bloquea, el motor solo
+      // lo calcula.
+      mediaRealSpendCents: p.base.isMediaBuy ? p.base.mediaBudgetCents - netPriceCents : null,
+      // El cliente factura su presupuesto de medios íntegro, nunca más
+      // (ronda 10): el fee se resta por dentro, no se suma encima.
+      billedTotalCents: p.base.isMediaBuy ? p.base.mediaBudgetCents : netPriceCents,
       marginCents,
       marginRate,
     };
   });
 
   // --- Totales ---------------------------------------------------------------
+  // `netRevenueCents` (importe_neto_de_medios, CLAUDE.md §4.4): suma de lo
+  // que Weekendesk se queda de verdad. En líneas normales es la tarifa neta;
+  // en media buy, `netPriceCents` YA ES el fee de gestión (nunca se suma al
+  // presupuesto para facturar, ronda 10) — la fórmula no cambia, solo lo que
+  // representa `billedTotalCents` más arriba.
   const netRevenueCents = lines.reduce((s, l) => s + l.netPriceCents, 0);
   const mediaBudgetCents = lines.reduce((s, l) => s + l.mediaBudgetCents, 0);
   const costCents = lines.reduce((s, l) => s + l.costCents, 0);
@@ -420,7 +470,10 @@ export function priceOption(input: OptionInput, ctx: PricingContext): PricedOpti
       grossNetOfMediaCents > 0 ? effectiveDiscountCents / grossNetOfMediaCents : 0,
     netRevenueCents,
     mediaBudgetCents,
-    billedTotalCents: netRevenueCents + mediaBudgetCents,
+    // Suma de los `billedTotalCents` de línea (ronda 10): ya NO es
+    // `netRevenueCents + mediaBudgetCents` — esa identidad se rompió al
+    // dejar de sumar el fee encima del presupuesto de medios.
+    billedTotalCents: lines.reduce((s, l) => s + l.billedTotalCents, 0),
     costCents,
     marginCents,
     marginRate,
