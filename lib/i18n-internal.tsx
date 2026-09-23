@@ -127,6 +127,7 @@ const es = {
   'proposalBuilder.sentBody': 'El envío está congelado y el email ya ha salido a {email}, con copia a ti y a contracting@weekendesk.fr. Ningún cambio posterior lo altera.',
   'proposalBuilder.viewPublic': 'Ver pantalla pública',
   'proposalBuilder.applyDuration': 'Usar duración',
+  'proposalBuilder.autoQuantityHint': 'Automático según duración',
 
   'checklist.allPass': 'Todos los controles previos al envío pasan.',
   'checklist.blocks': 'Bloquea el envío',
@@ -237,6 +238,7 @@ const fr: Dict = {
   'proposalBuilder.sentBody': "L'envoi est figé et l'email est déjà parti à {email}, en copie à toi et à contracting@weekendesk.fr. Aucune modification ultérieure ne le change.",
   'proposalBuilder.viewPublic': 'Voir la page publique',
   'proposalBuilder.applyDuration': 'Utiliser la durée',
+  'proposalBuilder.autoQuantityHint': 'Automatique selon la durée',
 
   'checklist.allPass': "Tous les contrôles avant l'envoi passent.",
   'checklist.blocks': "Bloque l'envoi",
@@ -344,6 +346,7 @@ const en: Dict = {
   'proposalBuilder.sentBody': "The proposal is frozen and the email has already gone out to {email}, cc'd to you and to contracting@weekendesk.fr. No later change alters it.",
   'proposalBuilder.viewPublic': 'View public page',
   'proposalBuilder.applyDuration': 'Use duration',
+  'proposalBuilder.autoQuantityHint': 'Automatic from duration',
 
   'checklist.allPass': 'All pre-send checks pass.',
   'checklist.blocks': 'Blocks sending',
