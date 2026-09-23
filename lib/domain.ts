@@ -28,3 +28,33 @@ export interface AccountRow {
   readonly country_code: string;
   readonly contacts: readonly ContactRow[];
 }
+
+/**
+ * Estados de un envío (CLAUDE.md §5.5). `borrador` cubre dos casos bien
+ * distintos que la interfaz distingue (ronda 7): un envío recién creado que
+ * todavía no ha intentado mandar el email, y uno cuyo email falló
+ * (`log_proposal_send_failure`) — el único caso con un botón de reintento.
+ */
+export type ProposalStatus = 'DRAFT' | 'SENT' | 'VIEWED' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+
+export const PROPOSAL_STATUSES: readonly ProposalStatus[] = [
+  'DRAFT',
+  'SENT',
+  'VIEWED',
+  'ACCEPTED',
+  'REJECTED',
+  'EXPIRED',
+];
+
+/** Fila mínima para listar presupuestos (CLAUDE.md §10.1.1, ronda 7): `/proposals`, `/accounts/[id]`. */
+export interface ProposalListItem {
+  readonly id: string;
+  readonly status: ProposalStatus;
+  readonly created_at: string;
+  readonly updated_at: string;
+  readonly sent_at: string | null;
+  readonly decided_at: string | null;
+  readonly account: { readonly legal_name: string } | null;
+  readonly contact: { readonly full_name: string } | null;
+  readonly owner: { readonly full_name: string } | null;
+}

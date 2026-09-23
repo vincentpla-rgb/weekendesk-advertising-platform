@@ -5,17 +5,27 @@ import { useMemo, useState } from 'react';
 import {
   MARKETS,
   buildCatalog,
-  computeDurationUnits,
-  euros,
   priceOption,
   runPreSendChecks,
-  suggestedQuantity,
-  toEuros,
+  toOptionInput,
+  optionDurationUnits,
+  suggestedQuantityForSupport,
+  addLineDraft,
+  addOptionDiscount,
+  createOptionDraft,
+  removeLineDraft,
+  removeOptionDiscount,
+  resyncLineQuantity,
+  setLineQuantityManually,
+  setLineSupport,
+  toggleOptionMarket,
+  updateOptionDiscount,
+  updateOptionDraft,
+  type DiscountDraft,
   type DurationSupportUnit,
+  type LineDraft,
   type Market,
-  type ManualDiscount,
-  type OptionInput,
-  type OptionLineInput,
+  type OptionDraft,
   type PreSendOptionContext,
   type PricedOption,
   type PricingParameters,
@@ -34,65 +44,6 @@ let lineKeySeq = 0;
 function nextKey() {
   lineKeySeq += 1;
   return `l${lineKeySeq}`;
-}
-
-interface LineDraft {
-  readonly key: string;
-  supportId: string;
-  quantity: number;
-  mediaBudgetEuros: number | '';
-  mediaMonths: number | '';
-}
-
-interface DiscountDraft {
-  readonly key: string;
-  ratePercent: number | '';
-  reason: string;
-}
-
-type ScheduleMode = 'DATES' | 'DURATION_ONLY';
-
-interface OptionDraft {
-  readonly key: string;
-  code: 'A' | 'B' | 'C';
-  name: string;
-  pitch: string;
-  /** Mercados de la opción, elegidos UNA VEZ (CLAUDE.md §4.2, ronda 2). */
-  markets: Market[];
-  scheduleMode: ScheduleMode;
-  campaignStart: string;
-  campaignEnd: string;
-  durationCount: number | '';
-  durationUnit: DurationSupportUnit;
-  lines: LineDraft[];
-  discounts: DiscountDraft[];
-}
-
-function emptyLine(supports: readonly SupportDefinition[]): LineDraft {
-  return {
-    key: nextKey(),
-    supportId: supports[0]?.id ?? '',
-    quantity: 1,
-    mediaBudgetEuros: '',
-    mediaMonths: '',
-  };
-}
-
-function emptyOption(code: OptionDraft['code'], supports: readonly SupportDefinition[]): OptionDraft {
-  return {
-    key: nextKey(),
-    code,
-    name: '',
-    pitch: '',
-    markets: ['FR'],
-    scheduleMode: 'DATES',
-    campaignStart: '',
-    campaignEnd: '',
-    durationCount: '',
-    durationUnit: 'WEEK',
-    lines: [emptyLine(supports)],
-    discounts: [],
-  };
 }
 
 /** Idioma de interfaz (ES/FR/EN) → locale de Intl para `countryName` (CLAUDE.md §9, ronda 2). */
@@ -120,32 +71,48 @@ export function ProposalBuilder({
   const [brief, setBrief] = useState('');
   // Se empieza con una sola opción, sin pestañas visibles (CLAUDE.md §5.1,
   // ronda 4): las pestañas solo aparecen al añadir la segunda.
-  const [options, setOptions] = useState<OptionDraft[]>(() => [emptyOption('A', supports)]);
+  const [options, setOptions] = useState<OptionDraft[]>(() => [
+    createOptionDraft(catalog, 'A', nextKey(), nextKey(), supports),
+  ]);
   const [activeOptionKey, setActiveOptionKey] = useState<string>(() => options[0]!.key);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ publicToken: string } | null>(null);
+  const [result, setResult] = useState<{ proposalId: string; publicToken: string } | null>(null);
 
   const selectedAccount = accounts.find((a) => a.id === accountId) ?? null;
 
-  function updateOption(key: string, patch: Partial<OptionDraft>) {
-    setOptions((prev) => prev.map((o) => (o.key === key ? { ...o, ...patch } : o)));
+  // --- Transiciones de estado: todas delegan en el módulo puro
+  // (src/pricing/option-draft.ts), testeado de extremo a extremo sin React.
+  // Aquí solo se conecta useState a esas funciones — ninguna reimplementa la
+  // lógica de auto-sincronización de cantidades (CLAUDE.md §4, ronda 6).
+
+  function updateOption(key: string, patch: Parameters<typeof updateOptionDraft>[2]) {
+    setOptions((prev) => prev.map((o) => (o.key === key ? updateOptionDraft(catalog, o, patch) : o)));
   }
 
   function toggleMarket(optionKey: string, market: Market) {
+    setOptions((prev) => prev.map((o) => (o.key === optionKey ? toggleOptionMarket(o, market) : o)));
+  }
+
+  function changeLineSupport(optionKey: string, lineKey: string, supportId: string) {
     setOptions((prev) =>
-      prev.map((o) => {
-        if (o.key !== optionKey) return o;
-        const has = o.markets.includes(market);
-        // No se permite dejar la opción sin ningún mercado.
-        if (has && o.markets.length === 1) return o;
-        const markets = has ? o.markets.filter((m) => m !== market) : [...o.markets, market];
-        return { ...o, markets };
-      }),
+      prev.map((o) => (o.key === optionKey ? setLineSupport(catalog, o, lineKey, supportId) : o)),
     );
   }
 
-  function updateLine(optionKey: string, lineKey: string, patch: Partial<LineDraft>) {
+  function setLineQuantity(optionKey: string, lineKey: string, quantity: number) {
+    setOptions((prev) =>
+      prev.map((o) => (o.key === optionKey ? setLineQuantityManually(o, lineKey, quantity) : o)),
+    );
+  }
+
+  function resyncLine(optionKey: string, lineKey: string) {
+    setOptions((prev) =>
+      prev.map((o) => (o.key === optionKey ? resyncLineQuantity(catalog, o, lineKey) : o)),
+    );
+  }
+
+  function updateLineMedia(optionKey: string, lineKey: string, patch: Partial<Pick<LineDraft, 'mediaBudgetEuros' | 'mediaMonths'>>) {
     setOptions((prev) =>
       prev.map((o) =>
         o.key !== optionKey
@@ -157,53 +124,32 @@ export function ProposalBuilder({
 
   function addLine(optionKey: string) {
     setOptions((prev) =>
-      prev.map((o) => (o.key === optionKey ? { ...o, lines: [...o.lines, emptyLine(supports)] } : o)),
+      prev.map((o) => (o.key === optionKey ? addLineDraft(catalog, o, supports[0]?.id ?? '', nextKey()) : o)),
     );
   }
 
   function removeLine(optionKey: string, lineKey: string) {
-    setOptions((prev) =>
-      prev.map((o) =>
-        o.key !== optionKey ? o : { ...o, lines: o.lines.filter((l) => l.key !== lineKey) },
-      ),
-    );
+    setOptions((prev) => prev.map((o) => (o.key === optionKey ? removeLineDraft(o, lineKey) : o)));
   }
 
   function addDiscount(optionKey: string) {
-    setOptions((prev) =>
-      prev.map((o) =>
-        o.key === optionKey
-          ? { ...o, discounts: [...o.discounts, { key: nextKey(), ratePercent: '', reason: '' }] }
-          : o,
-      ),
-    );
+    setOptions((prev) => prev.map((o) => (o.key === optionKey ? addOptionDiscount(o, nextKey()) : o)));
   }
 
   function updateDiscount(optionKey: string, discountKey: string, patch: Partial<DiscountDraft>) {
     setOptions((prev) =>
-      prev.map((o) =>
-        o.key !== optionKey
-          ? o
-          : {
-              ...o,
-              discounts: o.discounts.map((d) => (d.key === discountKey ? { ...d, ...patch } : d)),
-            },
-      ),
+      prev.map((o) => (o.key === optionKey ? updateOptionDiscount(o, discountKey, patch) : o)),
     );
   }
 
   function removeDiscount(optionKey: string, discountKey: string) {
-    setOptions((prev) =>
-      prev.map((o) =>
-        o.key !== optionKey ? o : { ...o, discounts: o.discounts.filter((d) => d.key !== discountKey) },
-      ),
-    );
+    setOptions((prev) => prev.map((o) => (o.key === optionKey ? removeOptionDiscount(o, discountKey) : o)));
   }
 
   function addOption() {
     if (options.length >= 3) return;
     const nextCode = (['A', 'B', 'C'] as const)[options.length]!;
-    const next = emptyOption(nextCode, supports);
+    const next = createOptionDraft(catalog, nextCode, nextKey(), nextKey(), supports);
     setOptions((prev) => [...prev, next]);
     // La opción recién añadida es la que el comercial quiere editar.
     setActiveOptionKey(next.key);
@@ -222,35 +168,11 @@ export function ProposalBuilder({
   // Es solo una vista previa: el servidor recalcula con este mismo motor a
   // partir de los datos crudos al enviar, y esos números (no estos) son los
   // que se persisten y se congelan.
-  const draftToOptionInput = (draft: OptionDraft): OptionInput => ({
-    id: draft.key,
-    name: draft.name || undefined,
-    markets: draft.markets,
-    lines: draft.lines
-      .filter((l) => l.supportId)
-      .map((l): OptionLineInput => {
-        const support = catalog.get(l.supportId);
-        return {
-          supportId: l.supportId,
-          quantity: l.quantity,
-          ...(support?.isMediaBuy
-            ? {
-                mediaBudgetCents: l.mediaBudgetEuros === '' ? 0 : euros(l.mediaBudgetEuros),
-                mediaMonths: l.mediaMonths === '' ? 1 : l.mediaMonths,
-              }
-            : {}),
-        };
-      }),
-    manualDiscounts: draft.discounts
-      .filter((d) => d.ratePercent !== '' && d.reason.trim() !== '')
-      .map((d): ManualDiscount => ({ rate: Number(d.ratePercent) / 100, reason: d.reason })),
-  });
-
   let priced: (PricedOption & { error?: string })[] = [];
   try {
     priced = options.map((draft) => {
       try {
-        return priceOption(draftToOptionInput(draft), { parameters, catalog });
+        return priceOption(toOptionInput(catalog, draft), { parameters, catalog });
       } catch (err) {
         return {
           id: draft.key,
@@ -344,7 +266,7 @@ export function ProposalBuilder({
       if (!res.ok) {
         throw new Error(body.error ?? 'Error al crear el envío');
       }
-      setResult({ publicToken: body.publicToken });
+      setResult({ proposalId: body.proposalId, publicToken: body.publicToken });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
@@ -366,9 +288,19 @@ export function ProposalBuilder({
           {t('proposalBuilder.sentBody', { email: contactEmail })}
         </p>
         <div className="wk-input" style={{ marginBottom: 12, userSelect: 'all' }}>{publicUrl}</div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        {/* No dejar al comercial sin salida (CLAUDE.md §10.1.1, ronda 7):
+            antes solo se podía ver la pantalla pública — ni un enlace de
+            vuelta al presupuesto que se acaba de crear, ni una forma clara
+            de empezar el siguiente sin recargar la página a mano. */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <a className="wk-btn wk-btn-secondary" href={publicUrl} target="_blank" rel="noreferrer">
             {t('proposalBuilder.viewPublic')}
+          </a>
+          <a className="wk-btn wk-btn-secondary" href={`/proposals/${result.proposalId}`}>
+            {t('proposalBuilder.viewProposal')}
+          </a>
+          <a className="wk-btn wk-btn-primary" href="/proposals/new">
+            {t('proposalBuilder.createAnother')}
           </a>
         </div>
       </div>
@@ -518,7 +450,10 @@ export function ProposalBuilder({
             catalog={catalog}
             onUpdate={(patch) => updateOption(draft.key, patch)}
             onToggleMarket={(m) => toggleMarket(draft.key, m)}
-            onUpdateLine={(lineKey, patch) => updateLine(draft.key, lineKey, patch)}
+            onChangeLineSupport={(lineKey, supportId) => changeLineSupport(draft.key, lineKey, supportId)}
+            onSetLineQuantity={(lineKey, quantity) => setLineQuantity(draft.key, lineKey, quantity)}
+            onResyncLine={(lineKey) => resyncLine(draft.key, lineKey)}
+            onUpdateLineMedia={(lineKey, patch) => updateLineMedia(draft.key, lineKey, patch)}
             onAddLine={() => addLine(draft.key)}
             onRemoveLine={(lineKey) => removeLine(draft.key, lineKey)}
             onAddDiscount={() => addDiscount(draft.key)}
@@ -607,7 +542,10 @@ function OptionEditor({
   catalog,
   onUpdate,
   onToggleMarket,
-  onUpdateLine,
+  onChangeLineSupport,
+  onSetLineQuantity,
+  onResyncLine,
+  onUpdateLineMedia,
   onAddLine,
   onRemoveLine,
   onAddDiscount,
@@ -619,9 +557,12 @@ function OptionEditor({
   priced: (PricedOption & { error?: string }) | null;
   supports: readonly SupportDefinition[];
   catalog: ReturnType<typeof buildCatalog>;
-  onUpdate: (patch: Partial<OptionDraft>) => void;
+  onUpdate: (patch: Parameters<typeof updateOptionDraft>[2]) => void;
   onToggleMarket: (market: Market) => void;
-  onUpdateLine: (lineKey: string, patch: Partial<LineDraft>) => void;
+  onChangeLineSupport: (lineKey: string, supportId: string) => void;
+  onSetLineQuantity: (lineKey: string, quantity: number) => void;
+  onResyncLine: (lineKey: string) => void;
+  onUpdateLineMedia: (lineKey: string, patch: Partial<Pick<LineDraft, 'mediaBudgetEuros' | 'mediaMonths'>>) => void;
   onAddLine: () => void;
   onRemoveLine: (lineKey: string) => void;
   onAddDiscount: () => void;
@@ -631,40 +572,20 @@ function OptionEditor({
 }) {
   const { t } = useI18n();
 
-  // La MISMA conversión que alimenta la cantidad del motor (CLAUDE.md §5.3,
-  // ronda 2): nunca una fórmula "de mostrar" distinta de la "de calcular".
-  const duration: { count: number; unit: DurationSupportUnit; units: ReturnType<typeof computeDurationUnits> | null } | null =
-    (() => {
-      if (draft.scheduleMode === 'DURATION_ONLY') {
-        return draft.durationCount === ''
-          ? null
-          : { count: draft.durationCount, unit: draft.durationUnit, units: null };
-      }
-      if (!draft.campaignStart || !draft.campaignEnd) return null;
-      try {
-        const units = computeDurationUnits(
-          new Date(`${draft.campaignStart}T00:00:00Z`),
-          new Date(`${draft.campaignEnd}T00:00:00Z`),
-        );
-        return { count: draft.durationUnit === 'WEEK' ? units.weeks : units.months, unit: draft.durationUnit, units };
-      } catch {
-        return null;
-      }
-    })();
-
-  function applyDurationToLine(lineKey: string, unit: DurationSupportUnit) {
+  // Solo para el texto informativo bajo el selector de periodo — la MISMA
+  // conversión que ya usa el motor para sugerir la cantidad de cada línea
+  // (CLAUDE.md §5.3, ronda 2 — y §4, ronda 6, para el porqué ya no hace
+  // falta pulsar nada).
+  const duration: { count: number; unit: DurationSupportUnit; weeks: number; months: number } | null = (() => {
     if (draft.scheduleMode === 'DURATION_ONLY') {
-      if (draft.durationCount === '' || draft.durationUnit !== unit) return;
-      onUpdateLine(lineKey, { quantity: draft.durationCount });
-      return;
+      return draft.durationCount === ''
+        ? null
+        : { count: draft.durationCount, unit: draft.durationUnit, weeks: 0, months: 0 };
     }
-    if (!draft.campaignStart || !draft.campaignEnd) return;
-    const units = computeDurationUnits(
-      new Date(`${draft.campaignStart}T00:00:00Z`),
-      new Date(`${draft.campaignEnd}T00:00:00Z`),
-    );
-    onUpdateLine(lineKey, { quantity: suggestedQuantity(units, unit) });
-  }
+    const units = optionDurationUnits(draft);
+    if (units === null) return null;
+    return { count: units.weeks, unit: 'WEEK', weeks: units.weeks, months: units.months };
+  })();
 
   return (
     <div className="wk-card">
@@ -788,8 +709,8 @@ function OptionEditor({
 
       {duration && (
         <p style={{ fontSize: 12, color: 'var(--wk-navy)', margin: '2px 0 4px', fontWeight: 600 }}>
-          {duration.units
-            ? `${duration.units.weeks} ${t('proposalBuilder.durationUnitWeek')} (${duration.units.months} ${t('proposalBuilder.durationUnitMonth')})`
+          {draft.scheduleMode === 'DATES'
+            ? `${duration.weeks} ${t('proposalBuilder.durationUnitWeek')} (${duration.months} ${t('proposalBuilder.durationUnitMonth')})`
             : `${duration.count} ${duration.unit === 'WEEK' ? t('proposalBuilder.durationUnitWeek') : t('proposalBuilder.durationUnitMonth')}`}
         </p>
       )}
@@ -814,15 +735,20 @@ function OptionEditor({
             const notSellableIn = draft.markets.filter(
               (m) => priced?.lines.find((l) => l.supportId === line.supportId && l.market === m && !l.sellable),
             );
-            const canApplyDuration =
-              support && (support.unit === 'WEEK' || support.unit === 'MONTH') && duration !== null;
+            // La cantidad se rellena sola mientras la línea siga en modo
+            // automático (CLAUDE.md §4, ronda 6): el botón de abajo solo
+            // hace falta para RESINCRONIZAR una línea que el comercial ya
+            // editó a mano, si el periodo cambia después de esa edición.
+            const suggestedQuantity = suggestedQuantityForSupport(draft, support);
+            const canResync = suggestedQuantity !== null && !line.quantityAutoSynced;
+            const isAutoManaged = suggestedQuantity !== null && line.quantityAutoSynced;
             return (
               <tr key={line.key}>
                 <td>
                   <select
                     className="wk-select"
                     value={line.supportId}
-                    onChange={(e) => onUpdateLine(line.key, { supportId: e.target.value })}
+                    onChange={(e) => onChangeLineSupport(line.key, e.target.value)}
                   >
                     {supports.map((s) => (
                       <option key={s.id} value={s.id}>
@@ -849,15 +775,24 @@ function OptionEditor({
                       min={0.5}
                       step={0.5}
                       value={line.quantity}
-                      onChange={(e) => onUpdateLine(line.key, { quantity: Number(e.target.value) })}
+                      onChange={(e) => onSetLineQuantity(line.key, Number(e.target.value))}
                       style={{ width: 68 }}
                     />
-                    {canApplyDuration && (
+                    {isAutoManaged && (
+                      <span
+                        className="wk-badge wk-badge-neutral"
+                        style={{ fontSize: 10, padding: '2px 6px' }}
+                        title={t('proposalBuilder.autoQuantityHint')}
+                      >
+                        {t('proposalBuilder.autoQuantityHint')}
+                      </span>
+                    )}
+                    {canResync && (
                       <button
                         type="button"
                         className="wk-btn wk-btn-ghost"
                         style={{ fontSize: 11, padding: '4px 6px' }}
-                        onClick={() => applyDurationToLine(line.key, support!.unit as DurationSupportUnit)}
+                        onClick={() => onResyncLine(line.key)}
                       >
                         {t('proposalBuilder.applyDuration')}
                       </button>
@@ -873,7 +808,7 @@ function OptionEditor({
                         placeholder={t('proposalBuilder.mediaBudgetPlaceholder')}
                         value={line.mediaBudgetEuros}
                         onChange={(e) =>
-                          onUpdateLine(line.key, {
+                          onUpdateLineMedia(line.key, {
                             mediaBudgetEuros: e.target.value === '' ? '' : Number(e.target.value),
                           })
                         }
@@ -886,7 +821,7 @@ function OptionEditor({
                         min={1}
                         value={line.mediaMonths}
                         onChange={(e) =>
-                          onUpdateLine(line.key, {
+                          onUpdateLineMedia(line.key, {
                             mediaMonths: e.target.value === '' ? '' : Number(e.target.value),
                           })
                         }

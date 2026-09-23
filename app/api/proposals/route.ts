@@ -7,10 +7,8 @@ import { createClient } from '@/lib/supabase/server';
 import type { Json } from '@/lib/supabase/database.types.js';
 import type { ContentLanguage } from '@/lib/domain';
 import { buildProposalEmailContent } from '@/lib/email/proposal-email';
+import { CONTRACTING_BCC } from '@/lib/email/constants';
 import { sendEmail } from '@/lib/email/resend-client';
-
-/** Weekendesk SAS, 28 rue de Londres, 75009 Paris (CLAUDE.md §7) — CCO fija de todo envío. */
-const CONTRACTING_BCC = 'contracting@weekendesk.fr';
 
 interface RawLine {
   supportId: string;
