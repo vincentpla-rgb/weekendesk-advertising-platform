@@ -198,6 +198,8 @@ interface FrozenSnapshotOption {
   readonly campaign_duration_unit: 'WEEK' | 'MONTH' | null;
   readonly lines: readonly FrozenSnapshotLine[];
   readonly discounts: readonly FrozenSnapshotDiscount[];
+  /** Interruptor "desactivar descuento por volumen" (CLAUDE.md §4.5, ronda 9). */
+  readonly volume_discount_disabled: boolean;
 }
 
 export async function duplicateProposal(proposalId: string): Promise<DuplicateProposalResult> {
@@ -255,6 +257,9 @@ export async function duplicateProposal(proposalId: string): Promise<DuplicatePr
     discounts: opt.discounts
       .filter((d: FrozenSnapshotDiscount) => d.kind === 'MANUAL')
       .map((d: FrozenSnapshotDiscount) => ({ ratePercent: d.rate * 100, reason: d.reason ?? '' })),
+    // El interruptor es una decisión de negocio sobre la opción, no un
+    // número congelado: se traslada tal cual (CLAUDE.md §4.5, ronda 9).
+    volumeDiscountDisabled: opt.volume_discount_disabled,
   }));
 
   let ctx;

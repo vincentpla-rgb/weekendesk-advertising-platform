@@ -210,6 +210,7 @@ function frozenProposal(overrides: Partial<Record<string, unknown>> = {}) {
             { kind: 'MANUAL', rate: 0.1, reason: 'Cliente recurrente' },
             { kind: 'VOLUME', rate: 0.05, reason: null },
           ],
+          volume_discount_disabled: true,
         },
         {
           code: 'B',
@@ -231,6 +232,7 @@ function frozenProposal(overrides: Partial<Record<string, unknown>> = {}) {
             },
           ],
           discounts: [],
+          volume_discount_disabled: false,
         },
       ],
     },
@@ -317,6 +319,12 @@ describe('duplicateProposal', () => {
 
       // Solo el descuento MANUAL sobrevive; el de VOLUME se recalcula solo.
       expect(options[0]!.discounts).toEqual([{ kind: 'MANUAL', rate: 0.1, reason: 'Cliente recurrente' }]);
+
+      // El interruptor "desactivar descuento por volumen" (CLAUDE.md §4.5,
+      // ronda 9) se traslada tal cual, opción por opción: es una decisión de
+      // negocio, no un número congelado que haya que recalcular.
+      expect(options[0]!.volume_discount_disabled).toBe(true);
+      expect(options[1]!.volume_discount_disabled).toBe(false);
 
       expect(result.newProposalId).toBe('p2');
       // Nunca hereda el número del original: el original ni siquiera se lee

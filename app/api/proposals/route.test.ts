@@ -104,6 +104,7 @@ function validBody() {
         campaignDurationUnit: null,
         lines: [{ supportId: 'ON-01', quantity: 1, mediaBudgetEuros: null, mediaMonths: null }],
         discounts: [],
+        volumeDiscountDisabled: false,
       },
       {
         code: 'B',
@@ -116,6 +117,7 @@ function validBody() {
         campaignDurationUnit: null,
         lines: [{ supportId: 'ON-01', quantity: 2, mediaBudgetEuros: null, mediaMonths: null }],
         discounts: [],
+        volumeDiscountDisabled: false,
       },
     ],
   };
