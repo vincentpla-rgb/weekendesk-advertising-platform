@@ -15,8 +15,9 @@ no esté ahí, preguntar antes de inventar.
 | Motor de precios | `src/pricing/` | Hecho |
 | Envío de email real (Resend) | `app/api/proposals/`, `lib/email/` | Hecho — presupuesto al cliente |
 | Login | `app/login/` | Hecho — email + contraseña, no magic link (ver CLAUDE.md §10.3) |
-| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts`, `app/**/*.test.ts` | Hecho — 143 tests + scripts/verify-rls-self-read.sh (contra PostgreSQL 16 real) |
-| Interfaz (Next.js) | `app/`, `lib/`, `components/` | Hecho — 3 pantallas del MVP |
+| Alta de usuarios del equipo | `app/(internal)/admin/users/` | Hecho — crea el usuario en Supabase Auth y lo añade a `allowed_emails` desde la app (CLAUDE.md §10.3 bis) |
+| Tests unitarios | `src/pricing/__tests__/`, `lib/**/*.test.ts`, `app/**/*.test.ts` | Hecho + scripts/verify-rls-self-read.sh (contra PostgreSQL 16 real) — `npm test` para el número actual |
+| Interfaz (Next.js) | `app/`, `lib/`, `components/` | Hecho — 4 pantallas del MVP, interfaz interna en ES/FR/EN (`lib/i18n-internal.tsx`) |
 
 Ver CLAUDE.md §10 para el detalle de qué pantallas existen y qué queda
 explícitamente fuera de esta pasada (dashboard, contrapropuesta, forzar
@@ -49,8 +50,11 @@ Verificadas ejecutándolas contra un PostgreSQL 16 real, no solo por sintaxis.
 9. `..._email_send.sql` — separa "crear el presupuesto" de "marcarlo enviado": `create_and_send_proposal` ahora deja el envío en `DRAFT`, y `mark_proposal_sent` / `log_proposal_send_failure` lo confirman o registran el fallo según la respuesta de Resend (ver `app/api/proposals/route.ts`)
 10. `..._self_read_policies.sql` — permite a un usuario autenticado leer su propia fila de `profiles` y de `allowed_emails` sin pasar por `is_team_member()` (defensa en profundidad, CLAUDE.md §10.3; `loginWithPassword` no depende de ella, sigue usando la clave de servicio)
 11. `..._service_role_grants.sql` — **bloqueante para el login en producción**: concede a `service_role` los privilegios de tabla que `grants.sql` (punto 7) ya concedía a `authenticated`. Sin esta migración, `service_role` da `permission denied for table allowed_emails` (un error de GRANT, no de RLS) y el login siempre deniega el acceso aunque las filas sean correctas. Ver CLAUDE.md §10.3
+12. `..._option_level_campaign.sql` — mueve `campaign_start`/`campaign_end` de `proposals` a `proposal_options` (cada opción tiene su propio periodo, CLAUDE.md §5.1) y añade `markets`, `campaign_duration_count`/`campaign_duration_unit` (modo "solo duración", §5.3 bis)
+13. `..._create_and_send_proposal_v2.sql` — `create_and_send_proposal` persiste mercados y fechas por opción; deja de escribir en `availability_checks` (el check manual de disponibilidad se quita de la app, §5.3, ronda 2)
+14. `..._public_proposal_access_v2.sql` — `get_public_proposal` devuelve mercados, fechas y duración por opción en vez de un único periodo de envío
 
-**Aplicar los puntos 10 y 11 en el proyecto Supabase real** (dashboard SQL
+**Aplicar los puntos 10 a 14 en el proyecto Supabase real** (dashboard SQL
 editor o `supabase db push`) — hacer `git push`/desplegar en Vercel no
 aplica migraciones de base de datos por sí solo, son dos pasos
 independientes.
@@ -131,13 +135,15 @@ y el catálogo, y devuelve el cálculo con su traza.
 | `catalog.ts` | Los 19 soportes del rate card |
 | `engine.ts` | Coste, multimercado, suelo, media buy, descuentos |
 | `reach.ts` | Audiencia: sin dato medido, valor nulo |
-| `checks.ts` | Controles previos al envío, festivos por mercado incluidos |
+| `checks.ts` | Controles previos al envío, festivos por mercado incluidos, antelación no verificable en modo "solo duración" (§5.3 bis) |
 | `fiscal.ts` | Año fiscal mayo–abril |
 | `holidays.ts` | Festivos nacionales FR/ES/IT/BE-FR/BE-NL 2026-2027 |
+| `duration.ts` | Conversión periodo de fechas → semanas/meses; alimenta la cantidad sugerida de una línea (CLAUDE.md §5.3 bis, ronda 2) |
 
 ## Cómo está organizada la app
 
-- `app/(internal)/proposals/new/` — creación de presupuesto (requiere sesión)
+- `app/(internal)/proposals/new/` — creación de presupuesto (requiere sesión). Cada opción elige sus propios mercados y su propio periodo (fechas o solo duración) — CLAUDE.md §4.2/§5.3 bis, ronda 2
+- `app/(internal)/admin/users/` — alta y baja de usuarios del equipo (Supabase Auth + `allowed_emails` en un paso, ronda 2)
 - `app/p/[token]/` — pantalla pública comparativa + aceptación + rechazo
 - `app/api/proposals/` — crea un presupuesto, lo manda por email con Resend y solo entonces lo marca `SENT`
 - `app/api/public/proposals/[token]/{accept,reject}/` — flujo público
@@ -145,7 +151,8 @@ y el catálogo, y devuelve el cálculo con su traza.
 - `app/api/auth/send-email/`, `app/auth/confirm/`, `lib/supabase/login-redirect.ts`, `lib/email/magic-link-email.ts`, `lib/email/confirm-url.ts` — infraestructura del magic link, sin usar desde que el login pasó a contraseña (CLAUDE.md §10.3); `app/auth/callback/` sigue activa como ruta de vuelta del canje PKCE, aunque nada la invoca ya
 - `lib/pricing-context.ts` — puente entre las tablas de Supabase y el motor puro
 - `lib/vies.ts` — verificación VIES (llamada de servidor, la función SQL no tiene salida de red)
-- `lib/i18n.ts` — textos de la pantalla pública en el idioma del cliente (mención de IVA incluida)
+- `lib/i18n.ts` — textos de la pantalla pública en el idioma DEL CLIENTE (mención de IVA incluida) — no confundir con `lib/i18n-internal.tsx`, el idioma de la INTERFAZ del equipo (ES/FR/EN, preferencia de navegador, ronda 2)
+- `lib/countries.ts` — lista de países ISO-2 para el desplegable de "País" al crear una cuenta (ronda 2, sustituye al texto libre)
 - `lib/email/` — contenido de los emails (presupuesto, magic link), cliente de Resend y verificación de firma del webhook — todo puro salvo `resend-client.ts`, que hace la llamada HTTP
 - `lib/email/templates/` — una plantilla por idioma del email de presupuesto (`proposal-email.<idioma>.ts`), separada de la lógica de envío para poder retocar el texto sin tocarla
 

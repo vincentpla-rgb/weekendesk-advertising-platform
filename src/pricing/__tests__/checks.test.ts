@@ -3,9 +3,15 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_CATALOG } from '../catalog.js';
 import { DEFAULT_PRICING_PARAMETERS } from '../parameters.js';
 import { priceOption, type PricingContext } from '../engine.js';
-import { availabilityKey, businessDaysBetween, runPreSendChecks, type PreSendContext } from '../checks.js';
+import {
+  businessDaysBetween,
+  runPreSendChecks,
+  type PreSendContext,
+  type PreSendOptionContext,
+} from '../checks.js';
 import { fiscalPeriodOf, fiscalYearLabel } from '../fiscal.js';
 import { DEFAULT_HOLIDAYS, type PublicHoliday } from '../holidays.js';
+import type { PricedOption } from '../types.js';
 
 const ctx: PricingContext = { parameters: DEFAULT_PRICING_PARAMETERS, catalog: DEFAULT_CATALOG };
 const d = (iso: string) => new Date(`${iso}T00:00:00Z`);
@@ -13,13 +19,21 @@ const d = (iso: string) => new Date(`${iso}T00:00:00Z`);
 function baseContext(overrides: Partial<PreSendContext> = {}): PreSendContext {
   return {
     today: d('2026-09-18'),
-    campaignStart: d('2026-11-02'),
     brief: 'Campaña de otoño para la Costa Brava.',
-    confirmedAvailability: new Set<string>(),
     parameters: DEFAULT_PRICING_PARAMETERS,
     holidays: DEFAULT_HOLIDAYS,
     ...overrides,
   };
+}
+
+/** Envuelve una opción ya calculada con una fecha de inicio concreta (§5.3). */
+function withStart(option: PricedOption, campaignStart: Date | null = d('2026-11-02')): PreSendOptionContext {
+  return { option, campaignStart, durationOnly: false };
+}
+
+/** Opción cotizada solo por duración, sin fecha de inicio concreta (§5.3 bis). */
+function withDurationOnly(option: PricedOption): PreSendOptionContext {
+  return { option, campaignStart: null, durationOnly: true };
 }
 
 describe('businessDaysBetween', () => {
@@ -75,124 +89,105 @@ describe('businessDaysBetween', () => {
 });
 
 describe('controles previos al envío', () => {
-  it('bloquea si falta el check de disponibilidad de un soporte que lo exige', () => {
-    const option = priceOption({ id: 'A', lines: [{ supportId: 'ON-01', market: 'FR' }] }, ctx);
-    const informe = runPreSendChecks([option], baseContext());
-
-    expect(informe.canSend).toBe(false);
-    expect(informe.blockers.map((b) => b.code)).toContain('AVAILABILITY_NOT_CONFIRMED');
-  });
-
-  it('deja pasar cuando la disponibilidad está confirmada', () => {
-    const option = priceOption({ id: 'A', lines: [{ supportId: 'ON-01', market: 'FR' }] }, ctx);
-    const informe = runPreSendChecks([option], baseContext({
-      confirmedAvailability: new Set([availabilityKey('ON-01', 'FR')]),
-    }));
+  it('ya no exige check de disponibilidad con Marketing: se hace fuera del sistema (§5.3)', () => {
+    const option = priceOption({ id: 'A', markets: ['FR'], lines: [{ supportId: 'ON-01' }] }, ctx);
+    const informe = runPreSendChecks([withStart(option)], baseContext());
 
     expect(informe.canSend).toBe(true);
-    expect(informe.blockers).toHaveLength(0);
-  });
-
-  it('no exige check de disponibilidad a los soportes que no lo requieren', () => {
-    const option = priceOption({ id: 'A', lines: [{ supportId: 'CON-01', market: 'FR' }] }, ctx);
-    expect(runPreSendChecks([option], baseContext()).canSend).toBe(true);
+    expect(informe.blockers.map((b) => b.code)).not.toContain('AVAILABILITY_NOT_CONFIRMED');
   });
 
   it('bloquea por antelación insuficiente frente al soporte más lento', () => {
     // INF-01 exige 30 días laborables; del 18/09 al 02/11 hay 31 (sin festivos FR en medio).
     const option = priceOption(
-      { id: 'A', lines: [{ supportId: 'INF-01', market: 'FR', mediaBudgetCents: 500_000, mediaMonths: 1 }] },
+      { id: 'A', markets: ['FR'], lines: [{ supportId: 'INF-01', mediaBudgetCents: 500_000, mediaMonths: 1 }] },
       ctx,
     );
-    expect(runPreSendChecks([option], baseContext()).canSend).toBe(true);
+    expect(runPreSendChecks([withStart(option)], baseContext()).canSend).toBe(true);
 
-    const apurado = runPreSendChecks([option], baseContext({ campaignStart: d('2026-10-09') }));
+    const apurado = runPreSendChecks([withStart(option, d('2026-10-09'))], baseContext());
     expect(apurado.canSend).toBe(false);
     expect(apurado.blockers.map((b) => b.code)).toContain('LEAD_TIME_INSUFFICIENT');
+  });
+
+  it('sin fecha de inicio concreta (solo duración) avisa en vez de bloquear (§5.3 bis)', () => {
+    const option = priceOption(
+      { id: 'A', markets: ['FR'], lines: [{ supportId: 'INF-01', mediaBudgetCents: 500_000, mediaMonths: 1 }] },
+      ctx,
+    );
+    const informe = runPreSendChecks([withDurationOnly(option)], baseContext());
+
+    expect(informe.canSend).toBe(true);
+    expect(informe.blockers.map((b) => b.code)).not.toContain('LEAD_TIME_INSUFFICIENT');
+    expect(informe.warnings.map((w) => w.code)).toContain('LEAD_TIME_NOT_VERIFIABLE');
   });
 
   it('el caso de Navidad: sin festivos pasa, con festivos bloquea', () => {
     // ON-01 exige 15 días laborables. Del 11/12/2026 al 01/01/2027 hay 15 sin
     // festivos, pero 13 con el calendario FR (25/12 y 01/01 caen en medio).
-    const option = priceOption(
-      { id: 'A', lines: [{ supportId: 'ON-01', market: 'FR' }] },
-      ctx,
+    const option = priceOption({ id: 'A', markets: ['FR'], lines: [{ supportId: 'ON-01' }] }, ctx);
+    const sinFestivos = runPreSendChecks(
+      [withStart(option, d('2027-01-01'))],
+      baseContext({ today: d('2026-12-11'), holidays: [] }),
     );
-    const sinFestivos = runPreSendChecks([option], baseContext({
-      today: d('2026-12-11'),
-      campaignStart: d('2027-01-01'),
-      confirmedAvailability: new Set([availabilityKey('ON-01', 'FR')]),
-      holidays: [],
-    }));
     expect(sinFestivos.canSend).toBe(true);
 
-    const conFestivos = runPreSendChecks([option], baseContext({
-      today: d('2026-12-11'),
-      campaignStart: d('2027-01-01'),
-      confirmedAvailability: new Set([availabilityKey('ON-01', 'FR')]),
-    }));
+    const conFestivos = runPreSendChecks(
+      [withStart(option, d('2027-01-01'))],
+      baseContext({ today: d('2026-12-11') }),
+    );
     expect(conFestivos.canSend).toBe(false);
     expect(conFestivos.blockers.map((b) => b.code)).toContain('LEAD_TIME_INSUFFICIENT');
     expect(conFestivos.blockers[0]!.market).toBe('FR');
   });
 
   it('la antelación se evalúa por línea: un mercado puede bloquear y otro no', () => {
-    // Mismo soporte y misma fecha límite, pero IT pierde un día laborable más
-    // (Epifanía, 6 de enero) que FR en el mismo rango.
+    // Mismo soporte en dos mercados de la misma opción; IT pierde un día
+    // laborable más (Epifanía, 6 de enero) que FR en el mismo rango.
     const option = priceOption(
-      {
-        id: 'A',
-        lines: [
-          { supportId: 'CRM-03', market: 'FR' }, // 10 días
-          { supportId: 'CRM-03', market: 'IT' },
-        ],
-      },
+      { id: 'A', markets: ['FR', 'IT'], lines: [{ supportId: 'CRM-03' }] }, // 10 días
       ctx,
     );
-    const informe = runPreSendChecks([option], baseContext({
-      today: d('2026-12-20'),
-      campaignStart: d('2027-01-08'), // FR: 13 días disponibles, IT: 12
-      confirmedAvailability: new Set([
-        availabilityKey('CRM-03', 'FR'),
-        availabilityKey('CRM-03', 'IT'),
-      ]),
-    }));
+    const informe = runPreSendChecks(
+      [withStart(option, d('2027-01-08'))], // FR: 13 días disponibles, IT: 12
+      baseContext({ today: d('2026-12-20') }),
+    );
     // 10 días exigidos, ambos mercados sobran: no debería bloquear ninguno.
     expect(informe.blockers.filter((b) => b.code === 'LEAD_TIME_INSUFFICIENT')).toHaveLength(0);
   });
 
   it('bloquea una opción por debajo del suelo de margen', () => {
     const option = priceOption(
-      { id: 'A', lines: [{ supportId: 'ADS-03', market: 'FR', mediaBudgetCents: 100_000, mediaMonths: 1 }] },
+      { id: 'A', markets: ['FR'], lines: [{ supportId: 'ADS-03', mediaBudgetCents: 100_000, mediaMonths: 1 }] },
       ctx,
     );
-    const informe = runPreSendChecks([option], baseContext());
+    const informe = runPreSendChecks([withStart(option)], baseContext());
 
     expect(informe.blockers.map((b) => b.code)).toContain('MARGIN_BELOW_FLOOR');
   });
 
   it('no compensa una opción floja con otra buena', () => {
-    const buena = priceOption({ id: 'A', lines: [{ supportId: 'CON-01', market: 'FR' }] }, ctx);
+    const buena = priceOption({ id: 'A', markets: ['FR'], lines: [{ supportId: 'CON-01' }] }, ctx);
     const floja = priceOption(
-      { id: 'B', lines: [{ supportId: 'ADS-03', market: 'FR', mediaBudgetCents: 100_000, mediaMonths: 1 }] },
+      { id: 'B', markets: ['FR'], lines: [{ supportId: 'ADS-03', mediaBudgetCents: 100_000, mediaMonths: 1 }] },
       ctx,
     );
 
-    const informe = runPreSendChecks([buena, floja], baseContext());
+    const informe = runPreSendChecks([withStart(buena), withStart(floja)], baseContext());
     expect(informe.canSend).toBe(false);
     expect(informe.blockers.filter((b) => b.code === 'MARGIN_BELOW_FLOOR')).toHaveLength(1);
     expect(informe.blockers[0]!.optionId).toBe('B');
   });
 
   it('bloquea un soporte no vendible en ese mercado', () => {
-    const option = priceOption({ id: 'A', lines: [{ supportId: 'SOC-05', market: 'IT' }] }, ctx);
-    const informe = runPreSendChecks([option], baseContext());
+    const option = priceOption({ id: 'A', markets: ['IT'], lines: [{ supportId: 'SOC-05' }] }, ctx);
+    const informe = runPreSendChecks([withStart(option)], baseContext());
     expect(informe.blockers.map((b) => b.code)).toContain('SUPPORT_NOT_SELLABLE');
   });
 
   it('el brief vacío avisa pero no bloquea', () => {
-    const option = priceOption({ id: 'A', lines: [{ supportId: 'CON-01', market: 'FR' }] }, ctx);
-    const informe = runPreSendChecks([option], baseContext({ brief: '   ' }));
+    const option = priceOption({ id: 'A', markets: ['FR'], lines: [{ supportId: 'CON-01' }] }, ctx);
+    const informe = runPreSendChecks([withStart(option)], baseContext({ brief: '   ' }));
 
     expect(informe.canSend).toBe(true);
     expect(informe.warnings.map((w) => w.code)).toContain('EMPTY_BRIEF');

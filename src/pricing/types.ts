@@ -82,10 +82,9 @@ export interface ManualDiscount {
 
 export interface OptionLineInput {
   readonly supportId: string;
-  readonly market: Market;
-  /** Número de unidades (semanas, envíos, stories…). Por defecto 1. */
+  /** Número de unidades (semanas, envíos, stories…). Por defecto 1. Se aplica igual en cada mercado de la opción. */
   readonly quantity?: number;
-  /** Solo media buy: presupuesto de medios del cliente, a coste. */
+  /** Solo media buy: presupuesto de medios del cliente, a coste. Se aplica igual en cada mercado de la opción. */
   readonly mediaBudgetCents?: Cents;
   /** Solo media buy: meses de campaña, para el fee mínimo mensual. */
   readonly mediaMonths?: number;
@@ -94,6 +93,14 @@ export interface OptionLineInput {
 export interface OptionInput {
   readonly id?: string;
   readonly name?: string;
+  /**
+   * Mercados de la opción, elegidos UNA VEZ (CLAUDE.md §4.2, ronda 2). Todo
+   * soporte de `lines` se vende automáticamente en todos estos mercados: no
+   * existe ya un mercado por línea. El mercado líder (el que paga el diseño)
+   * es el de mayor coeficiente entre estos, igual para todos los soportes de
+   * la opción — porque, por construcción, todo soporte aparece en todos ellos.
+   */
+  readonly markets: readonly Market[];
   readonly lines: readonly OptionLineInput[];
   /** Multimercado y cualquier otro descuento comercial. Nunca automáticos. */
   readonly manualDiscounts?: readonly ManualDiscount[];

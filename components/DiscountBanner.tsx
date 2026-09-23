@@ -1,6 +1,7 @@
 'use client';
 
 import { formatCents, formatPercent } from '@/lib/format';
+import { useI18n } from '@/lib/i18n-internal';
 
 /**
  * El total de descuento acumulado, bien visible — confirmado por Vincent
@@ -19,12 +20,13 @@ export function DiscountBanner({
   effectiveRate: number;
   effectiveCents: number;
 }) {
+  const { t } = useI18n();
   const floorBit = nominalCents !== effectiveCents;
 
   if (nominalCents === 0) {
     return (
       <div className="wk-discount-banner" style={{ background: 'var(--wk-bg)', color: 'var(--wk-text-muted)' }}>
-        <span style={{ fontSize: 13 }}>Sin descuento aplicado.</span>
+        <span style={{ fontSize: 13 }}>{t('discountBanner.none')}</span>
       </div>
     );
   }
@@ -33,15 +35,15 @@ export function DiscountBanner({
     <div className="wk-discount-banner">
       <div className="wk-discount-figure">
         {formatPercent(nominalRate)}
-        <small>Descuento nominal ({formatCents(nominalCents)})</small>
+        <small>{t('discountBanner.nominal')} ({formatCents(nominalCents)})</small>
       </div>
       <div className="wk-discount-figure">
         {formatPercent(effectiveRate)}
-        <small>Descuento efectivo ({formatCents(effectiveCents)})</small>
+        <small>{t('discountBanner.effective')} ({formatCents(effectiveCents)})</small>
       </div>
       {floorBit && (
         <span className="wk-badge wk-badge-warning" style={{ alignSelf: 'center' }}>
-          El suelo de margen absorbe {formatCents(nominalCents - effectiveCents)}
+          {t('discountBanner.floorAbsorbs', { amount: formatCents(nominalCents - effectiveCents) })}
         </span>
       )}
     </div>

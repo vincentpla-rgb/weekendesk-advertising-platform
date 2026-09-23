@@ -6,7 +6,9 @@
  *
  * Orden del cálculo, por opción:
  *
- *   1. coste por línea, con la regla multimercado por soporte      (§4.1, §4.2)
+ *   0. la opción elige sus mercados UNA VEZ; cada línea (soporte) se expande
+ *      automáticamente a todos ellos — ya no hay mercado por línea (§4.2, ronda 2)
+ *   1. coste por línea×mercado, con la regla multimercado por opción (§4.1, §4.2)
  *   2. tarifa bruta y suelo de margen → tarifa de lista            (§4.3)
  *      · media buy: fee = max(medios × 40 %, mínimo mensual × meses) (§4.4)
  *   3. base del descuento = suma de tarifas de lista, NETA DE MEDIOS (§4.5)
@@ -93,24 +95,15 @@ export function mediaManagementFee(
 }
 
 /**
- * Mercado que paga el diseño, POR SOPORTE (CLAUDE.md §4.2): el de coeficiente
- * más alto entre aquellos en los que ese soporte aparece en la opción.
+ * Mercado que paga el diseño (CLAUDE.md §4.2, ronda 2): el de mayor
+ * coeficiente entre los elegidos para la OPCIÓN. Como todo soporte se vende
+ * ahora automáticamente en todos los mercados de la opción (§4.2), ya no hace
+ * falta resolverlo por soporte: es uno solo, igual para toda la opción.
  */
-function resolveLeadMarkets(
-  lines: readonly OptionLineInput[],
-  parameters: PricingParameters,
-): Map<string, Market> {
-  const lead = new Map<string, Market>();
-  for (const line of lines) {
-    const current = lead.get(line.supportId);
-    if (
-      current === undefined ||
-      coefficientFor(parameters, line.market) > coefficientFor(parameters, current)
-    ) {
-      lead.set(line.supportId, line.market);
-    }
-  }
-  return lead;
+function resolveLeadMarket(markets: readonly Market[], parameters: PricingParameters): Market {
+  return markets.reduce((best, market) =>
+    coefficientFor(parameters, market) > coefficientFor(parameters, best) ? market : best,
+  );
 }
 
 function validate(line: OptionLineInput, support: SupportDefinition): void {
@@ -156,8 +149,9 @@ interface PreDiscountLine {
 
 function priceLineBeforeDiscount(
   line: OptionLineInput,
+  market: Market,
   ctx: PricingContext,
-  leadMarkets: Map<string, Market>,
+  isLeadMarket: boolean,
 ): PreDiscountLine {
   const { parameters, catalog } = ctx;
   const support = catalog.get(line.supportId);
@@ -166,26 +160,25 @@ function priceLineBeforeDiscount(
 
   const quantity = line.quantity ?? 1;
   const warnings: PricingWarning[] = [];
-  const sellable = isSellable(support, line.market);
+  const sellable = isSellable(support, market);
   if (!sellable) {
     warnings.push({
       code: 'NOT_SELLABLE_IN_MARKET',
       message:
-        `${support.id} no es vendible en ${line.market}` +
-        (support.markets?.[line.market]?.note ? `: ${support.markets[line.market]!.note}` : ''),
+        `${support.id} no es vendible en ${market}` +
+        (support.markets?.[market]?.note ? `: ${support.markets[market]!.note}` : ''),
       supportId: support.id,
-      market: line.market,
+      market,
     });
   }
 
   // --- 1. Coste (§4.1 + §4.2) ------------------------------------------------
   // El diseño se reutiliza entre mercados; el coste externo no.
-  const isLeadMarket = leadMarkets.get(support.id) === line.market;
   const billableHours = isLeadMarket
     ? support.businessHours + support.designHours
     : support.businessHours;
   const unitCostCents =
-    Math.round(billableHours * parameters.hourlyRateCents) + externalCostFor(support, line.market);
+    Math.round(billableHours * parameters.hourlyRateCents) + externalCostFor(support, market);
   // El coste escala con la cantidad: 3 stories son 3 boosts.
   const costCents = Math.round(unitCostCents * quantity);
 
@@ -212,7 +205,7 @@ function priceLineBeforeDiscount(
           `medios × ${(parameters.mediaFeeRate * 100).toFixed(0)} %, sin suelo. ` +
           `Parámetro pendiente (CLAUDE.md §9).`,
         supportId: support.id,
-        market: line.market,
+        market,
       });
     }
 
@@ -228,7 +221,7 @@ function priceLineBeforeDiscount(
     floorApplied = fee.minimumApplied;
   } else {
     grossPriceCents = Math.round(
-      support.basePriceCents * coefficientFor(parameters, line.market) * quantity,
+      support.basePriceCents * coefficientFor(parameters, market) * quantity,
     );
     enforcedFloorCents = theoreticalMarginFloor;
     listPriceCents = Math.max(grossPriceCents, enforcedFloorCents);
@@ -237,11 +230,11 @@ function priceLineBeforeDiscount(
       warnings.push({
         code: 'MARGIN_FLOOR_APPLIED',
         message:
-          `${support.id} en ${line.market}: la tarifa sube de ` +
+          `${support.id} en ${market}: la tarifa sube de ` +
           `${(grossPriceCents / 100).toFixed(2)} € a ${(listPriceCents / 100).toFixed(2)} € ` +
           `por el suelo de margen del ${(parameters.minMarginRate * 100).toFixed(0)} %.`,
         supportId: support.id,
-        market: line.market,
+        market,
       });
     }
   }
@@ -250,7 +243,7 @@ function priceLineBeforeDiscount(
     base: {
       supportId: support.id,
       supportName: support.name,
-      market: line.market,
+      market,
       quantity,
       isMediaBuy: support.isMediaBuy,
       sellable,
@@ -279,20 +272,27 @@ function priceLineBeforeDiscount(
 export function priceOption(input: OptionInput, ctx: PricingContext): PricedOption {
   const { parameters } = ctx;
 
+  const markets = [...new Set(input.markets)];
+  if (markets.length === 0) {
+    throw new PricingError('La opción no tiene ningún mercado seleccionado');
+  }
+  for (const market of markets) coefficientFor(parameters, market); // valida que exista coeficiente
+
   const seen = new Set<string>();
   for (const line of input.lines) {
-    const key = `${line.supportId}|${line.market}`;
-    if (seen.has(key)) {
+    if (seen.has(line.supportId)) {
       throw new PricingError(
-        `${line.supportId} aparece dos veces en ${line.market} dentro de la misma opción. ` +
+        `${line.supportId} aparece dos veces en la misma opción. ` +
           `Usa la cantidad: duplicar la línea recontaría el diseño.`,
       );
     }
-    seen.add(key);
+    seen.add(line.supportId);
   }
 
-  const leadMarkets = resolveLeadMarkets(input.lines, parameters);
-  const priced = input.lines.map((line) => priceLineBeforeDiscount(line, ctx, leadMarkets));
+  const leadMarket = resolveLeadMarket(markets, parameters);
+  const priced = input.lines.flatMap((line) =>
+    markets.map((market) => priceLineBeforeDiscount(line, market, ctx, market === leadMarket)),
+  );
 
   // --- 3. Base del descuento: neta de medios (§4.5) --------------------------
   // El presupuesto de medios ni suma para el tramo ni se descuenta: es dinero
@@ -400,8 +400,6 @@ export function priceOption(input: OptionInput, ctx: PricingContext): PricedOpti
         `El margen se mide neto de medios.`,
     });
   }
-
-  const markets = [...new Set(lines.map((l) => l.market))];
 
   return {
     id: input.id ?? null,

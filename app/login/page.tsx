@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { loginWithPassword } from './actions';
+import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import { useI18n } from '@/lib/i18n-internal';
 
 /**
  * Login con email y contraseña (CLAUDE.md §2, §10.3). Sustituye al magic
@@ -28,6 +30,7 @@ import { loginWithPassword } from './actions';
  */
 export default function LoginPage() {
   const router = useRouter();
+  const { t } = useI18n();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -54,15 +57,18 @@ export default function LoginPage() {
 
   return (
     <div className="wk-shell" style={{ maxWidth: 400, marginTop: 80 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <img src="/LOGO_Weekendesk_color.png" alt={t('app.title')} style={{ height: 26, width: 'auto' }} />
+        <LanguageSwitcher />
+      </div>
       <div className="wk-card">
-        <h1 style={{ fontSize: 20 }}>Weekendesk Advertising</h1>
         <p style={{ color: 'var(--wk-text-muted)', fontSize: 13, marginBottom: 18 }}>
-          Acceso solo para el equipo. Introduce tu email y contraseña de Weekendesk.
+          {t('login.subtitle')}
         </p>
 
         <form onSubmit={handleSubmit}>
           <label className="wk-label" htmlFor="email">
-            Email
+            {t('login.email')}
           </label>
           <input
             id="email"
@@ -77,7 +83,7 @@ export default function LoginPage() {
           />
 
           <label className="wk-label" htmlFor="password">
-            Contraseña
+            {t('login.password')}
           </label>
           <input
             id="password"
@@ -102,12 +108,12 @@ export default function LoginPage() {
             disabled={submitting}
             style={{ width: '100%', justifyContent: 'center' }}
           >
-            {submitting ? 'Entrando…' : 'Entrar'}
+            {submitting ? t('login.submitting') : t('login.submit')}
           </button>
         </form>
 
         <p style={{ color: 'var(--wk-text-muted)', fontSize: 12, marginTop: 16 }}>
-          ¿No tienes cuenta? Pide a Vincent que te la cree.
+          {t('login.noAccount')}
         </p>
       </div>
     </div>
