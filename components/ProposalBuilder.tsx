@@ -77,7 +77,7 @@ export function ProposalBuilder({
   const [activeOptionKey, setActiveOptionKey] = useState<string>(() => options[0]!.key);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [result, setResult] = useState<{ publicToken: string } | null>(null);
+  const [result, setResult] = useState<{ proposalId: string; publicToken: string } | null>(null);
 
   const selectedAccount = accounts.find((a) => a.id === accountId) ?? null;
 
@@ -266,7 +266,7 @@ export function ProposalBuilder({
       if (!res.ok) {
         throw new Error(body.error ?? 'Error al crear el envío');
       }
-      setResult({ publicToken: body.publicToken });
+      setResult({ proposalId: body.proposalId, publicToken: body.publicToken });
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
@@ -288,9 +288,19 @@ export function ProposalBuilder({
           {t('proposalBuilder.sentBody', { email: contactEmail })}
         </p>
         <div className="wk-input" style={{ marginBottom: 12, userSelect: 'all' }}>{publicUrl}</div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        {/* No dejar al comercial sin salida (CLAUDE.md §10.1.1, ronda 7):
+            antes solo se podía ver la pantalla pública — ni un enlace de
+            vuelta al presupuesto que se acaba de crear, ni una forma clara
+            de empezar el siguiente sin recargar la página a mano. */}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <a className="wk-btn wk-btn-secondary" href={publicUrl} target="_blank" rel="noreferrer">
             {t('proposalBuilder.viewPublic')}
+          </a>
+          <a className="wk-btn wk-btn-secondary" href={`/proposals/${result.proposalId}`}>
+            {t('proposalBuilder.viewProposal')}
+          </a>
+          <a className="wk-btn wk-btn-primary" href="/proposals/new">
+            {t('proposalBuilder.createAnother')}
           </a>
         </div>
       </div>

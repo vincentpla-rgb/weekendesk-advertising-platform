@@ -44,6 +44,8 @@ const es = {
   'login.adminLink': 'Gestionar usuarios del equipo',
 
   'nav.newProposal': 'Nuevo presupuesto',
+  'nav.proposalsList': 'Presupuestos',
+  'nav.accountsList': 'Cuentas',
   'nav.admin': 'Usuarios',
 
   'admin.title': 'Usuarios del equipo',
@@ -128,6 +130,8 @@ const es = {
   'proposalBuilder.viewPublic': 'Ver pantalla pública',
   'proposalBuilder.applyDuration': 'Usar duración',
   'proposalBuilder.autoQuantityHint': 'Automático según duración',
+  'proposalBuilder.viewProposal': 'Ver presupuesto enviado',
+  'proposalBuilder.createAnother': 'Crear otro presupuesto',
 
   'checklist.allPass': 'Todos los controles previos al envío pasan.',
   'checklist.blocks': 'Bloquea el envío',
@@ -137,6 +141,52 @@ const es = {
   'discountBanner.effective': 'Descuento efectivo',
   'discountBanner.none': 'Sin descuento aplicado.',
   'discountBanner.floorAbsorbs': 'El suelo de margen absorbe {amount}',
+
+  'status.DRAFT': 'Borrador',
+  'status.SENT': 'Enviado',
+  'status.VIEWED': 'Visto',
+  'status.ACCEPTED': 'Aceptado',
+  'status.REJECTED': 'Rechazado',
+  'status.EXPIRED': 'Caducado',
+
+  'proposalsList.title': 'Presupuestos',
+  'proposalsList.filterStatus': 'Estado',
+  'proposalsList.filterStatusAll': 'Todos',
+  'proposalsList.filterOwner': 'Creador',
+  'proposalsList.filterOwnerAll': 'Todos',
+  'proposalsList.colAccount': 'Cuenta',
+  'proposalsList.colContact': 'Contacto',
+  'proposalsList.colStatus': 'Estado',
+  'proposalsList.colUpdated': 'Última modificación',
+  'proposalsList.colOwner': 'Creador',
+  'proposalsList.empty': 'No hay presupuestos con estos filtros.',
+
+  'proposalDetail.title': 'Presupuesto',
+  'proposalDetail.back': '← Volver a presupuestos',
+  'proposalDetail.draftNotice':
+    'Este presupuesto se calculó y quedó guardado, pero el email nunca llegó a salir. El cliente no lo ha visto.',
+  'proposalDetail.retryButton': 'Reintentar envío',
+  'proposalDetail.retrying': 'Reintentando…',
+  'proposalDetail.retrySuccess': 'Email enviado. El presupuesto ya está marcado como enviado.',
+  'proposalDetail.publicLink': 'Enlace público',
+  'proposalDetail.sentAt': 'Enviado el',
+  'proposalDetail.decidedAt': 'Decidido el',
+  'proposalDetail.option': 'Opción',
+  'proposalDetail.lineMarket': 'Mercado',
+  'proposalDetail.notFound': 'Presupuesto no encontrado.',
+
+  'accountsList.title': 'Cuentas',
+  'accountsList.colLegalName': 'Razón social',
+  'accountsList.colCountry': 'País',
+  'accountsList.colContacts': 'Contactos',
+  'accountsList.colProposals': 'Presupuestos',
+  'accountsList.empty': 'No hay cuentas todavía.',
+
+  'accountDetail.title': 'Cuenta',
+  'accountDetail.back': '← Volver a cuentas',
+  'accountDetail.contacts': 'Contactos',
+  'accountDetail.proposals': 'Historial de presupuestos',
+  'accountDetail.noProposals': 'Esta cuenta no tiene presupuestos todavía.',
 } as const;
 
 export type I18nKey = keyof typeof es;
@@ -155,6 +205,8 @@ const fr: Dict = {
   'login.adminLink': "Gérer les utilisateurs de l'équipe",
 
   'nav.newProposal': 'Nouveau devis',
+  'nav.proposalsList': 'Devis',
+  'nav.accountsList': 'Comptes',
   'nav.admin': 'Utilisateurs',
 
   'admin.title': "Utilisateurs de l'équipe",
@@ -239,6 +291,8 @@ const fr: Dict = {
   'proposalBuilder.viewPublic': 'Voir la page publique',
   'proposalBuilder.applyDuration': 'Utiliser la durée',
   'proposalBuilder.autoQuantityHint': 'Automatique selon la durée',
+  'proposalBuilder.viewProposal': 'Voir le devis envoyé',
+  'proposalBuilder.createAnother': 'Créer un autre devis',
 
   'checklist.allPass': "Tous les contrôles avant l'envoi passent.",
   'checklist.blocks': "Bloque l'envoi",
@@ -248,6 +302,52 @@ const fr: Dict = {
   'discountBanner.effective': 'Remise effective',
   'discountBanner.none': 'Aucune remise appliquée.',
   'discountBanner.floorAbsorbs': 'Le plancher de marge absorbe {amount}',
+
+  'status.DRAFT': 'Brouillon',
+  'status.SENT': 'Envoyé',
+  'status.VIEWED': 'Vu',
+  'status.ACCEPTED': 'Accepté',
+  'status.REJECTED': 'Refusé',
+  'status.EXPIRED': 'Expiré',
+
+  'proposalsList.title': 'Devis',
+  'proposalsList.filterStatus': 'Statut',
+  'proposalsList.filterStatusAll': 'Tous',
+  'proposalsList.filterOwner': 'Créateur',
+  'proposalsList.filterOwnerAll': 'Tous',
+  'proposalsList.colAccount': 'Compte',
+  'proposalsList.colContact': 'Contact',
+  'proposalsList.colStatus': 'Statut',
+  'proposalsList.colUpdated': 'Dernière modification',
+  'proposalsList.colOwner': 'Créateur',
+  'proposalsList.empty': 'Aucun devis avec ces filtres.',
+
+  'proposalDetail.title': 'Devis',
+  'proposalDetail.back': '← Retour aux devis',
+  'proposalDetail.draftNotice':
+    "Ce devis a été calculé et enregistré, mais l'email n'est jamais parti. Le client ne l'a pas vu.",
+  'proposalDetail.retryButton': "Réessayer l'envoi",
+  'proposalDetail.retrying': 'Nouvel essai…',
+  'proposalDetail.retrySuccess': 'Email envoyé. Le devis est maintenant marqué comme envoyé.',
+  'proposalDetail.publicLink': 'Lien public',
+  'proposalDetail.sentAt': 'Envoyé le',
+  'proposalDetail.decidedAt': 'Décidé le',
+  'proposalDetail.option': 'Option',
+  'proposalDetail.lineMarket': 'Marché',
+  'proposalDetail.notFound': 'Devis introuvable.',
+
+  'accountsList.title': 'Comptes',
+  'accountsList.colLegalName': 'Raison sociale',
+  'accountsList.colCountry': 'Pays',
+  'accountsList.colContacts': 'Contacts',
+  'accountsList.colProposals': 'Devis',
+  'accountsList.empty': 'Aucun compte pour le moment.',
+
+  'accountDetail.title': 'Compte',
+  'accountDetail.back': '← Retour aux comptes',
+  'accountDetail.contacts': 'Contacts',
+  'accountDetail.proposals': 'Historique des devis',
+  'accountDetail.noProposals': "Ce compte n'a pas encore de devis.",
 };
 
 const en: Dict = {
@@ -263,6 +363,8 @@ const en: Dict = {
   'login.adminLink': 'Manage team users',
 
   'nav.newProposal': 'New proposal',
+  'nav.proposalsList': 'Proposals',
+  'nav.accountsList': 'Accounts',
   'nav.admin': 'Users',
 
   'admin.title': 'Team users',
@@ -347,6 +449,8 @@ const en: Dict = {
   'proposalBuilder.viewPublic': 'View public page',
   'proposalBuilder.applyDuration': 'Use duration',
   'proposalBuilder.autoQuantityHint': 'Automatic from duration',
+  'proposalBuilder.viewProposal': 'View sent proposal',
+  'proposalBuilder.createAnother': 'Create another proposal',
 
   'checklist.allPass': 'All pre-send checks pass.',
   'checklist.blocks': 'Blocks sending',
@@ -356,6 +460,52 @@ const en: Dict = {
   'discountBanner.effective': 'Effective discount',
   'discountBanner.none': 'No discount applied.',
   'discountBanner.floorAbsorbs': 'The margin floor absorbs {amount}',
+
+  'status.DRAFT': 'Draft',
+  'status.SENT': 'Sent',
+  'status.VIEWED': 'Viewed',
+  'status.ACCEPTED': 'Accepted',
+  'status.REJECTED': 'Rejected',
+  'status.EXPIRED': 'Expired',
+
+  'proposalsList.title': 'Proposals',
+  'proposalsList.filterStatus': 'Status',
+  'proposalsList.filterStatusAll': 'All',
+  'proposalsList.filterOwner': 'Creator',
+  'proposalsList.filterOwnerAll': 'All',
+  'proposalsList.colAccount': 'Account',
+  'proposalsList.colContact': 'Contact',
+  'proposalsList.colStatus': 'Status',
+  'proposalsList.colUpdated': 'Last modified',
+  'proposalsList.colOwner': 'Creator',
+  'proposalsList.empty': 'No proposals match these filters.',
+
+  'proposalDetail.title': 'Proposal',
+  'proposalDetail.back': '← Back to proposals',
+  'proposalDetail.draftNotice':
+    'This proposal was calculated and saved, but the email never went out. The client has not seen it.',
+  'proposalDetail.retryButton': 'Retry send',
+  'proposalDetail.retrying': 'Retrying…',
+  'proposalDetail.retrySuccess': 'Email sent. The proposal is now marked as sent.',
+  'proposalDetail.publicLink': 'Public link',
+  'proposalDetail.sentAt': 'Sent on',
+  'proposalDetail.decidedAt': 'Decided on',
+  'proposalDetail.option': 'Option',
+  'proposalDetail.lineMarket': 'Market',
+  'proposalDetail.notFound': 'Proposal not found.',
+
+  'accountsList.title': 'Accounts',
+  'accountsList.colLegalName': 'Legal name',
+  'accountsList.colCountry': 'Country',
+  'accountsList.colContacts': 'Contacts',
+  'accountsList.colProposals': 'Proposals',
+  'accountsList.empty': 'No accounts yet.',
+
+  'accountDetail.title': 'Account',
+  'accountDetail.back': '← Back to accounts',
+  'accountDetail.contacts': 'Contacts',
+  'accountDetail.proposals': 'Proposal history',
+  'accountDetail.noProposals': 'This account has no proposals yet.',
 };
 
 const DICTS: Record<InternalLanguage, Dict> = { ES: es, FR: fr, EN: en };

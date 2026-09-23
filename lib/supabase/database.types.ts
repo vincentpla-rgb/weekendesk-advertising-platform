@@ -22,6 +22,10 @@ export type SupportUnit =
   | 'COLLABORATION';
 export type ContentLanguageEnum = 'FR' | 'ES' | 'IT' | 'NL' | 'EN';
 export type ViesResultEnum = 'VALID' | 'INVALID' | 'UNAVAILABLE';
+export type ProposalStatusEnum = 'DRAFT' | 'SENT' | 'VIEWED' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+export type VatRegimeEnum = 'FR_VAT_20' | 'REVERSE_CHARGE';
+export type PaymentTermsEnum = 'SPLIT_30_70' | 'FULL_ON_SIGNATURE';
+export type CampaignDurationUnitEnum = 'WEEK' | 'MONTH';
 
 export interface Database {
   // Marcador que @supabase/postgrest-js (v2.47+) exige en el tipo Database
@@ -101,6 +105,143 @@ export interface Database {
             columns: ['account_id'];
             isOneToOne: false;
             referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      // Añadidas en la ronda 7 (navegación/listados): antes solo se tocaban
+      // vía RPC (create_and_send_proposal, mark_proposal_sent...), que
+      // devuelven `Json` opaco. Las pantallas de listado/detalle sí
+      // necesitan `.from('proposals').select(...)` tipado de verdad.
+      proposals: {
+        Row: {
+          id: string;
+          account_id: string;
+          contact_id: string;
+          owner_id: string;
+          parameter_set_id: string;
+          version: number;
+          supersedes_id: string | null;
+          status: ProposalStatusEnum;
+          language: ContentLanguageEnum;
+          brief: string | null;
+          public_token: string;
+          sent_at: string | null;
+          first_viewed_at: string | null;
+          decided_at: string | null;
+          expires_at: string | null;
+          vat_regime: VatRegimeEnum | null;
+          payment_terms: PaymentTermsEnum | null;
+          frozen_snapshot: Json | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database['public']['Tables']['proposals']['Row']> & {
+          account_id: string;
+          contact_id: string;
+          owner_id: string;
+          parameter_set_id: string;
+          public_token: string;
+          language: ContentLanguageEnum;
+        };
+        Update: Partial<Database['public']['Tables']['proposals']['Row']>;
+        Relationships: [
+          {
+            foreignKeyName: 'proposals_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'proposals_contact_id_fkey';
+            columns: ['contact_id'];
+            isOneToOne: false;
+            referencedRelation: 'contacts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'proposals_owner_id_fkey';
+            columns: ['owner_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      proposal_options: {
+        Row: {
+          id: string;
+          proposal_id: string;
+          code: 'A' | 'B' | 'C';
+          name: string;
+          pitch: string | null;
+          sort_order: number;
+          markets: Market[];
+          campaign_start: string | null;
+          campaign_end: string | null;
+          campaign_duration_count: number | null;
+          campaign_duration_unit: CampaignDurationUnitEnum | null;
+          gross_net_of_media_cents: number | null;
+          discount_cents: number | null;
+          net_revenue_cents: number | null;
+          media_budget_cents: number | null;
+          billed_total_cents: number | null;
+          cost_cents: number | null;
+          margin_cents: number | null;
+          margin_rate: number | null;
+          max_lead_time_days: number | null;
+          calculated_at: string | null;
+        };
+        Insert: Partial<Database['public']['Tables']['proposal_options']['Row']> & {
+          proposal_id: string;
+          code: 'A' | 'B' | 'C';
+          name: string;
+        };
+        Update: Partial<Database['public']['Tables']['proposal_options']['Row']>;
+        Relationships: [
+          {
+            foreignKeyName: 'proposal_options_proposal_id_fkey';
+            columns: ['proposal_id'];
+            isOneToOne: false;
+            referencedRelation: 'proposals';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      proposal_option_lines: {
+        Row: {
+          id: string;
+          option_id: string;
+          support_id: string;
+          market: Market;
+          quantity: number;
+          media_budget_cents: number | null;
+          media_months: number | null;
+          is_lead_market: boolean | null;
+          unit_cost_cents: number | null;
+          cost_cents: number | null;
+          gross_price_cents: number | null;
+          margin_floor_cents: number | null;
+          floor_applied: boolean | null;
+          list_price_cents: number | null;
+          discount_cents: number | null;
+          net_price_cents: number | null;
+          billed_total_cents: number | null;
+          sort_order: number;
+        };
+        Insert: Partial<Database['public']['Tables']['proposal_option_lines']['Row']> & {
+          option_id: string;
+          support_id: string;
+          market: Market;
+        };
+        Update: Partial<Database['public']['Tables']['proposal_option_lines']['Row']>;
+        Relationships: [
+          {
+            foreignKeyName: 'proposal_option_lines_option_id_fkey';
+            columns: ['option_id'];
+            isOneToOne: false;
+            referencedRelation: 'proposal_options';
             referencedColumns: ['id'];
           },
         ];
@@ -266,6 +407,9 @@ export interface Database {
       support_unit: SupportUnit;
       content_language: ContentLanguageEnum;
       vies_result: ViesResultEnum;
+      proposal_status: ProposalStatusEnum;
+      vat_regime: VatRegimeEnum;
+      payment_terms: PaymentTermsEnum;
     };
     CompositeTypes: Record<string, never>;
   };
