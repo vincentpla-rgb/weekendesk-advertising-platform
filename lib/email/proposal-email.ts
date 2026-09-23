@@ -25,6 +25,8 @@ export interface ProposalEmailInput {
   readonly expiresAtIso: string;
   /** Nombre del comercial que envía (creador del presupuesto). */
   readonly salesName: string;
+  /** Número corto y legible del presupuesto (CLAUDE.md §10.3 octies), p. ej. "2026-014". */
+  readonly proposalNumber: string;
   readonly language: ContentLanguage;
 }
 
@@ -60,6 +62,8 @@ export function buildProposalEmailContent(input: ProposalEmailInput): EmailConte
   const textLines = [
     template.greeting(firstName(input.contactFullName)),
     '',
+    template.referenceLine(input.proposalNumber),
+    '',
     ...(input.brief ? [input.brief, ''] : []),
     template.optionsLine(input.numberOfOptions),
     '',
@@ -90,6 +94,7 @@ export function buildProposalEmailContent(input: ProposalEmailInput): EmailConte
   <body style="font-family: Arial, Helvetica, sans-serif; color: #1a1a1a; background: #ffffff; padding: 16px;">
     <div style="max-width: 560px; margin: 0 auto;">
       <p style="margin: 0 0 16px;">${escapeHtml(template.greeting(firstName(input.contactFullName)))}</p>
+      <p style="margin: 0 0 16px; color: #555555; font-size: 13px;">${escapeHtml(template.referenceLine(input.proposalNumber))}</p>
       ${input.brief ? `<p style="margin: 0 0 16px; white-space: pre-wrap;">${escapeHtml(input.brief)}</p>` : ''}
       <p style="margin: 0 0 20px;">${escapeHtml(template.optionsLine(input.numberOfOptions))}</p>
       <p style="margin: 0 0 20px;">

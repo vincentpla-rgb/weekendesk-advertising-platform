@@ -122,6 +122,8 @@ export interface Database {
           parameter_set_id: string;
           version: number;
           supersedes_id: string | null;
+          /** Número corto y legible (CLAUDE.md §10.3 octies), p. ej. "2026-014" — asignado al crear el borrador, único, nunca reutilizado. */
+          proposal_number: string;
           status: ProposalStatusEnum;
           language: ContentLanguageEnum;
           brief: string | null;

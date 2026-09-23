@@ -150,6 +150,7 @@ describe('POST /api/proposals — persiste aunque falte la configuración de Res
         return {
           data: {
             proposal_id: 'p1',
+            proposal_number: '2026-001',
             public_token: 'tok123',
             contact_email: 'jean@example.com',
             contact_full_name: 'Jean Dupont',
@@ -187,6 +188,7 @@ describe('POST /api/proposals — persiste aunque falte la configuración de Res
         return {
           data: {
             proposal_id: 'p1',
+            proposal_number: '2026-001',
             public_token: 'tok123',
             contact_email: 'jean@example.com',
             contact_full_name: 'Jean Dupont',
@@ -208,5 +210,7 @@ describe('POST /api/proposals — persiste aunque falte la configuración de Res
     expect(sendEmail).toHaveBeenCalledTimes(1);
     expect(rpc).toHaveBeenCalledWith('mark_proposal_sent', expect.anything());
     expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.proposalNumber).toBe('2026-001');
   });
 });

@@ -3,6 +3,7 @@
 import type { ProposalStatus } from '@/lib/domain';
 import { formatCents, formatDate, formatPercent } from '@/lib/format';
 import { useI18n, type I18nKey } from '@/lib/i18n-internal';
+import { DuplicateButton } from './DuplicateButton';
 import { RetrySendButton } from './RetrySendButton';
 
 const STATUS_BADGE_CLASS: Record<ProposalStatus, string> = {
@@ -48,6 +49,7 @@ interface DetailOption {
 
 interface DetailProposal {
   readonly id: string;
+  readonly proposal_number: string;
   readonly status: ProposalStatus;
   readonly brief: string | null;
   readonly sent_at: string | null;
@@ -78,7 +80,12 @@ export function ProposalDetailClient({
 
       <section className="wk-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', flexWrap: 'wrap', gap: 8 }}>
-          <h1 style={{ margin: 0 }}>{proposal.accounts?.legal_name ?? '—'}</h1>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
+            <h1 style={{ margin: 0 }}>{proposal.accounts?.legal_name ?? '—'}</h1>
+            <span style={{ fontSize: 14, color: 'var(--wk-text-muted)', fontVariantNumeric: 'tabular-nums' }}>
+              {proposal.proposal_number}
+            </span>
+          </div>
           <span className={`wk-badge ${STATUS_BADGE_CLASS[proposal.status]}`}>{t(STATUS_KEY[proposal.status])}</span>
         </div>
         <table className="wk-table" style={{ marginTop: 12 }}>
@@ -126,6 +133,12 @@ export function ProposalDetailClient({
           <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div className="wk-alert wk-alert-warning">{t('proposalDetail.draftNotice')}</div>
             <RetrySendButton proposalId={proposal.id} />
+          </div>
+        )}
+
+        {proposal.status !== 'DRAFT' && (
+          <div style={{ marginTop: 16 }}>
+            <DuplicateButton proposalId={proposal.id} />
           </div>
         )}
       </section>

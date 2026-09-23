@@ -23,6 +23,13 @@ export interface ProposalEmailTemplate {
   readonly optionsLine: (numberOfOptions: number) => string;
   /** Etiqueta del enlace. En texto plano se muestra entre corchetes seguida de la URL; en HTML es el texto del botón. */
   readonly cta: string;
+  /**
+   * Número de presupuesto (CLAUDE.md §10.3 octies, ronda 8), p. ej.
+   * "2026-014" — para poder mencionarlo en una llamada o un email interno
+   * sin abrir la pantalla pública. No es un precio ni un dato sensible, así
+   * que no rompe ninguna de las tres reglas de contenido de Vincent.
+   */
+  readonly referenceLine: (proposalNumber: string) => string;
   readonly postCtaLine: string;
   readonly validityLine: (formattedExpiryDate: string) => string;
   readonly closingLine: string;

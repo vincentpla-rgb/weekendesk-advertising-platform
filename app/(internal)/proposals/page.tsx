@@ -27,7 +27,7 @@ export default async function ProposalsListPage({
   let query = supabase
     .from('proposals')
     .select(
-      'id, status, created_at, updated_at, sent_at, decided_at, accounts(legal_name), contacts(full_name), profiles(full_name)',
+      'id, proposal_number, status, created_at, updated_at, sent_at, decided_at, accounts(legal_name), contacts(full_name), profiles(full_name)',
     )
     .order('updated_at', { ascending: false })
     .limit(200);
@@ -49,6 +49,7 @@ export default async function ProposalsListPage({
 
   const items: ProposalListItem[] = (rows ?? []).map((r) => ({
     id: r.id,
+    proposal_number: r.proposal_number,
     status: r.status,
     created_at: r.created_at,
     updated_at: r.updated_at,

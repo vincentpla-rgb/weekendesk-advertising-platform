@@ -10,6 +10,7 @@ const BASE = {
   publicUrl: 'https://weekendesk-advertising.vercel.app/p/abc123',
   expiresAtIso: '2026-10-03T00:00:00.000Z',
   salesName: 'Vincent Pla',
+  proposalNumber: '2026-014',
 };
 
 // Fragmentos que nunca deben aparecer en el cuerpo del email (reglas 1 y 2
@@ -175,5 +176,23 @@ describe('buildProposalEmailContent', () => {
 
     const fr = buildProposalEmailContent({ ...BASE, language: 'FR' });
     expect(fr.text).toContain('Vincent Pla\nRégie publicitaire\nWeekendesk SAS');
+  });
+
+  it('el número de presupuesto aparece en texto y HTML, en cada idioma (CLAUDE.md §10.3 octies)', () => {
+    const es = buildProposalEmailContent({ ...BASE, language: 'ES' });
+    expect(es.text).toContain('Referencia: 2026-014');
+    expect(es.html).toContain('Referencia: 2026-014');
+
+    const fr = buildProposalEmailContent({ ...BASE, language: 'FR' });
+    expect(fr.text).toContain('Référence : 2026-014');
+
+    const it_ = buildProposalEmailContent({ ...BASE, language: 'IT' });
+    expect(it_.text).toContain('Riferimento: 2026-014');
+
+    const nl = buildProposalEmailContent({ ...BASE, language: 'NL' });
+    expect(nl.text).toContain('Referentie: 2026-014');
+
+    const en = buildProposalEmailContent({ ...BASE, language: 'EN' });
+    expect(en.text).toContain('Reference: 2026-014');
   });
 });

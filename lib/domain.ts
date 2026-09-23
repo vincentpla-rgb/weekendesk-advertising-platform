@@ -49,6 +49,8 @@ export const PROPOSAL_STATUSES: readonly ProposalStatus[] = [
 /** Fila mínima para listar presupuestos (CLAUDE.md §10.1.1, ronda 7): `/proposals`, `/accounts/[id]`. */
 export interface ProposalListItem {
   readonly id: string;
+  /** Número corto y legible (CLAUDE.md §10.3 octies, ronda 8), p. ej. "2026-014". */
+  readonly proposal_number: string;
   readonly status: ProposalStatus;
   readonly created_at: string;
   readonly updated_at: string;
