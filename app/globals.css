@@ -247,6 +247,59 @@ button {
   gap: 16px;
 }
 
+/* Pestañas de opción (CLAUDE.md §5.1, ronda 4): solo aparecen a partir de la
+   segunda opción; cada pestaña dobla como resumen fijo de precio y margen,
+   para no perder la comparación al estar dentro de otra. */
+.wk-option-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--wk-bg);
+  padding: 10px 0;
+  margin: -10px 0 4px;
+}
+
+.wk-option-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  border: 1px solid var(--wk-border);
+  border-radius: var(--wk-radius);
+  background: var(--wk-surface);
+  padding: 8px 14px;
+  cursor: pointer;
+  min-width: 140px;
+  box-shadow: var(--wk-shadow);
+  text-align: left;
+}
+
+.wk-option-tab-active {
+  border-color: var(--wk-navy);
+  background: var(--wk-navy);
+}
+
+.wk-option-tab-active .wk-option-tab-name,
+.wk-option-tab-active .wk-option-tab-price {
+  color: #fff;
+}
+
+.wk-option-tab-name {
+  font-family: var(--wk-font-display);
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--wk-navy);
+}
+
+.wk-option-tab-price {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--wk-text);
+}
+
 .wk-discount-banner {
   display: flex;
   flex-wrap: wrap;
