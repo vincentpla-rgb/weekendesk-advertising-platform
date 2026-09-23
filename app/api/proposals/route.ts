@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
 
-import { euros, priceOption, type OptionInput, type OptionLineInput, type PricedOption } from '@/src/pricing/index.js';
-
 import { loadPricingContext } from '@/lib/pricing-context';
 import { createClient } from '@/lib/supabase/server';
 import type { Json } from '@/lib/supabase/database.types.js';
@@ -9,33 +7,7 @@ import type { ContentLanguage } from '@/lib/domain';
 import { buildProposalEmailContent } from '@/lib/email/proposal-email';
 import { CONTRACTING_BCC } from '@/lib/email/constants';
 import { sendEmail } from '@/lib/email/resend-client';
-
-interface RawLine {
-  supportId: string;
-  quantity: number;
-  mediaBudgetEuros: number | null;
-  mediaMonths: number | null;
-}
-
-interface RawDiscount {
-  ratePercent: number;
-  reason: string;
-}
-
-interface RawOption {
-  code: 'A' | 'B' | 'C';
-  name: string;
-  pitch: string;
-  /** Mercados elegidos UNA VEZ para la opción entera (CLAUDE.md §4.2, ronda 2). */
-  markets: string[];
-  campaignStart: string | null;
-  campaignEnd: string | null;
-  /** Modo "solo duración, sin fecha de inicio" (CLAUDE.md §5.3 bis). */
-  campaignDurationCount: number | null;
-  campaignDurationUnit: 'WEEK' | 'MONTH' | null;
-  lines: RawLine[];
-  discounts: RawDiscount[];
-}
+import { buildProposalOptionsPayload, type RawOption } from '@/lib/proposals/build-options-payload';
 
 interface RawBody {
   accountId: string | null;
@@ -86,95 +58,9 @@ export async function POST(request: Request) {
     );
   }
 
-  const optionsJson: unknown[] = [];
-  for (const raw of body.options) {
-    if (!Array.isArray(raw.markets) || raw.markets.length === 0) {
-      return NextResponse.json(
-        { error: `Opción ${raw.code}: elige al menos un mercado` },
-        { status: 400 },
-      );
-    }
-
-    const input: OptionInput = {
-      id: raw.code,
-      name: raw.name,
-      markets: raw.markets as OptionInput['markets'],
-      lines: raw.lines.map((l): OptionLineInput => {
-        const support = ctx.catalog.get(l.supportId);
-        return {
-          supportId: l.supportId,
-          quantity: l.quantity,
-          ...(support?.isMediaBuy
-            ? {
-                mediaBudgetCents: l.mediaBudgetEuros ? euros(l.mediaBudgetEuros) : 0,
-                mediaMonths: l.mediaMonths ?? 1,
-              }
-            : {}),
-        };
-      }),
-      manualDiscounts: raw.discounts.map((d) => ({ rate: d.ratePercent / 100, reason: d.reason })),
-    };
-
-    let priced: PricedOption;
-    try {
-      priced = priceOption(input, ctx);
-    } catch (err) {
-      return NextResponse.json(
-        { error: `Opción ${raw.code}: ${err instanceof Error ? err.message : 'error de cálculo'}` },
-        { status: 400 },
-      );
-    }
-
-    if (!priced.meetsMarginFloor) {
-      return NextResponse.json(
-        { error: `Opción ${raw.code}: por debajo del suelo de margen. Revisa antes de enviar.` },
-        { status: 400 },
-      );
-    }
-
-    optionsJson.push({
-      code: raw.code,
-      name: priced.name ?? raw.code,
-      pitch: raw.pitch,
-      sort_order: optionsJson.length,
-      markets: raw.markets,
-      campaign_start: raw.campaignStart,
-      campaign_end: raw.campaignEnd,
-      campaign_duration_count: raw.campaignDurationCount,
-      campaign_duration_unit: raw.campaignDurationUnit,
-      gross_net_of_media_cents: priced.grossNetOfMediaCents,
-      effective_discount_cents: priced.effectiveDiscountCents,
-      net_revenue_cents: priced.netRevenueCents,
-      media_budget_cents: priced.mediaBudgetCents,
-      billed_total_cents: priced.billedTotalCents,
-      cost_cents: priced.costCents,
-      margin_cents: priced.marginCents,
-      margin_rate: priced.marginRate,
-      max_lead_time_business_days: priced.maxLeadTimeBusinessDays,
-      lines: priced.lines.map((l, idx) => ({
-        support_id: l.supportId,
-        market: l.market,
-        quantity: l.quantity,
-        media_budget_cents: l.isMediaBuy ? l.mediaBudgetCents : null,
-        media_months: l.mediaMonths,
-        is_lead_market: l.isLeadMarket,
-        unit_cost_cents: l.unitCostCents,
-        cost_cents: l.costCents,
-        gross_price_cents: l.grossPriceCents,
-        margin_floor_cents: l.marginFloorCents,
-        floor_applied: l.floorApplied,
-        list_price_cents: l.listPriceCents,
-        discount_cents: l.discountCents,
-        net_price_cents: l.netPriceCents,
-        billed_total_cents: l.billedTotalCents,
-        sort_order: idx,
-      })),
-      discounts: priced.discounts.map((d) => ({
-        kind: d.kind,
-        rate: d.rate,
-        reason: d.reason,
-      })),
-    });
+  const built = buildProposalOptionsPayload(body.options as readonly RawOption[], ctx);
+  if (!built.ok) {
+    return NextResponse.json({ error: built.error }, { status: 400 });
   }
 
   const payload = {
@@ -182,7 +68,7 @@ export async function POST(request: Request) {
     ...(body.contactId ? { contact_id: body.contactId } : { contact: body.newContact }),
     language: body.language,
     brief: body.brief,
-    options: optionsJson,
+    options: built.optionsJson,
   };
 
   // Crea el envío en DRAFT (congelado, con enlace público ya generado, pero
@@ -213,6 +99,7 @@ export async function POST(request: Request) {
 
   const created = data as {
     proposal_id: string;
+    proposal_number: string;
     public_token: string;
     contact_email: string;
     contact_full_name: string;
@@ -259,6 +146,7 @@ export async function POST(request: Request) {
     publicUrl,
     expiresAtIso,
     salesName: ownerProfile.full_name,
+    proposalNumber: created.proposal_number,
     // El idioma del EMAIL es el mismo que el de la pantalla pública: el que
     // el comercial elige para ESTE envío en "Idioma del cliente"
     // (CLAUDE.md §5.6, ronda 2), no `contacts.language` — ese es un dato
@@ -303,6 +191,7 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     proposalId: created.proposal_id,
+    proposalNumber: created.proposal_number,
     publicToken: created.public_token,
   });
 }

@@ -25,6 +25,8 @@ import type { ContentLanguage } from '@/lib/domain';
 import { buildProposalEmailContent } from '@/lib/email/proposal-email';
 import { CONTRACTING_BCC } from '@/lib/email/constants';
 import { sendEmail } from '@/lib/email/resend-client';
+import { loadPricingContext } from '@/lib/pricing-context';
+import { buildProposalOptionsPayload, type RawOption } from '@/lib/proposals/build-options-payload';
 import { createClient } from '@/lib/supabase/server';
 import type { Json } from '@/lib/supabase/database.types.js';
 
@@ -46,7 +48,7 @@ export async function retryProposalSend(proposalId: string): Promise<RetrySendRe
   const { data: proposal, error: proposalError } = await supabase
     .from('proposals')
     .select(
-      'id, status, language, brief, public_token, parameter_set_id, accounts(legal_name), contacts(full_name, email), profiles(full_name), proposal_options(id)',
+      'id, status, language, brief, public_token, parameter_set_id, proposal_number, accounts(legal_name), contacts(full_name, email), profiles(full_name), proposal_options(id)',
     )
     .eq('id', proposalId)
     .maybeSingle();
@@ -99,6 +101,7 @@ export async function retryProposalSend(proposalId: string): Promise<RetrySendRe
     publicUrl,
     expiresAtIso,
     salesName: proposal.profiles.full_name,
+    proposalNumber: proposal.proposal_number,
     // El idioma del email es proposals.language, igual que en el envío
     // original (CLAUDE.md §5.6, ronda 2) — nunca contacts.language.
     language: proposal.language as ContentLanguage,
@@ -131,4 +134,161 @@ export async function retryProposalSend(proposalId: string): Promise<RetrySendRe
   revalidatePath(`/proposals/${proposalId}`);
   revalidatePath('/proposals');
   return { ok: true };
+}
+
+/**
+ * Duplicar un presupuesto (CLAUDE.md §10.3 octies, ronda 8): a partir de
+ * cualquier presupuesto que ya salió de DRAFT (enviado, aceptado,
+ * rechazado o caducado), crea un presupuesto NUEVO en DRAFT — mismas
+ * opciones, líneas, mercados y fechas, pero:
+ *   - sin ningún envío asociado (arranca en DRAFT, sin sent_at/decided_at);
+ *   - sin enlace público propio todavía (se genera al enviar la copia, en
+ *     create_and_send_proposal, igual que cualquier otro presupuesto nuevo);
+ *   - con un `proposal_number` propio, nunca el del original;
+ *   - RECALCULADO con los parámetros VIVOS (loadPricingContext siempre lee
+ *     la base de datos, nunca cachea) — nunca una copia de los números
+ *     congelados del original. Si la tarifa por hora cambió desde entonces,
+ *     la copia lo refleja. Coherente con la inmutabilidad de §5.4: el
+ *     original no se toca, la copia es un presupuesto nuevo de pleno derecho.
+ *
+ * Los datos de origen salen de `frozen_snapshot` — el mismo jsonb que
+ * `create_and_send_proposal` guardó tal cual se le mandó (CLAUDE.md §10.1.1:
+ * "el cálculo se congela en un solo paso, no se recalcula después"). Sus
+ * opciones ya vienen con las líneas EXPANDIDAS por mercado (una fila por
+ * soporte y mercado de la opción, CLAUDE.md §4.2): para reconstruir la
+ * entrada cruda que espera `buildProposalOptionsPayload` (una fila por
+ * SOPORTE, sin mercado — el motor expande según `option.markets`) basta con
+ * quedarse con la fila del mercado líder de cada soporte (`is_lead_market`),
+ * que existe exactamente una vez por soporte y lleva la cantidad y el
+ * presupuesto de medios reales de la línea (CLAUDE.md §4.2: mismo
+ * presupuesto de medios en cada mercado de la opción, así que da igual cuál
+ * de los mercados se use como fuente).
+ *
+ * Los descuentos VOLUME no se copian: son automáticos y se recalculan solos
+ * a partir de la base nueva (CLAUDE.md §4.5). Solo los MANUAL sobreviven a
+ * la duplicación, con su motivo — igual que un comercial los introduciría a
+ * mano de nuevo, pero sin tener que volver a escribirlos.
+ */
+export type DuplicateProposalResult =
+  | { readonly ok: true; readonly newProposalId: string; readonly newProposalNumber: string }
+  | { readonly ok: false; readonly error: string };
+
+interface FrozenSnapshotLine {
+  readonly support_id: string;
+  readonly quantity: number;
+  readonly media_budget_cents: number | null;
+  readonly media_months: number | null;
+  readonly is_lead_market: boolean;
+}
+
+interface FrozenSnapshotDiscount {
+  readonly kind: 'VOLUME' | 'MANUAL';
+  readonly rate: number;
+  readonly reason: string | null;
+}
+
+interface FrozenSnapshotOption {
+  readonly code: 'A' | 'B' | 'C';
+  readonly name: string;
+  readonly pitch: string | null;
+  readonly markets: readonly string[];
+  readonly campaign_start: string | null;
+  readonly campaign_end: string | null;
+  readonly campaign_duration_count: number | null;
+  readonly campaign_duration_unit: 'WEEK' | 'MONTH' | null;
+  readonly lines: readonly FrozenSnapshotLine[];
+  readonly discounts: readonly FrozenSnapshotDiscount[];
+}
+
+export async function duplicateProposal(proposalId: string): Promise<DuplicateProposalResult> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { ok: false, error: 'No autenticado' };
+  }
+
+  const { data: proposal, error: proposalError } = await supabase
+    .from('proposals')
+    .select('id, status, account_id, contact_id, language, brief, frozen_snapshot')
+    .eq('id', proposalId)
+    .maybeSingle();
+
+  if (proposalError) return { ok: false, error: proposalError.message };
+  if (!proposal) return { ok: false, error: 'Presupuesto no encontrado' };
+  if (proposal.status === 'DRAFT') {
+    return {
+      ok: false,
+      error: 'Solo se puede duplicar un presupuesto que ya se envió (no un borrador todavía pendiente).',
+    };
+  }
+
+  const snapshot = proposal.frozen_snapshot as unknown as { options?: readonly FrozenSnapshotOption[] } | null;
+  if (!snapshot || !Array.isArray(snapshot.options) || snapshot.options.length === 0) {
+    return { ok: false, error: 'El presupuesto original no tiene datos de opciones que duplicar.' };
+  }
+
+  const rawOptions: RawOption[] = snapshot.options.map((opt) => ({
+    code: opt.code,
+    name: opt.name,
+    pitch: opt.pitch ?? '',
+    markets: opt.markets,
+    campaignStart: opt.campaign_start,
+    campaignEnd: opt.campaign_end,
+    campaignDurationCount: opt.campaign_duration_count,
+    campaignDurationUnit: opt.campaign_duration_unit,
+    // Una fila por soporte, no por soporte+mercado: el motor vuelve a
+    // expandir por `markets` él solo. La fila del mercado líder existe una
+    // única vez por soporte y basta como fuente (ver comentario de arriba).
+    lines: opt.lines
+      .filter((l: FrozenSnapshotLine) => l.is_lead_market)
+      .map((l: FrozenSnapshotLine) => ({
+        supportId: l.support_id,
+        quantity: l.quantity,
+        mediaBudgetEuros: l.media_budget_cents ? l.media_budget_cents / 100 : null,
+        mediaMonths: l.media_months,
+      })),
+    // Solo los descuentos MANUALES sobreviven; los de volumen (VOLUME) se
+    // recalculan solos a partir de la base nueva (CLAUDE.md §4.5).
+    discounts: opt.discounts
+      .filter((d: FrozenSnapshotDiscount) => d.kind === 'MANUAL')
+      .map((d: FrozenSnapshotDiscount) => ({ ratePercent: d.rate * 100, reason: d.reason ?? '' })),
+  }));
+
+  let ctx;
+  try {
+    ctx = await loadPricingContext(supabase);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'No se pudieron cargar los parámetros' };
+  }
+
+  const built = buildProposalOptionsPayload(rawOptions, ctx);
+  if (!built.ok) {
+    return {
+      ok: false,
+      error: `No se pudo duplicar: con los parámetros actuales, ${built.error.toLowerCase()}`,
+    };
+  }
+
+  const payload = {
+    account_id: proposal.account_id,
+    contact_id: proposal.contact_id,
+    language: proposal.language,
+    brief: proposal.brief,
+    options: built.optionsJson,
+  };
+
+  const { data, error } = await supabase.rpc('create_and_send_proposal', {
+    payload: payload as unknown as Json,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  const created = data as { proposal_id: string; proposal_number: string };
+
+  revalidatePath('/proposals');
+  revalidatePath(`/accounts/${proposal.account_id}`);
+
+  return { ok: true, newProposalId: created.proposal_id, newProposalNumber: created.proposal_number };
 }

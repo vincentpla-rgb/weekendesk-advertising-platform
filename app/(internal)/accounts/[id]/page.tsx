@@ -28,7 +28,9 @@ export default async function AccountDetailPage({
       .maybeSingle(),
     supabase
       .from('proposals')
-      .select('id, status, created_at, updated_at, sent_at, decided_at, contacts(full_name), profiles(full_name)')
+      .select(
+        'id, proposal_number, status, created_at, updated_at, sent_at, decided_at, contacts(full_name), profiles(full_name)',
+      )
       .eq('account_id', id)
       .order('updated_at', { ascending: false }),
   ]);
@@ -39,6 +41,7 @@ export default async function AccountDetailPage({
 
   const proposals: ProposalListItem[] = (proposalRows ?? []).map((r) => ({
     id: r.id,
+    proposal_number: r.proposal_number,
     status: r.status,
     created_at: r.created_at,
     updated_at: r.updated_at,

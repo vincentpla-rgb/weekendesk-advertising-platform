@@ -47,6 +47,7 @@ export function ProposalsTable({
     <table className="wk-table">
       <thead>
         <tr>
+          <th>{t('proposalsList.colNumber')}</th>
           {showAccount && <th>{t('proposalsList.colAccount')}</th>}
           <th>{t('proposalsList.colContact')}</th>
           <th>{t('proposalsList.colStatus')}</th>
@@ -57,6 +58,13 @@ export function ProposalsTable({
       <tbody>
         {items.map((p) => (
           <tr key={p.id}>
+            <td>
+              {showAccount ? (
+                p.proposal_number
+              ) : (
+                <a href={`/proposals/${p.id}`}>{p.proposal_number}</a>
+              )}
+            </td>
             {showAccount && (
               <td>
                 <a href={`/proposals/${p.id}`}>{p.account?.legal_name ?? '—'}</a>

@@ -118,11 +118,15 @@ $PSQL -c "drop database if exists $DB;" -c "create database $DB;" > /dev/null
 $PSQL -d "$DB" -f "$WORKDIR/00_supabase_shim.sql" > /dev/null
 
 echo "=== Paso 1: aplicar las migraciones SOLO hasta la ronda 3 (sin el arreglo) ==="
+# Se DETIENE en la migración del arreglo, no solo "salta esa" — cualquier
+# migración posterior (p. ej. la ronda 8, que reescribe create_and_send_proposal
+# ya con extensions.gen_random_bytes() cualificado) llevaría el arreglo consigo
+# sin querer y dejaría de reproducir el bug histórico.
 FIX_MIGRATION="20260924090000_qualify_pgcrypto_schema.sql"
 for f in "$WORKDIR"/2026*.sql; do
   base="$(basename "$f")"
   if [[ "$base" == "$FIX_MIGRATION" ]]; then
-    continue
+    break
   fi
   $PSQL -d "$DB" -f "$f" > /dev/null
 done
