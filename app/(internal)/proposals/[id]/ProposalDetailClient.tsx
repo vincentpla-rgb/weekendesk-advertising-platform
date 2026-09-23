@@ -30,6 +30,9 @@ interface DetailLine {
   readonly quantity: number;
   readonly net_price_cents: number | null;
   readonly billed_total_cents: number | null;
+  /** Antelación insuficiente forzada a mano (CLAUDE.md §5.3, ronda 11) — constancia visible en el detalle. */
+  readonly lead_time_forced: boolean;
+  readonly lead_time_force_reason: string | null;
 }
 
 interface DetailOption {
@@ -171,7 +174,21 @@ export function ProposalDetailClient({
             <tbody>
               {option.proposal_option_lines.map((line, idx) => (
                 <tr key={`${line.support_id}-${line.market}-${idx}`}>
-                  <td>{line.support_id}</td>
+                  <td>
+                    {line.support_id}
+                    {line.lead_time_forced && (
+                      <div style={{ marginTop: 4 }}>
+                        <span className="wk-badge wk-badge-warning" style={{ fontSize: 10 }}>
+                          {t('proposalDetail.leadTimeForced')}
+                        </span>
+                        {line.lead_time_force_reason && (
+                          <div style={{ fontSize: 11, color: 'var(--wk-text-muted)', marginTop: 2 }}>
+                            {t('proposalDetail.leadTimeForcedReason', { reason: line.lead_time_force_reason })}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </td>
                   <td>{line.market}</td>
                   <td>{line.quantity}</td>
                   <td>{formatCents(line.billed_total_cents ?? 0)}</td>

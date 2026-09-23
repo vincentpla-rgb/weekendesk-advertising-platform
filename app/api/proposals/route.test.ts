@@ -105,6 +105,7 @@ function validBody() {
         lines: [{ supportId: 'ON-01', quantity: 1, mediaBudgetEuros: null, mediaMonths: null }],
         discounts: [],
         volumeDiscountDisabled: false,
+        leadTimeOverrides: [],
       },
       {
         code: 'B',
@@ -118,6 +119,7 @@ function validBody() {
         lines: [{ supportId: 'ON-01', quantity: 2, mediaBudgetEuros: null, mediaMonths: null }],
         discounts: [],
         volumeDiscountDisabled: false,
+        leadTimeOverrides: [],
       },
     ],
   };

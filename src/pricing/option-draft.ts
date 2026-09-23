@@ -66,6 +66,20 @@ export interface DiscountDraft {
   readonly reason: string;
 }
 
+/**
+ * Antelación insuficiente forzada a mano para un soporte+mercado concretos
+ * de la opción (CLAUDE.md §5.3, ronda 11) — el ÚNICO bloqueo duro que se
+ * puede forzar: una decisión de negocio legítima, nunca un error de datos
+ * ni un compromiso ya cerrado con otro cliente (a diferencia de fechas
+ * inválidas, presupuesto de medios vacío o conflicto de disponibilidad, que
+ * no tienen equivalente y siguen sin poder forzarse).
+ */
+export interface LeadTimeOverrideDraft {
+  readonly supportId: string;
+  readonly market: Market;
+  readonly reason: string;
+}
+
 export interface OptionDraft extends OptionScheduleDraft {
   readonly key: string;
   readonly code: 'A' | 'B' | 'C';
@@ -82,6 +96,8 @@ export interface OptionDraft extends OptionScheduleDraft {
    * siguen sumándose aparte). Por defecto `false`.
    */
   readonly volumeDiscountDisabled: boolean;
+  /** Antelaciones insuficientes forzadas a mano, por soporte+mercado (ronda 11). Vacío por defecto. */
+  readonly leadTimeOverrides: readonly LeadTimeOverrideDraft[];
 }
 
 const SCHEDULE_FIELDS = new Set<string>([
@@ -201,6 +217,7 @@ export function createOptionDraft(
     lines: [createLineDraft(catalog, schedule, supports[0]?.id ?? '', lineKey)],
     discounts: [],
     volumeDiscountDisabled: false,
+    leadTimeOverrides: [],
   };
 }
 
@@ -323,6 +340,36 @@ export function updateOptionDiscount(draft: OptionDraft, discountKey: string, pa
 
 export function removeOptionDiscount(draft: OptionDraft, discountKey: string): OptionDraft {
   return { ...draft, discounts: draft.discounts.filter((d) => d.key !== discountKey) };
+}
+
+/**
+ * Fuerza a mano la antelación insuficiente de un soporte+mercado concretos
+ * (CLAUDE.md §5.3, ronda 11) — el único bloqueo duro forzable. Sustituye
+ * cualquier forzado previo para ese mismo soporte+mercado, así que solo
+ * puede haber uno vigente a la vez. `reason` vacío no tiene efecto: el
+ * motivo es obligatorio, igual que exige `runPreSendChecks`.
+ */
+export function forceLeadTimeOverride(
+  draft: OptionDraft,
+  supportId: string,
+  market: Market,
+  reason: string,
+): OptionDraft {
+  if (reason.trim() === '') return draft;
+  const others = draft.leadTimeOverrides.filter(
+    (o) => !(o.supportId === supportId && o.market === market),
+  );
+  return { ...draft, leadTimeOverrides: [...others, { supportId, market, reason: reason.trim() }] };
+}
+
+/** Retira un forzado de antelación previo, p. ej. si el comercial cambia de opinión. */
+export function clearLeadTimeOverride(draft: OptionDraft, supportId: string, market: Market): OptionDraft {
+  return {
+    ...draft,
+    leadTimeOverrides: draft.leadTimeOverrides.filter(
+      (o) => !(o.supportId === supportId && o.market === market),
+    ),
+  };
 }
 
 /**

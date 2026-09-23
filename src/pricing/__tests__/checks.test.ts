@@ -6,6 +6,7 @@ import { priceOption, type PricingContext } from '../engine.js';
 import {
   businessDaysBetween,
   runPreSendChecks,
+  type LeadTimeOverride,
   type PreSendContext,
   type PreSendOptionContext,
 } from '../checks.js';
@@ -31,8 +32,9 @@ function withStart(
   option: PricedOption,
   campaignStart: Date | null = d('2026-11-02'),
   campaignEnd: Date | null = null,
+  leadTimeOverrides: readonly LeadTimeOverride[] = [],
 ): PreSendOptionContext {
-  return { option, campaignStart, campaignEnd, durationOnly: false };
+  return { option, campaignStart, campaignEnd, durationOnly: false, leadTimeOverrides };
 }
 
 /** Opción cotizada solo por duración, sin fecha de inicio concreta (§5.3 bis). */
@@ -126,6 +128,28 @@ describe('controles previos al envío', () => {
     const apurado = runPreSendChecks([withStart(option, d('2026-10-09'))], baseContext());
     expect(apurado.canSend).toBe(false);
     expect(apurado.blockers.map((b) => b.code)).toContain('LEAD_TIME_INSUFFICIENT');
+  });
+
+  it('LEAD_TIME_INSUFFICIENT es el único bloqueo marcado como forcible (ronda 11)', () => {
+    const option = priceOption(
+      {
+        id: 'A',
+        markets: ['FR'],
+        lines: [
+          {
+            supportId: 'INF-01',
+            mediaBudgetCents: 500_000,
+            mediaMonths: 1,
+            manualFeeCents: 200_000,
+            manualFeeReason: 'Negociado con el cliente.',
+          },
+        ],
+      },
+      ctx,
+    );
+    const apurado = runPreSendChecks([withStart(option, d('2026-10-09'))], baseContext());
+    const leadTimeBlocker = apurado.blockers.find((b) => b.code === 'LEAD_TIME_INSUFFICIENT');
+    expect(leadTimeBlocker?.forcible).toBe(true);
   });
 
   it('sin fecha de inicio concreta (solo duración) avisa en vez de bloquear (§5.3 bis)', () => {
@@ -379,6 +403,118 @@ describe('controles previos al envío', () => {
     );
     const informe = runPreSendChecks([withStart(option)], baseContext());
     expect(informe.blockers.map((b) => b.code)).not.toContain('MEDIA_SPLIT_REQUIRED');
+  });
+});
+
+// =============================================================================
+// §5.3, ronda 11 — de los cuatro bloqueos duros, solo la antelación
+// insuficiente se puede forzar a mano. Los otros tres (fechas invertidas,
+// presupuesto de medios vacío, conflicto de disponibilidad) no tienen ni han
+// tenido nunca ningún mecanismo de forzado.
+// =============================================================================
+
+describe('forzar antelación insuficiente — el único bloqueo duro forzable (ronda 11)', () => {
+  function apuradoOption() {
+    // INF-01 exige 30 días laborables; el 09/10 solo deja 20 (sin festivos FR
+    // en medio) — insuficiente frente al 02/11.
+    return priceOption(
+      {
+        id: 'A',
+        markets: ['FR'],
+        lines: [
+          {
+            supportId: 'INF-01',
+            mediaBudgetCents: 500_000,
+            mediaMonths: 1,
+            manualFeeCents: 200_000,
+            manualFeeReason: 'Negociado con el cliente.',
+          },
+        ],
+      },
+      ctx,
+    );
+  }
+
+  it('con un motivo, forzar la antelación quita el bloqueo y aparece como aviso LEAD_TIME_FORCED', () => {
+    const option = apuradoOption();
+    const informe = runPreSendChecks(
+      [
+        withStart(option, d('2026-10-09'), null, [
+          { supportId: 'INF-01', market: 'FR', reason: 'Cliente grande, acepta el riesgo del plazo ajustado.' },
+        ]),
+      ],
+      baseContext(),
+    );
+
+    expect(informe.canSend).toBe(true);
+    expect(informe.blockers.map((b) => b.code)).not.toContain('LEAD_TIME_INSUFFICIENT');
+    const forced = informe.warnings.find((w) => w.code === 'LEAD_TIME_FORCED');
+    expect(forced).toBeDefined();
+    expect(forced?.supportId).toBe('INF-01');
+    expect(forced?.market).toBe('FR');
+    expect(forced?.messageVars?.reason).toBe('Cliente grande, acepta el riesgo del plazo ajustado.');
+  });
+
+  it('un motivo vacío (o solo espacios) no fuerza nada: el bloqueo se mantiene', () => {
+    const option = apuradoOption();
+
+    const vacio = runPreSendChecks(
+      [withStart(option, d('2026-10-09'), null, [{ supportId: 'INF-01', market: 'FR', reason: '' }])],
+      baseContext(),
+    );
+    expect(vacio.canSend).toBe(false);
+    expect(vacio.blockers.map((b) => b.code)).toContain('LEAD_TIME_INSUFFICIENT');
+
+    const soloEspacios = runPreSendChecks(
+      [withStart(option, d('2026-10-09'), null, [{ supportId: 'INF-01', market: 'FR', reason: '   ' }])],
+      baseContext(),
+    );
+    expect(soloEspacios.canSend).toBe(false);
+    expect(soloEspacios.blockers.map((b) => b.code)).toContain('LEAD_TIME_INSUFFICIENT');
+  });
+
+  it('un forzado para otro soporte o mercado no afecta al bloqueo que sí aplica', () => {
+    const option = apuradoOption();
+
+    const otroSoporte = runPreSendChecks(
+      [withStart(option, d('2026-10-09'), null, [{ supportId: 'ADS-01', market: 'FR', reason: 'motivo' }])],
+      baseContext(),
+    );
+    expect(otroSoporte.canSend).toBe(false);
+    expect(otroSoporte.blockers.map((b) => b.code)).toContain('LEAD_TIME_INSUFFICIENT');
+
+    const otroMercado = runPreSendChecks(
+      [withStart(option, d('2026-10-09'), null, [{ supportId: 'INF-01', market: 'ES', reason: 'motivo' }])],
+      baseContext(),
+    );
+    expect(otroMercado.canSend).toBe(false);
+    expect(otroMercado.blockers.map((b) => b.code)).toContain('LEAD_TIME_INSUFFICIENT');
+  });
+
+  it('las fechas invertidas (CAMPAIGN_DATES_INVALID) no tienen forcible ni ningún camino para forzarse', () => {
+    const option = priceOption({ id: 'A', markets: ['FR'], lines: [{ supportId: 'CON-01' }] }, ctx);
+    const informe = runPreSendChecks(
+      [withStart(option, d('2026-11-09'), d('2026-11-02'))],
+      baseContext(),
+    );
+    const blocker = informe.blockers.find((b) => b.code === 'CAMPAIGN_DATES_INVALID');
+    expect(blocker).toBeDefined();
+    expect(blocker?.forcible).not.toBe(true);
+    // No hay ningún campo de PreSendOptionContext para forzarlo: solo existe
+    // `leadTimeOverrides`, que no tiene ningún efecto sobre este bloqueo.
+    expect(informe.canSend).toBe(false);
+  });
+
+  it('el presupuesto de medios vacío (MEDIA_BUDGET_MISSING) tampoco tiene forcible ni forma de forzarse', () => {
+    const option = priceOption(
+      { id: 'A', markets: ['FR'], lines: [{ supportId: 'ADS-01', mediaBudgetCents: 0, mediaMonths: 1 }] },
+      ctx,
+    );
+    const informe = runPreSendChecks([withStart(option)], baseContext());
+    const blocker = informe.blockers.find((b) => b.code === 'MEDIA_BUDGET_MISSING');
+    expect(blocker).toBeDefined();
+    expect(blocker?.forcible).not.toBe(true);
+    expect(informe.canSend).toBe(false);
   });
 });
 

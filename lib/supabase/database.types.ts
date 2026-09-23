@@ -234,6 +234,8 @@ export interface Database {
           manual_fee_cents: number | null;
           manual_fee_reason: string | null;
           media_real_spend_cents: number | null;
+          lead_time_forced: boolean;
+          lead_time_force_reason: string | null;
           billed_total_cents: number | null;
           sort_order: number;
         };

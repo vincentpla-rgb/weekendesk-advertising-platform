@@ -30,7 +30,7 @@ export default async function ProposalDetailPage({
   const { data: proposal, error } = await supabase
     .from('proposals')
     .select(
-      'id, proposal_number, status, language, brief, sent_at, decided_at, expires_at, public_token, created_at, updated_at, accounts(legal_name), contacts(full_name, email), profiles(full_name), proposal_options(id, code, name, pitch, markets, campaign_start, campaign_end, campaign_duration_count, campaign_duration_unit, billed_total_cents, net_revenue_cents, media_budget_cents, cost_cents, margin_cents, margin_rate, sort_order, proposal_option_lines(support_id, market, quantity, net_price_cents, billed_total_cents, sort_order))',
+      'id, proposal_number, status, language, brief, sent_at, decided_at, expires_at, public_token, created_at, updated_at, accounts(legal_name), contacts(full_name, email), profiles(full_name), proposal_options(id, code, name, pitch, markets, campaign_start, campaign_end, campaign_duration_count, campaign_duration_unit, billed_total_cents, net_revenue_cents, media_budget_cents, cost_cents, margin_cents, margin_rate, sort_order, proposal_option_lines(support_id, market, quantity, net_price_cents, billed_total_cents, lead_time_forced, lead_time_force_reason, sort_order))',
     )
     .eq('id', id)
     .maybeSingle();

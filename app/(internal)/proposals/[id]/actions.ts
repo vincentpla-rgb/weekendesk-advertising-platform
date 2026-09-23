@@ -190,6 +190,12 @@ interface FrozenSnapshotDiscount {
   readonly reason: string | null;
 }
 
+interface FrozenSnapshotLeadTimeOverride {
+  readonly support_id: string;
+  readonly market: string;
+  readonly reason: string;
+}
+
 interface FrozenSnapshotOption {
   readonly code: 'A' | 'B' | 'C';
   readonly name: string;
@@ -203,6 +209,15 @@ interface FrozenSnapshotOption {
   readonly discounts: readonly FrozenSnapshotDiscount[];
   /** Interruptor "desactivar descuento por volumen" (CLAUDE.md §4.5, ronda 9). */
   readonly volume_discount_disabled: boolean;
+  /**
+   * Antelaciones insuficientes forzadas a mano (CLAUDE.md §5.3, ronda 11).
+   * A propósito NO se lee de `lines` (que solo conserva la fila del mercado
+   * líder, ver más abajo): la antelación es por soporte+mercado, así que un
+   * forzado en un mercado no líder se perdería si se intentara extraer de
+   * ahí. Se guarda como su propio array a nivel de opción, igual que
+   * `discounts`.
+   */
+  readonly lead_time_overrides: readonly FrozenSnapshotLeadTimeOverride[] | undefined;
 }
 
 export async function duplicateProposal(proposalId: string): Promise<DuplicateProposalResult> {
@@ -269,6 +284,15 @@ export async function duplicateProposal(proposalId: string): Promise<DuplicatePr
     // El interruptor es una decisión de negocio sobre la opción, no un
     // número congelado: se traslada tal cual (CLAUDE.md §4.5, ronda 9).
     volumeDiscountDisabled: opt.volume_discount_disabled,
+    // El forzado de antelación es una decisión de negocio, no un número
+    // derivado de parámetros vivos (CLAUDE.md §5.3, ronda 11): se traslada
+    // tal cual, igual que el interruptor de descuento por volumen y el
+    // reparto de medios forzado.
+    leadTimeOverrides: (opt.lead_time_overrides ?? []).map((o: FrozenSnapshotLeadTimeOverride) => ({
+      supportId: o.support_id,
+      market: o.market,
+      reason: o.reason,
+    })),
   }));
 
   let ctx;

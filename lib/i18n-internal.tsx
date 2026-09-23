@@ -151,6 +151,27 @@ const es = {
   'checklist.allPass': 'Todos los controles previos al envío pasan.',
   'checklist.blocks': 'Bloquea el envío',
   'checklist.warning': 'Aviso',
+  'checklist.marginBelowFloor': 'Opción {option}: margen del {rate} %, por debajo del {min} % exigido.',
+  'checklist.campaignDatesInvalid':
+    'Opción {option}: la fecha de fin de campaña no puede ser anterior a la de inicio.',
+  'checklist.leadTimeInsufficient':
+    '{support} en {market}: quedan {available} días laborables hasta el inicio (descontando festivos de {market}) y el soporte exige {required}.',
+  'checklist.leadTimeForced': '{support} en {market}: antelación insuficiente, forzada — motivo: {reason}',
+  'checklist.leadTimeNotVerifiable':
+    'Opción {option}: cotizada solo por duración, sin fecha de inicio. No se puede comprobar la antelación de {support} en {market} (exige {required} días laborables).',
+  'checklist.supportNotSellable': '{support} no es vendible en {market}.',
+  'checklist.mediaBudgetMissing':
+    '{support}: falta el presupuesto de medios (€). Es obligatorio para calcular el fee de gestión.',
+  'checklist.mediaFeeExceedsBudget':
+    '{support}: el presupuesto de medios del cliente no cubre el mínimo de gestión (faltan {amount} €). Fuerza el reparto a mano o sube el presupuesto.',
+  'checklist.mediaSplitRequired':
+    '{support}: el reparto entre el importe para el medio real y el fee de gestión nunca es automático. Confírmalo a mano antes de enviar.',
+  'checklist.emptyBrief':
+    'El brief de campaña está vacío. Se reutiliza en el email y, más adelante, en el PDF.',
+  'checklist.forceLeadTime': 'Forzar antelación',
+  'checklist.forceLeadTimeReasonLabel': 'Motivo (obligatorio)',
+  'checklist.forceLeadTimeConfirm': 'Confirmar',
+  'checklist.forceLeadTimeCancel': 'Cancelar',
 
   'discountBanner.nominal': 'Descuento nominal',
   'discountBanner.effective': 'Descuento efectivo',
@@ -192,6 +213,8 @@ const es = {
   'proposalDetail.option': 'Opción',
   'proposalDetail.lineMarket': 'Mercado',
   'proposalDetail.notFound': 'Presupuesto no encontrado.',
+  'proposalDetail.leadTimeForced': 'Antelación forzada',
+  'proposalDetail.leadTimeForcedReason': 'Motivo: {reason}',
 
   'accountsList.title': 'Cuentas',
   'accountsList.colLegalName': 'Razón social',
@@ -330,6 +353,27 @@ const fr: Dict = {
   'checklist.allPass': "Tous les contrôles avant l'envoi passent.",
   'checklist.blocks': "Bloque l'envoi",
   'checklist.warning': 'Avertissement',
+  'checklist.marginBelowFloor': 'Option {option} : marge de {rate} %, en dessous des {min} % exigés.',
+  'checklist.campaignDatesInvalid':
+    'Option {option} : la date de fin de campagne ne peut pas être antérieure à la date de début.',
+  'checklist.leadTimeInsufficient':
+    "{support} en {market} : il reste {available} jours ouvrés avant le début (hors jours fériés de {market}) et le support en exige {required}.",
+  'checklist.leadTimeForced': '{support} en {market} : délai insuffisant, forcé — motif : {reason}',
+  'checklist.leadTimeNotVerifiable':
+    "Option {option} : devis établi uniquement par durée, sans date de début. Impossible de vérifier le délai de {support} en {market} (exige {required} jours ouvrés).",
+  'checklist.supportNotSellable': "{support} n'est pas commercialisable en {market}.",
+  'checklist.mediaBudgetMissing':
+    '{support} : budget médias manquant (€). Obligatoire pour calculer le fee de gestion.',
+  'checklist.mediaFeeExceedsBudget':
+    '{support} : le budget médias du client ne couvre pas le minimum de gestion (il manque {amount} €). Forcez la répartition manuellement ou augmentez le budget.',
+  'checklist.mediaSplitRequired':
+    "{support} : la répartition entre le montant réel pour le média et le fee de gestion n'est jamais automatique. Confirmez-la manuellement avant l'envoi.",
+  'checklist.emptyBrief':
+    "Le brief de campagne est vide. Il est réutilisé dans l'email puis, plus tard, dans le PDF.",
+  'checklist.forceLeadTime': 'Forcer le délai',
+  'checklist.forceLeadTimeReasonLabel': 'Motif (obligatoire)',
+  'checklist.forceLeadTimeConfirm': 'Confirmer',
+  'checklist.forceLeadTimeCancel': 'Annuler',
 
   'discountBanner.nominal': 'Remise nominale',
   'discountBanner.effective': 'Remise effective',
@@ -371,6 +415,8 @@ const fr: Dict = {
   'proposalDetail.option': 'Option',
   'proposalDetail.lineMarket': 'Marché',
   'proposalDetail.notFound': 'Devis introuvable.',
+  'proposalDetail.leadTimeForced': 'Délai forcé',
+  'proposalDetail.leadTimeForcedReason': 'Motif : {reason}',
 
   'accountsList.title': 'Comptes',
   'accountsList.colLegalName': 'Raison sociale',
@@ -506,6 +552,27 @@ const en: Dict = {
   'checklist.allPass': 'All pre-send checks pass.',
   'checklist.blocks': 'Blocks sending',
   'checklist.warning': 'Warning',
+  'checklist.marginBelowFloor': 'Option {option}: margin of {rate}%, below the required {min}%.',
+  'checklist.campaignDatesInvalid':
+    'Option {option}: the campaign end date cannot be earlier than the start date.',
+  'checklist.leadTimeInsufficient':
+    '{support} in {market}: {available} business days left until the start (excluding {market} holidays) and the support requires {required}.',
+  'checklist.leadTimeForced': '{support} in {market}: insufficient lead time, forced — reason: {reason}',
+  'checklist.leadTimeNotVerifiable':
+    'Option {option}: quoted only by duration, with no start date. Cannot check the lead time of {support} in {market} (requires {required} business days).',
+  'checklist.supportNotSellable': '{support} is not sellable in {market}.',
+  'checklist.mediaBudgetMissing':
+    '{support}: missing media budget (€). Required to calculate the management fee.',
+  'checklist.mediaFeeExceedsBudget':
+    "{support}: the client's media budget doesn't cover the management minimum (missing {amount} €). Force the split manually or raise the budget.",
+  'checklist.mediaSplitRequired':
+    '{support}: the split between the real amount for the medium and the management fee is never automatic. Confirm it manually before sending.',
+  'checklist.emptyBrief':
+    "The campaign brief is empty. It's reused in the email and, later, in the PDF.",
+  'checklist.forceLeadTime': 'Force lead time',
+  'checklist.forceLeadTimeReasonLabel': 'Reason (required)',
+  'checklist.forceLeadTimeConfirm': 'Confirm',
+  'checklist.forceLeadTimeCancel': 'Cancel',
 
   'discountBanner.nominal': 'Nominal discount',
   'discountBanner.effective': 'Effective discount',
@@ -546,6 +613,8 @@ const en: Dict = {
   'proposalDetail.decidedAt': 'Decided on',
   'proposalDetail.option': 'Option',
   'proposalDetail.lineMarket': 'Market',
+  'proposalDetail.leadTimeForced': 'Lead time forced',
+  'proposalDetail.leadTimeForcedReason': 'Reason: {reason}',
   'proposalDetail.notFound': 'Proposal not found.',
 
   'accountsList.title': 'Accounts',
@@ -584,6 +653,28 @@ interface I18nContextValue {
 
 const I18nContext = createContext<I18nContextValue | null>(null);
 
+/**
+ * Sustituye `{variable}` por su valor en `text`. Pura y exportada aparte de
+ * `t()` (que necesita el `InternalI18nProvider` de React) para poder
+ * testearla sin renderizar nada — igual que el resto del motor de este
+ * proyecto separa cálculo puro de interfaz.
+ *
+ * `replaceAll`, no `replace`: una plantilla puede repetir la misma variable
+ * más de una vez (p. ej. `checklist.leadTimeInsufficient`, ronda 11: "...en
+ * {market}... festivos de {market}..."). Bug real encontrado con Playwright
+ * contra un navegador real, no por ningún test unitario (CLAUDE.md §10.3
+ * undecies): con `replace()`, de un solo uso, la segunda aparición de
+ * `{market}` llegaba a pantalla sin traducir, literal.
+ */
+export function interpolate(text: string, vars?: Record<string, string>): string {
+  if (!vars) return text;
+  let result = text;
+  for (const [name, value] of Object.entries(vars)) {
+    result = result.replaceAll(`{${name}}`, value);
+  }
+  return result;
+}
+
 export function InternalI18nProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<InternalLanguage>('ES');
 
@@ -602,15 +693,7 @@ export function InternalI18nProvider({ children }: { children: React.ReactNode }
   }, []);
 
   const t = useCallback<I18nContextValue['t']>(
-    (key, vars) => {
-      let text: string = DICTS[language][key] ?? DICTS.ES[key] ?? key;
-      if (vars) {
-        for (const [name, value] of Object.entries(vars)) {
-          text = text.replace(`{${name}}`, value);
-        }
-      }
-      return text;
-    },
+    (key, vars) => interpolate(DICTS[language][key] ?? DICTS.ES[key] ?? key, vars),
     [language],
   );
 
