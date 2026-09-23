@@ -10,9 +10,11 @@ import type { Market, PricedOption, PricingParameters } from './types.js';
 
 export type CheckCode =
   | 'MARGIN_BELOW_FLOOR'
+  | 'CAMPAIGN_DATES_INVALID'
   | 'LEAD_TIME_INSUFFICIENT'
   | 'LEAD_TIME_NOT_VERIFIABLE'
   | 'SUPPORT_NOT_SELLABLE'
+  | 'MEDIA_BUDGET_MISSING'
   | 'EMPTY_BRIEF';
 
 export interface CheckResult {
@@ -34,6 +36,8 @@ export interface CheckResult {
 export interface PreSendOptionContext {
   readonly option: PricedOption;
   readonly campaignStart: Date | null;
+  /** Solo relevante en modo "fechas concretas" — `null` en modo "solo duración" o si aún no se ha rellenado. */
+  readonly campaignEnd: Date | null;
   readonly durationOnly: boolean;
 }
 
@@ -93,7 +97,7 @@ export function runPreSendChecks(
   const blockers: CheckResult[] = [];
   const warnings: CheckResult[] = [];
 
-  for (const { option, campaignStart, durationOnly } of options) {
+  for (const { option, campaignStart, campaignEnd, durationOnly } of options) {
     // 1. Margen por debajo del 50 % en cualquier opción. No se compensa una
     //    opción floja con otra.
     if (!option.meetsMarginFloor) {
@@ -106,6 +110,38 @@ export function runPreSendChecks(
           `por debajo del ${(ctx.parameters.minMarginRate * 100).toFixed(0)} % exigido.`,
         optionId: option.id,
       });
+    }
+
+    // Fechas de campaña inválidas: el fin no puede ser anterior al inicio.
+    // Solo se evalúa cuando ambas fechas están rellenas (modo "fechas
+    // concretas") — en modo "solo duración" no hay fechas que comparar.
+    if (campaignStart !== null && campaignEnd !== null && campaignEnd < campaignStart) {
+      blockers.push({
+        code: 'CAMPAIGN_DATES_INVALID',
+        severity: 'BLOCKER',
+        message: `Opción ${option.name ?? option.id ?? '—'}: la fecha de fin de campaña no puede ser anterior a la de inicio.`,
+        optionId: option.id,
+      });
+    }
+
+    // Presupuesto de medios obligatorio (CLAUDE.md §4.4, ronda 9): es una
+    // cifra de negociación con el cliente, nunca se calcula sola — sin ella
+    // el fee de gestión no tiene sentido de negocio. Una vez por soporte, no
+    // por mercado: el presupuesto es el mismo en todos los mercados de la
+    // opción (§4.2), así que comprobarlo línea a línea repetiría el mismo
+    // aviso una vez por mercado.
+    const flaggedMediaBudget = new Set<string>();
+    for (const line of option.lines) {
+      if (line.isMediaBuy && line.mediaBudgetCents === 0 && !flaggedMediaBudget.has(line.supportId)) {
+        flaggedMediaBudget.add(line.supportId);
+        blockers.push({
+          code: 'MEDIA_BUDGET_MISSING',
+          severity: 'BLOCKER',
+          message: `${line.supportId}: falta el presupuesto de medios (€). Es obligatorio para calcular el fee de gestión.`,
+          optionId: option.id,
+          supportId: line.supportId,
+        });
+      }
     }
 
     for (const line of option.lines) {

@@ -193,6 +193,8 @@ export interface Database {
           margin_cents: number | null;
           margin_rate: number | null;
           max_lead_time_days: number | null;
+          /** Interruptor "desactivar descuento por volumen" (CLAUDE.md §4.5, ronda 9). */
+          volume_discount_disabled: boolean;
           calculated_at: string | null;
         };
         Insert: Partial<Database['public']['Tables']['proposal_options']['Row']> & {

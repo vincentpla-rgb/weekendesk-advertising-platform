@@ -27,6 +27,8 @@ export interface RawOption {
   readonly campaignDurationUnit: 'WEEK' | 'MONTH' | null;
   readonly lines: readonly RawLine[];
   readonly discounts: readonly RawDiscount[];
+  /** Interruptor por opción (CLAUDE.md §4.5, ronda 9): ver `OptionInput.volumeDiscountDisabled`. */
+  readonly volumeDiscountDisabled: boolean;
 }
 
 export type BuildOptionsPayloadResult =
@@ -74,6 +76,7 @@ export function buildProposalOptionsPayload(
         };
       }),
       manualDiscounts: raw.discounts.map((d) => ({ rate: d.ratePercent / 100, reason: d.reason })),
+      volumeDiscountDisabled: raw.volumeDiscountDisabled,
     };
 
     let priced: PricedOption;
@@ -106,6 +109,7 @@ export function buildProposalOptionsPayload(
       margin_cents: priced.marginCents,
       margin_rate: priced.marginRate,
       max_lead_time_business_days: priced.maxLeadTimeBusinessDays,
+      volume_discount_disabled: raw.volumeDiscountDisabled,
       lines: priced.lines.map((l, idx) => ({
         support_id: l.supportId,
         market: l.market,

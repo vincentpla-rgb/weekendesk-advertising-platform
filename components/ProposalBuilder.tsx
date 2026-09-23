@@ -9,6 +9,7 @@ import {
   runPreSendChecks,
   toOptionInput,
   optionDurationUnits,
+  suggestedMediaMonths,
   suggestedQuantityForSupport,
   addLineDraft,
   addOptionDiscount,
@@ -112,7 +113,7 @@ export function ProposalBuilder({
     );
   }
 
-  function updateLineMedia(optionKey: string, lineKey: string, patch: Partial<Pick<LineDraft, 'mediaBudgetEuros' | 'mediaMonths'>>) {
+  function updateLineMedia(optionKey: string, lineKey: string, patch: Partial<Pick<LineDraft, 'mediaBudgetEuros'>>) {
     setOptions((prev) =>
       prev.map((o) =>
         o.key !== optionKey
@@ -208,6 +209,10 @@ export function ProposalBuilder({
       draft.scheduleMode === 'DATES' && draft.campaignStart
         ? new Date(`${draft.campaignStart}T00:00:00Z`)
         : null,
+    campaignEnd:
+      draft.scheduleMode === 'DATES' && draft.campaignEnd
+        ? new Date(`${draft.campaignEnd}T00:00:00Z`)
+        : null,
     durationOnly: draft.scheduleMode === 'DURATION_ONLY',
   }));
 
@@ -253,11 +258,15 @@ export function ProposalBuilder({
                 supportId: l.supportId,
                 quantity: l.quantity,
                 mediaBudgetEuros: l.mediaBudgetEuros === '' ? null : l.mediaBudgetEuros,
-                mediaMonths: l.mediaMonths === '' ? null : l.mediaMonths,
+                // Nunca un campo manual (CLAUDE.md §4.4, ronda 9): se deriva
+                // de la duración vigente de la opción, la MISMA función que
+                // alimenta la vista previa en vivo.
+                mediaMonths: suggestedMediaMonths(o),
               })),
             discounts: o.discounts
               .filter((d) => d.ratePercent !== '' && d.reason.trim() !== '')
               .map((d) => ({ ratePercent: d.ratePercent, reason: d.reason })),
+            volumeDiscountDisabled: o.volumeDiscountDisabled,
           })),
         }),
       });
@@ -362,7 +371,16 @@ export function ProposalBuilder({
               value={contactId}
               onChange={(e) => setContactId(e.target.value)}
             >
-              <option value="__new__">{t('proposalBuilder.newContact')}</option>
+              {/* El nombre tecleado se refleja en la propia etiqueta de la
+                  opción (CLAUDE.md §10.3 novies): no hay ningún contacto
+                  que "seleccionar" todavía — no existe en la base de datos
+                  hasta que se envía el presupuesto — pero así el
+                  desplegable deja de parecer que ignora lo escrito abajo. */}
+              <option value="__new__">
+                {contactId === '__new__' && newContact.full_name.trim()
+                  ? `${t('proposalBuilder.newContact')}: ${newContact.full_name.trim()}`
+                  : t('proposalBuilder.newContact')}
+              </option>
               {selectedAccount?.contacts.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.full_name} ({c.email})
@@ -562,7 +580,7 @@ function OptionEditor({
   onChangeLineSupport: (lineKey: string, supportId: string) => void;
   onSetLineQuantity: (lineKey: string, quantity: number) => void;
   onResyncLine: (lineKey: string) => void;
-  onUpdateLineMedia: (lineKey: string, patch: Partial<Pick<LineDraft, 'mediaBudgetEuros' | 'mediaMonths'>>) => void;
+  onUpdateLineMedia: (lineKey: string, patch: Partial<Pick<LineDraft, 'mediaBudgetEuros'>>) => void;
   onAddLine: () => void;
   onRemoveLine: (lineKey: string) => void;
   onAddDiscount: () => void;
@@ -801,32 +819,49 @@ function OptionEditor({
                 </td>
                 <td>
                   {support?.isMediaBuy ? (
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      <input
-                        className="wk-input"
-                        type="number"
-                        placeholder={t('proposalBuilder.mediaBudgetPlaceholder')}
-                        value={line.mediaBudgetEuros}
-                        onChange={(e) =>
-                          onUpdateLineMedia(line.key, {
-                            mediaBudgetEuros: e.target.value === '' ? '' : Number(e.target.value),
-                          })
-                        }
-                        style={{ width: 90 }}
-                      />
-                      <input
-                        className="wk-input"
-                        type="number"
-                        placeholder={t('proposalBuilder.mediaMonthsPlaceholder')}
-                        min={1}
-                        value={line.mediaMonths}
-                        onChange={(e) =>
-                          onUpdateLineMedia(line.key, {
-                            mediaMonths: e.target.value === '' ? '' : Number(e.target.value),
-                          })
-                        }
-                        style={{ width: 64 }}
-                      />
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <div>
+                        <label className="wk-label" style={{ fontSize: 10 }}>
+                          {t('proposalBuilder.mediaBudgetLabel')}
+                        </label>
+                        <input
+                          className="wk-input"
+                          type="number"
+                          placeholder={t('proposalBuilder.mediaBudgetPlaceholder')}
+                          value={line.mediaBudgetEuros}
+                          onChange={(e) =>
+                            onUpdateLineMedia(line.key, {
+                              mediaBudgetEuros: e.target.value === '' ? '' : Number(e.target.value),
+                            })
+                          }
+                          style={{
+                            width: 100,
+                            borderColor: line.mediaBudgetEuros === '' ? 'var(--wk-danger)' : undefined,
+                          }}
+                        />
+                        {line.mediaBudgetEuros === '' && (
+                          <div className="wk-badge wk-badge-danger" style={{ marginTop: 2, fontSize: 10 }}>
+                            {t('proposalBuilder.mediaBudgetRequired')}
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <label className="wk-label" style={{ fontSize: 10 }}>
+                          {t('proposalBuilder.mediaMonthsAutoLabel')}
+                        </label>
+                        {/* Nunca manual (CLAUDE.md §4.4, ronda 9): se deriva de la
+                            duración de la opción, igual que la cantidad de las
+                            demás líneas — si el periodo cambia, este valor se
+                            actualiza solo. */}
+                        <input
+                          className="wk-input"
+                          type="number"
+                          disabled
+                          value={suggestedMediaMonths(draft) ?? ''}
+                          title={t('proposalBuilder.mediaMonthsAutoHint')}
+                          style={{ width: 64, color: 'var(--wk-text-muted)' }}
+                        />
+                      </div>
                     </div>
                   ) : (
                     <span style={{ color: 'var(--wk-text-muted)' }}>—</span>
@@ -881,6 +916,20 @@ function OptionEditor({
         <button type="button" className="wk-btn wk-btn-ghost" onClick={onAddDiscount}>
           {t('proposalBuilder.addDiscount')}
         </button>
+      </div>
+
+      <div style={{ marginTop: 10 }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+          <input
+            type="checkbox"
+            checked={draft.volumeDiscountDisabled}
+            onChange={(e) => onUpdate({ volumeDiscountDisabled: e.target.checked })}
+          />
+          {t('proposalBuilder.disableVolumeDiscount')}
+        </label>
+        <p style={{ fontSize: 12, color: 'var(--wk-text-muted)', margin: '2px 0 0 22px' }}>
+          {t('proposalBuilder.disableVolumeDiscountHelp')}
+        </p>
       </div>
 
       {priced && (

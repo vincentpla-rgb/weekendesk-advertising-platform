@@ -413,6 +413,40 @@ describe('descuentos', () => {
     expect(option.discounts[1]!.reason).toMatch(/Multimercado/);
   });
 
+  it('volumeDiscountDisabled: no aplica el descuento por volumen aunque la base supere el umbral (ronda 9)', () => {
+    const conDescuento = priceOption(
+      { markets: ['FR'], lines: [{ supportId: 'CRM-01', quantity: 2 }] }, // 4.000€, tramo del 5%
+      ctx,
+    );
+    expect(conDescuento.discounts.map((d) => d.kind)).toEqual(['VOLUME']);
+    expect(conDescuento.nominalDiscountRate).toBeGreaterThan(0);
+
+    const sinDescuento = priceOption(
+      { markets: ['FR'], lines: [{ supportId: 'CRM-01', quantity: 2 }], volumeDiscountDisabled: true },
+      ctx,
+    );
+    expect(sinDescuento.discounts).toEqual([]);
+    expect(sinDescuento.nominalDiscountRate).toBe(0);
+    expect(sinDescuento.nominalDiscountCents).toBe(0);
+    // La tarifa bruta se factura entera, sin ningún descuento por tramo.
+    expect(sinDescuento.netRevenueCents).toBe(sinDescuento.grossNetOfMediaCents);
+    expect(sinDescuento.netRevenueCents).toBeGreaterThan(conDescuento.netRevenueCents);
+  });
+
+  it('volumeDiscountDisabled no afecta a los descuentos manuales: siguen sumándose aparte', () => {
+    const option = priceOption(
+      {
+        markets: ['FR'],
+        lines: [{ supportId: 'CRM-01', quantity: 2 }],
+        manualDiscounts: [{ rate: 0.1, reason: 'Cliente recurrente' }],
+        volumeDiscountDisabled: true,
+      },
+      ctx,
+    );
+    expect(option.discounts.map((d) => d.kind)).toEqual(['MANUAL']);
+    expect(option.nominalDiscountRate).toBeCloseTo(0.1, 10);
+  });
+
   it('rechaza un descuento manual sin motivo', () => {
     expect(() =>
       priceOption(

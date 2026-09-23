@@ -41,8 +41,13 @@ export interface LineDraft {
    * a partir de ahí se respeta y no se sobrescribe sola.
    */
   readonly quantityAutoSynced: boolean;
+  /**
+   * Presupuesto de medios en euros (CLAUDE.md §4.4, ronda 9): cifra de
+   * NEGOCIACIÓN con el cliente, nunca se calcula sola. Vacío por defecto —
+   * obligando a rellenarlo antes de enviar (§10.3 novies): sin presupuesto,
+   * el fee de gestión no se puede calcular con sentido de negocio.
+   */
   readonly mediaBudgetEuros: number | '';
-  readonly mediaMonths: number | '';
 }
 
 export interface DiscountDraft {
@@ -60,6 +65,13 @@ export interface OptionDraft extends OptionScheduleDraft {
   readonly markets: readonly Market[];
   readonly lines: readonly LineDraft[];
   readonly discounts: readonly DiscountDraft[];
+  /**
+   * Interruptor por opción (CLAUDE.md §4.5, ronda 9): desactiva el
+   * descuento automático por volumen, aunque la tarifa bruta supere el
+   * umbral que lo activaría. Distinto de `discounts` (los manuales, que
+   * siguen sumándose aparte). Por defecto `false`.
+   */
+  readonly volumeDiscountDisabled: boolean;
 }
 
 const SCHEDULE_FIELDS = new Set<string>([
@@ -114,6 +126,33 @@ export function suggestedQuantityForSupport(
   return suggestedQuantity(units, support.unit as DurationSupportUnit);
 }
 
+/**
+ * Duración de la opción EN MESES, para el fee mínimo mensual de un soporte
+ * de media buy (CLAUDE.md §4.4, ronda 9) — nunca un campo manual suelto:
+ * se deriva del periodo vigente de la opción, igual que la cantidad
+ * sugerida de las demás líneas (§4, ronda 6). A diferencia de esa cantidad,
+ * no depende de la unidad del soporte (un soporte de media buy puede tener
+ * `unit: 'COLLABORATION'`, como INF-01, cuya cantidad — número de
+ * colaboraciones — es un eje distinto de la duración en meses).
+ *
+ * En modo "fechas concretas" es `computeDurationUnits(...).months` (días
+ * naturales entre las dos fechas, redondeado hacia arriba a meses de 30
+ * días — la misma aproximación que usa el resto del motor, CLAUDE.md §5.3).
+ * En modo "solo duración": si la unidad elegida ya es "mes", el número es
+ * directo; si es "semana", se aproxima con la misma equivalencia de 7/30
+ * días que usa `computeDurationUnits` para no introducir una segunda regla
+ * de conversión.
+ */
+export function suggestedMediaMonths(schedule: OptionScheduleDraft): number | null {
+  if (schedule.scheduleMode === 'DURATION_ONLY') {
+    if (schedule.durationCount === '') return null;
+    if (schedule.durationUnit === 'MONTH') return schedule.durationCount;
+    return Math.ceil((schedule.durationCount * 7) / 30);
+  }
+  const units = optionDurationUnits(schedule);
+  return units === null ? null : units.months;
+}
+
 /** Nueva línea con la cantidad ya sugerida por el periodo vigente de la opción, si aplica — nunca empieza en 1 esperando una acción manual. */
 export function createLineDraft(catalog: Catalog, schedule: OptionScheduleDraft, supportId: string, key: string): LineDraft {
   const suggested = suggestedQuantityForSupport(schedule, catalog.get(supportId));
@@ -123,7 +162,6 @@ export function createLineDraft(catalog: Catalog, schedule: OptionScheduleDraft,
     quantity: suggested ?? 1,
     quantityAutoSynced: true,
     mediaBudgetEuros: '',
-    mediaMonths: '',
   };
 }
 
@@ -150,6 +188,7 @@ export function createOptionDraft(
     ...schedule,
     lines: [createLineDraft(catalog, schedule, supports[0]?.id ?? '', lineKey)],
     discounts: [],
+    volumeDiscountDisabled: false,
   };
 }
 
@@ -240,7 +279,7 @@ export function resyncLineQuantity(catalog: Catalog, draft: OptionDraft, lineKey
   };
 }
 
-export function updateLineDraft(draft: OptionDraft, lineKey: string, patch: Partial<Pick<LineDraft, 'mediaBudgetEuros' | 'mediaMonths'>>): OptionDraft {
+export function updateLineDraft(draft: OptionDraft, lineKey: string, patch: Partial<Pick<LineDraft, 'mediaBudgetEuros'>>): OptionDraft {
   return {
     ...draft,
     lines: draft.lines.map((line) => (line.key === lineKey ? { ...line, ...patch } : line)),
@@ -292,7 +331,9 @@ export function toOptionInput(catalog: Catalog, draft: OptionDraft): OptionInput
           ...(support?.isMediaBuy
             ? {
                 mediaBudgetCents: l.mediaBudgetEuros === '' ? 0 : euros(l.mediaBudgetEuros),
-                mediaMonths: l.mediaMonths === '' ? 1 : l.mediaMonths,
+                // Nunca un campo manual: la duración de la opción, en meses
+                // (CLAUDE.md §4.4, ronda 9) — ver `suggestedMediaMonths`.
+                mediaMonths: suggestedMediaMonths(draft) ?? 1,
               }
             : {}),
         };
@@ -300,5 +341,6 @@ export function toOptionInput(catalog: Catalog, draft: OptionDraft): OptionInput
     manualDiscounts: draft.discounts
       .filter((d) => d.ratePercent !== '' && d.reason.trim() !== '')
       .map((d): ManualDiscount => ({ rate: Number(d.ratePercent) / 100, reason: d.reason })),
+    volumeDiscountDisabled: draft.volumeDiscountDisabled,
   };
 }

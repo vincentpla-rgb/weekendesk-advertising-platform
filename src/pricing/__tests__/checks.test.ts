@@ -27,13 +27,17 @@ function baseContext(overrides: Partial<PreSendContext> = {}): PreSendContext {
 }
 
 /** Envuelve una opción ya calculada con una fecha de inicio concreta (§5.3). */
-function withStart(option: PricedOption, campaignStart: Date | null = d('2026-11-02')): PreSendOptionContext {
-  return { option, campaignStart, durationOnly: false };
+function withStart(
+  option: PricedOption,
+  campaignStart: Date | null = d('2026-11-02'),
+  campaignEnd: Date | null = null,
+): PreSendOptionContext {
+  return { option, campaignStart, campaignEnd, durationOnly: false };
 }
 
 /** Opción cotizada solo por duración, sin fecha de inicio concreta (§5.3 bis). */
 function withDurationOnly(option: PricedOption): PreSendOptionContext {
-  return { option, campaignStart: null, durationOnly: true };
+  return { option, campaignStart: null, campaignEnd: null, durationOnly: true };
 }
 
 describe('businessDaysBetween', () => {
@@ -191,6 +195,75 @@ describe('controles previos al envío', () => {
 
     expect(informe.canSend).toBe(true);
     expect(informe.warnings.map((w) => w.code)).toContain('EMPTY_BRIEF');
+  });
+
+  it('bloquea una opción cuya fecha de fin es anterior a la de inicio (ronda 9)', () => {
+    const option = priceOption({ id: 'A', markets: ['FR'], lines: [{ supportId: 'CON-01' }] }, ctx);
+    const informe = runPreSendChecks(
+      [withStart(option, d('2026-11-02'), d('2026-10-30'))],
+      baseContext(),
+    );
+
+    expect(informe.canSend).toBe(false);
+    expect(informe.blockers.map((b) => b.code)).toContain('CAMPAIGN_DATES_INVALID');
+  });
+
+  it('no bloquea cuando la fecha de fin es igual o posterior a la de inicio', () => {
+    const mismoDia = priceOption({ id: 'A', markets: ['FR'], lines: [{ supportId: 'CON-01' }] }, ctx);
+    const iguales = runPreSendChecks(
+      [withStart(mismoDia, d('2026-11-02'), d('2026-11-02'))],
+      baseContext(),
+    );
+    expect(iguales.blockers.map((b) => b.code)).not.toContain('CAMPAIGN_DATES_INVALID');
+
+    const posterior = priceOption({ id: 'A', markets: ['FR'], lines: [{ supportId: 'CON-01' }] }, ctx);
+    const bienOrdenadas = runPreSendChecks(
+      [withStart(posterior, d('2026-11-02'), d('2026-11-09'))],
+      baseContext(),
+    );
+    expect(bienOrdenadas.blockers.map((b) => b.code)).not.toContain('CAMPAIGN_DATES_INVALID');
+  });
+
+  it('no evalúa fechas inválidas en modo "solo duración", sin fecha de fin', () => {
+    const option = priceOption({ id: 'A', markets: ['FR'], lines: [{ supportId: 'CON-01' }] }, ctx);
+    const informe = runPreSendChecks([withDurationOnly(option)], baseContext());
+    expect(informe.blockers.map((b) => b.code)).not.toContain('CAMPAIGN_DATES_INVALID');
+  });
+
+  it('bloquea una línea de media buy sin presupuesto de medios (ronda 9)', () => {
+    const option = priceOption(
+      { id: 'A', markets: ['FR'], lines: [{ supportId: 'ADS-01', mediaBudgetCents: 0, mediaMonths: 1 }] },
+      ctx,
+    );
+    const informe = runPreSendChecks([withStart(option)], baseContext());
+
+    expect(informe.canSend).toBe(false);
+    expect(informe.blockers.map((b) => b.code)).toContain('MEDIA_BUDGET_MISSING');
+    expect(informe.blockers.find((b) => b.code === 'MEDIA_BUDGET_MISSING')?.supportId).toBe('ADS-01');
+  });
+
+  it('no bloquea una línea de media buy con presupuesto de medios relleno', () => {
+    const option = priceOption(
+      { id: 'A', markets: ['FR'], lines: [{ supportId: 'ADS-01', mediaBudgetCents: 300_000, mediaMonths: 1 }] },
+      ctx,
+    );
+    const informe = runPreSendChecks([withStart(option)], baseContext());
+    expect(informe.blockers.map((b) => b.code)).not.toContain('MEDIA_BUDGET_MISSING');
+  });
+
+  it('no bloquea una línea normal (no media buy) por falta de presupuesto de medios', () => {
+    const option = priceOption({ id: 'A', markets: ['FR'], lines: [{ supportId: 'CON-01' }] }, ctx);
+    const informe = runPreSendChecks([withStart(option)], baseContext());
+    expect(informe.blockers.map((b) => b.code)).not.toContain('MEDIA_BUDGET_MISSING');
+  });
+
+  it('avisa una sola vez por soporte de media buy sin presupuesto, aunque se venda en varios mercados', () => {
+    const option = priceOption(
+      { id: 'A', markets: ['FR', 'ES'], lines: [{ supportId: 'ADS-01', mediaBudgetCents: 0, mediaMonths: 1 }] },
+      ctx,
+    );
+    const informe = runPreSendChecks([withStart(option)], baseContext());
+    expect(informe.blockers.filter((b) => b.code === 'MEDIA_BUDGET_MISSING')).toHaveLength(1);
   });
 });
 

@@ -14,6 +14,7 @@ import {
   setLineSupport,
   toOptionInput,
   toggleOptionMarket,
+  updateLineDraft,
   updateOptionDraft,
   type OptionDraft,
 } from '../option-draft.js';
@@ -315,5 +316,145 @@ describe('createLineDraft / createOptionDraft', () => {
     const schedule = { scheduleMode: 'DATES' as const, campaignStart: '2027-10-01', campaignEnd: '2027-10-28', durationCount: '' as const, durationUnit: 'WEEK' as const };
     const line = createLineDraft(DEFAULT_CATALOG, schedule, 'ON-01', 'l1');
     expect(line.quantity).toBe(4);
+  });
+});
+
+// =============================================================================
+// Media buy (CLAUDE.md §4.4, ronda 9): el presupuesto de medios es SIEMPRE
+// manual (cifra de negociación, nunca se calcula sola), pero los meses del
+// fee mínimo se derivan de la duración de la opción — nunca un campo suelto
+// que el comercial tenga que rellenar dos veces (una en la cantidad, que ya
+// se auto-sincroniza para ADS-*, y otra en los meses).
+// =============================================================================
+
+describe('media buy: presupuesto manual, meses derivados de la duración (ronda 9)', () => {
+  it('ADS-01 (mensual): el motor recibe mediaMonths = duración en meses, sin que el comercial lo escriba', () => {
+    let option = freshOption();
+    option = setLineSupport(DEFAULT_CATALOG, option, option.lines[0]!.key, 'ADS-01');
+    option = updateLineDraft(option, option.lines[0]!.key, { mediaBudgetEuros: 3000 });
+    option = updateOptionDraft(DEFAULT_CATALOG, option, {
+      campaignStart: '2027-10-01',
+      campaignEnd: '2027-11-29', // 60 días = 2 meses
+    });
+
+    const input = toOptionInput(DEFAULT_CATALOG, option);
+    expect(input.lines[0]!.mediaMonths).toBe(2);
+
+    const priced = priceOption(input, ctx);
+    const ads01 = priced.lines.find((l) => l.supportId === 'ADS-01' && l.market === 'FR')!;
+    expect(ads01.mediaMonths).toBe(2);
+  });
+
+  it('INF-01 (unidad "Colaboración", no auto-sincroniza cantidad) SÍ deriva mediaMonths de la duración igualmente', () => {
+    let option = freshOption();
+    option = setLineSupport(DEFAULT_CATALOG, option, option.lines[0]!.key, 'INF-01');
+    option = updateLineDraft(option, option.lines[0]!.key, { mediaBudgetEuros: 5000 });
+    option = updateOptionDraft(DEFAULT_CATALOG, option, {
+      campaignStart: '2027-10-01',
+      campaignEnd: '2027-11-29', // 60 días = 2 meses
+    });
+
+    // La cantidad (colaboraciones) sigue en 1, sin inventar nada — eje
+    // distinto de la duración en meses del fee mínimo.
+    expect(option.lines[0]!.quantity).toBe(1);
+
+    const input = toOptionInput(DEFAULT_CATALOG, option);
+    expect(input.lines[0]!.mediaMonths).toBe(2);
+  });
+
+  it('cambiar el periodo después de fijar el presupuesto actualiza los meses solo, sin tocar el presupuesto', () => {
+    let option = freshOption();
+    option = setLineSupport(DEFAULT_CATALOG, option, option.lines[0]!.key, 'ADS-01');
+    option = updateLineDraft(option, option.lines[0]!.key, { mediaBudgetEuros: 3000 });
+    option = updateOptionDraft(DEFAULT_CATALOG, option, {
+      campaignStart: '2027-10-01',
+      campaignEnd: '2027-10-28', // 4 semanas = 1 mes
+    });
+    expect(toOptionInput(DEFAULT_CATALOG, option).lines[0]!.mediaMonths).toBe(1);
+
+    option = updateOptionDraft(DEFAULT_CATALOG, option, { campaignEnd: '2027-12-27' }); // ~12 semanas = 3 meses
+    const input = toOptionInput(DEFAULT_CATALOG, option);
+    expect(input.lines[0]!.mediaMonths).toBe(3);
+    // El presupuesto, manual, no se toca por cambiar el periodo.
+    expect(option.lines[0]!.mediaBudgetEuros).toBe(3000);
+  });
+
+  it('modo "solo duración" en meses: mediaMonths es el conteo elegido, directo', () => {
+    let option = freshOption();
+    option = setLineSupport(DEFAULT_CATALOG, option, option.lines[0]!.key, 'ADS-02');
+    option = updateLineDraft(option, option.lines[0]!.key, { mediaBudgetEuros: 4000 });
+    option = updateOptionDraft(DEFAULT_CATALOG, option, {
+      scheduleMode: 'DURATION_ONLY',
+      durationCount: 5,
+      durationUnit: 'MONTH',
+    });
+    expect(toOptionInput(DEFAULT_CATALOG, option).lines[0]!.mediaMonths).toBe(5);
+  });
+
+  it('modo "solo duración" en semanas: mediaMonths se aproxima con la misma equivalencia de días que el resto del motor', () => {
+    let option = freshOption();
+    option = setLineSupport(DEFAULT_CATALOG, option, option.lines[0]!.key, 'ADS-02');
+    option = updateLineDraft(option, option.lines[0]!.key, { mediaBudgetEuros: 4000 });
+    option = updateOptionDraft(DEFAULT_CATALOG, option, {
+      scheduleMode: 'DURATION_ONLY',
+      durationCount: 8,
+      durationUnit: 'WEEK', // 8 semanas × 7 / 30 = 1.87 → 2 meses
+    });
+    expect(toOptionInput(DEFAULT_CATALOG, option).lines[0]!.mediaMonths).toBe(2);
+  });
+
+  it('sin periodo fijado todavía, mediaMonths cae al valor por defecto (1) — igual que antes de esta ronda', () => {
+    let option = freshOption();
+    option = setLineSupport(DEFAULT_CATALOG, option, option.lines[0]!.key, 'ADS-01');
+    option = updateLineDraft(option, option.lines[0]!.key, { mediaBudgetEuros: 3000 });
+    expect(toOptionInput(DEFAULT_CATALOG, option).lines[0]!.mediaMonths).toBe(1);
+  });
+
+  it('el presupuesto de medios vacío se manda como 0 al motor — el control previo al envío es quien lo bloquea, no el motor', () => {
+    let option = freshOption();
+    option = setLineSupport(DEFAULT_CATALOG, option, option.lines[0]!.key, 'ADS-01');
+    expect(option.lines[0]!.mediaBudgetEuros).toBe(''); // vacío por defecto (CLAUDE.md §4.4)
+
+    const input = toOptionInput(DEFAULT_CATALOG, option);
+    expect(input.lines[0]!.mediaBudgetCents).toBe(0);
+  });
+});
+
+// =============================================================================
+// Interruptor "desactivar descuento por volumen" por opción (CLAUDE.md §4.5,
+// ronda 9): distinto de los descuentos manuales, que ya existían.
+// =============================================================================
+
+describe('volumeDiscountDisabled: interruptor por opción (ronda 9)', () => {
+  it('una opción recién creada empieza con el descuento por volumen activado (false)', () => {
+    const option = freshOption();
+    expect(option.volumeDiscountDisabled).toBe(false);
+  });
+
+  it('updateOptionDraft cambia el interruptor sin resincronizar cantidades (no es un campo de periodo)', () => {
+    let option = freshOption();
+    option = setLineQuantityManually(option, option.lines[0]!.key, 99); // deja de auto-sincronizar
+    option = updateOptionDraft(DEFAULT_CATALOG, option, { volumeDiscountDisabled: true });
+
+    expect(option.volumeDiscountDisabled).toBe(true);
+    expect(option.lines[0]!.quantity).toBe(99); // sin tocar
+  });
+
+  it('toOptionInput lo traslada al motor y el descuento por volumen deja de aplicarse', () => {
+    let option = freshOption();
+    // CRM-01, cantidad suficiente para superar el umbral del 5 % (3.000€).
+    option = setLineSupport(DEFAULT_CATALOG, option, option.lines[0]!.key, 'CRM-01');
+    option = setLineQuantityManually(option, option.lines[0]!.key, 2); // 2 × 2.000€ = 4.000€
+
+    const conDescuento = priceOption(toOptionInput(DEFAULT_CATALOG, option), ctx);
+    expect(conDescuento.discounts.map((d) => d.kind)).toEqual(['VOLUME']);
+
+    option = updateOptionDraft(DEFAULT_CATALOG, option, { volumeDiscountDisabled: true });
+    const input = toOptionInput(DEFAULT_CATALOG, option);
+    expect(input.volumeDiscountDisabled).toBe(true);
+
+    const sinDescuento = priceOption(input, ctx);
+    expect(sinDescuento.discounts).toEqual([]);
+    expect(sinDescuento.netRevenueCents).toBe(sinDescuento.grossNetOfMediaCents);
   });
 });

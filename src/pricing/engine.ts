@@ -301,7 +301,12 @@ export function priceOption(input: OptionInput, ctx: PricingContext): PricedOpti
 
   // --- 4. Descuentos ---------------------------------------------------------
   const discounts: AppliedDiscount[] = [];
-  const volumeRate = volumeDiscountRate(parameters, grossNetOfMediaCents);
+  // Interruptor por opción (CLAUDE.md §4.5, ronda 9): con el descuento por
+  // volumen desactivado, la tarifa bruta se factura sin ningún descuento por
+  // tramo — los descuentos manuales, si los hay, se suman igual más abajo.
+  const volumeRate = input.volumeDiscountDisabled
+    ? 0
+    : volumeDiscountRate(parameters, grossNetOfMediaCents);
   if (volumeRate > 0) {
     discounts.push({ kind: 'VOLUME', rate: volumeRate, reason: null });
   }

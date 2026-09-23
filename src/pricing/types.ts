@@ -104,6 +104,15 @@ export interface OptionInput {
   readonly lines: readonly OptionLineInput[];
   /** Multimercado y cualquier otro descuento comercial. Nunca automáticos. */
   readonly manualDiscounts?: readonly ManualDiscount[];
+  /**
+   * Interruptor por opción (CLAUDE.md §4.5, ronda 9): desactiva el descuento
+   * automático por volumen para esta opción, aunque su tarifa bruta supere
+   * el umbral que lo activaría — la tarifa se factura sin ningún descuento
+   * por tramo. Distinto de los descuentos manuales, que se suman aparte y
+   * siguen aplicándose igual. Por defecto `false` (el descuento por volumen
+   * se aplica normalmente).
+   */
+  readonly volumeDiscountDisabled?: boolean;
 }
 
 // -----------------------------------------------------------------------------
