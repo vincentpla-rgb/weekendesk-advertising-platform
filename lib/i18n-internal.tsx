@@ -147,6 +147,16 @@ const es = {
   'proposalBuilder.autoQuantityHint': 'Automático según duración',
   'proposalBuilder.viewProposal': 'Ver presupuesto enviado',
   'proposalBuilder.createAnother': 'Crear otro presupuesto',
+  'proposalBuilder.previewEmail': 'Vista previa del email',
+  'proposalBuilder.previewEmailModalTitle': 'Vista previa del email',
+  'proposalBuilder.previewEmailSubject': 'Asunto',
+  'proposalBuilder.previewEmailTabHtml': 'HTML',
+  'proposalBuilder.previewEmailTabText': 'Texto plano',
+  'proposalBuilder.previewEmailClose': 'Cerrar',
+  'proposalBuilder.previewEmailPlaceholderNotice':
+    'Esto no envía nada ni consume cuota de Resend. El enlace público y el número de presupuesto son marcadores de posición: solo existen de verdad tras enviar.',
+  'proposalBuilder.previewEmailNeedsData':
+    'Rellena al menos la razón social y el nombre del contacto para ver la vista previa.',
 
   'checklist.allPass': 'Todos los controles previos al envío pasan.',
   'checklist.blocks': 'Bloquea el envío',
@@ -349,6 +359,16 @@ const fr: Dict = {
   'proposalBuilder.autoQuantityHint': 'Automatique selon la durée',
   'proposalBuilder.viewProposal': 'Voir le devis envoyé',
   'proposalBuilder.createAnother': 'Créer un autre devis',
+  'proposalBuilder.previewEmail': "Aperçu de l'email",
+  'proposalBuilder.previewEmailModalTitle': "Aperçu de l'email",
+  'proposalBuilder.previewEmailSubject': 'Objet',
+  'proposalBuilder.previewEmailTabHtml': 'HTML',
+  'proposalBuilder.previewEmailTabText': 'Texte brut',
+  'proposalBuilder.previewEmailClose': 'Fermer',
+  'proposalBuilder.previewEmailPlaceholderNotice':
+    "Ceci n'envoie rien et ne consomme aucun quota Resend. Le lien public et le numéro de devis sont des valeurs provisoires : ils n'existent vraiment qu'après l'envoi.",
+  'proposalBuilder.previewEmailNeedsData':
+    "Renseigne au moins la raison sociale et le nom du contact pour voir l'aperçu.",
 
   'checklist.allPass': "Tous les contrôles avant l'envoi passent.",
   'checklist.blocks': "Bloque l'envoi",
@@ -548,6 +568,16 @@ const en: Dict = {
   'proposalBuilder.autoQuantityHint': 'Automatic from duration',
   'proposalBuilder.viewProposal': 'View sent proposal',
   'proposalBuilder.createAnother': 'Create another proposal',
+  'proposalBuilder.previewEmail': 'Preview email',
+  'proposalBuilder.previewEmailModalTitle': 'Email preview',
+  'proposalBuilder.previewEmailSubject': 'Subject',
+  'proposalBuilder.previewEmailTabHtml': 'HTML',
+  'proposalBuilder.previewEmailTabText': 'Plain text',
+  'proposalBuilder.previewEmailClose': 'Close',
+  'proposalBuilder.previewEmailPlaceholderNotice':
+    "This doesn't send anything and doesn't use any Resend quota. The public link and the proposal number are placeholders: they only exist for real after sending.",
+  'proposalBuilder.previewEmailNeedsData':
+    'Fill in at least the legal name and the contact name to see the preview.',
 
   'checklist.allPass': 'All pre-send checks pass.',
   'checklist.blocks': 'Blocks sending',

@@ -41,6 +41,8 @@ import { COUNTRY_CODES, countryName } from '@/lib/countries';
 import { MARKET_LABELS, formatCents, formatPercent } from '@/lib/format';
 import { DiscountBanner } from '@/components/DiscountBanner';
 import { PreSendChecklist } from '@/components/PreSendChecklist';
+import { EmailPreviewModal } from '@/components/EmailPreviewModal';
+import { buildDraftProposalEmailPreview } from '@/lib/email/proposal-email-preview';
 import { useI18n, type InternalLanguage } from '@/lib/i18n-internal';
 
 let lineKeySeq = 0;
@@ -57,11 +59,17 @@ export function ProposalBuilder({
   supports,
   holidays,
   accounts,
+  offerValidityDays,
+  salesName,
 }: {
   parameters: PricingParameters;
   supports: readonly SupportDefinition[];
   holidays: readonly PublicHoliday[];
   accounts: readonly AccountRow[];
+  /** CLAUDE.md §7, para la vista previa del email (ronda 12) — del juego de parámetros activo. */
+  offerValidityDays: number;
+  /** Nombre del comercial (creador), para la firma de la vista previa del email (ronda 12). */
+  salesName: string;
 }) {
   const { t, language: uiLanguage } = useI18n();
   const catalog = useMemo(() => buildCatalog(supports), [supports]);
@@ -81,8 +89,22 @@ export function ProposalBuilder({
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<{ proposalId: string; publicToken: string } | null>(null);
+  const [showEmailPreview, setShowEmailPreview] = useState(false);
 
   const selectedAccount = accounts.find((a) => a.id === accountId) ?? null;
+
+  // Mismo par de valores que handleSubmit manda al servidor para
+  // advertiserName/contactFullName (CLAUDE.md §10.3 duodecies, ronda 12) —
+  // resueltos aquí, en el cliente, para poder alimentar la vista previa del
+  // email sin ningún round-trip de red: cuenta/contacto existentes, o los
+  // campos de "nueva cuenta"/"nuevo contacto" que todavía no se han guardado.
+  const previewAdvertiserName =
+    accountId === '__new__' ? newAccount.legal_name.trim() : (selectedAccount?.legal_name ?? '');
+  const previewContactFullName =
+    contactId === '__new__'
+      ? newContact.full_name.trim()
+      : (selectedAccount?.contacts.find((c) => c.id === contactId)?.full_name ?? '');
+  const canPreviewEmail = previewAdvertiserName !== '' && previewContactFullName !== '';
 
   // --- Transiciones de estado: todas delegan en el módulo puro
   // (src/pricing/option-draft.ts), testeado de extremo a extremo sin React.
@@ -538,15 +560,41 @@ export function ProposalBuilder({
 
       {submitError && <div className="wk-alert wk-alert-danger">{submitError}</div>}
 
-      <button
-        type="button"
-        className="wk-btn wk-btn-primary"
-        disabled={!preSend.canSend || hasEngineErrors || submitting || options.length < 2}
-        onClick={handleSubmit}
-        style={{ alignSelf: 'flex-start', fontSize: 15, padding: '12px 24px' }}
-      >
-        {submitting ? t('proposalBuilder.sending') : t('proposalBuilder.send')}
-      </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <button
+          type="button"
+          className="wk-btn wk-btn-primary"
+          disabled={!preSend.canSend || hasEngineErrors || submitting || options.length < 2}
+          onClick={handleSubmit}
+          style={{ fontSize: 15, padding: '12px 24px' }}
+        >
+          {submitting ? t('proposalBuilder.sending') : t('proposalBuilder.send')}
+        </button>
+        <button
+          type="button"
+          className="wk-btn wk-btn-secondary"
+          disabled={!canPreviewEmail}
+          title={canPreviewEmail ? undefined : t('proposalBuilder.previewEmailNeedsData')}
+          onClick={() => setShowEmailPreview(true)}
+        >
+          {t('proposalBuilder.previewEmail')}
+        </button>
+      </div>
+
+      {showEmailPreview && (
+        <EmailPreviewModal
+          content={buildDraftProposalEmailPreview({
+            advertiserName: previewAdvertiserName,
+            contactFullName: previewContactFullName,
+            brief: brief || null,
+            numberOfOptions: options.length,
+            salesName,
+            offerValidityDays,
+            language,
+          })}
+          onClose={() => setShowEmailPreview(false)}
+        />
+      )}
     </div>
   );
 }
