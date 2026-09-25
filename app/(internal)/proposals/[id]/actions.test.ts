@@ -461,4 +461,118 @@ describe('duplicateProposal', () => {
     const lineA = (payload.options[0]!.lines as Array<Record<string, unknown>>)[0]!;
     expect(lineA.manual_fee_cents).toBeNull();
   });
+
+  // ---------------------------------------------------------------------------
+  // Ronda 11 (CLAUDE.md §5.3): la antelación insuficiente forzada a mano es
+  // una decisión de negocio, no un número derivado de parámetros vivos — se
+  // traslada tal cual, igual que el reparto de medios forzado (ronda 10) y
+  // el interruptor de descuento por volumen (ronda 9).
+  // ---------------------------------------------------------------------------
+
+  it('el forzado de antelación se traslada sin recalcular al duplicar', async () => {
+    maybeSingleProposal.mockResolvedValue({
+      data: frozenProposal({
+        frozen_snapshot: {
+          options: [
+            {
+              code: 'A',
+              name: 'Entrada',
+              pitch: 'p',
+              markets: ['FR'],
+              campaign_start: '2027-05-01',
+              campaign_end: '2027-05-31',
+              campaign_duration_count: null,
+              campaign_duration_unit: null,
+              lines: [
+                {
+                  support_id: 'CRM-03',
+                  quantity: 1,
+                  media_budget_cents: null,
+                  media_months: null,
+                  is_lead_market: true,
+                  cost_cents: 999_999_999,
+                },
+              ],
+              discounts: [],
+              volume_discount_disabled: false,
+              lead_time_overrides: [
+                { support_id: 'CRM-03', market: 'FR', reason: 'Cliente grande, acepta el riesgo del plazo.' },
+              ],
+            },
+          ],
+        },
+      }),
+      error: null,
+    });
+    rpc.mockResolvedValue({ data: { proposal_id: 'p2', proposal_number: '2026-002' }, error: null });
+
+    await duplicateProposal('p1');
+
+    const [, { payload }] = rpc.mock.calls[0] as [string, { payload: { options: Array<Record<string, unknown>> } }];
+    const leadTimeOverrides = payload.options[0]!.lead_time_overrides as Array<Record<string, unknown>>;
+
+    expect(leadTimeOverrides).toEqual([
+      { support_id: 'CRM-03', market: 'FR', reason: 'Cliente grande, acepta el riesgo del plazo.' },
+    ]);
+  });
+
+  it('sin forzado de antelación en el original, la copia tampoco lo lleva', async () => {
+    maybeSingleProposal.mockResolvedValue({ data: frozenProposal(), error: null });
+    rpc.mockResolvedValue({ data: { proposal_id: 'p2', proposal_number: '2026-002' }, error: null });
+
+    await duplicateProposal('p1');
+
+    const [, { payload }] = rpc.mock.calls[0] as [string, { payload: { options: Array<Record<string, unknown>> } }];
+    expect(payload.options[0]!.lead_time_overrides).toEqual([]);
+    expect(payload.options[1]!.lead_time_overrides).toEqual([]);
+  });
+
+  it('un forzado en un mercado que no es el líder se conserva igual (no se lee de `lines`, solo del array de la opción)', async () => {
+    maybeSingleProposal.mockResolvedValue({
+      data: frozenProposal({
+        frozen_snapshot: {
+          options: [
+            {
+              code: 'A',
+              name: 'Entrada',
+              pitch: 'p',
+              markets: ['FR', 'ES'],
+              campaign_start: '2027-05-01',
+              campaign_end: '2027-05-31',
+              campaign_duration_count: null,
+              campaign_duration_unit: null,
+              lines: [
+                {
+                  support_id: 'CRM-03',
+                  quantity: 1,
+                  media_budget_cents: null,
+                  media_months: null,
+                  is_lead_market: true, // FR es el mercado líder
+                  cost_cents: 999_999_999,
+                },
+              ],
+              discounts: [],
+              volume_discount_disabled: false,
+              // El forzado es en ES, que no es el mercado líder — y por
+              // tanto no tiene fila propia en `lines` tras el filtro por
+              // is_lead_market (§10.3 octies). Debe conservarse igual.
+              lead_time_overrides: [
+                { support_id: 'CRM-03', market: 'ES', reason: 'Forzado en el mercado no líder.' },
+              ],
+            },
+          ],
+        },
+      }),
+      error: null,
+    });
+    rpc.mockResolvedValue({ data: { proposal_id: 'p2', proposal_number: '2026-002' }, error: null });
+
+    await duplicateProposal('p1');
+
+    const [, { payload }] = rpc.mock.calls[0] as [string, { payload: { options: Array<Record<string, unknown>> } }];
+    const leadTimeOverrides = payload.options[0]!.lead_time_overrides as Array<Record<string, unknown>>;
+    expect(leadTimeOverrides).toEqual([
+      { support_id: 'CRM-03', market: 'ES', reason: 'Forzado en el mercado no líder.' },
+    ]);
+  });
 });

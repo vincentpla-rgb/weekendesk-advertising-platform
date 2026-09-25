@@ -17,6 +17,18 @@ export interface RawDiscount {
   readonly reason: string;
 }
 
+/**
+ * Antelación insuficiente forzada a mano para un soporte+mercado concretos
+ * (CLAUDE.md §5.3, ronda 11) — el único bloqueo duro forzable. `reason`
+ * nunca vacío: lo exige tanto `runPreSendChecks` como, aquí, la restricción
+ * `check` de `overrides.reason`.
+ */
+export interface RawLeadTimeOverride {
+  readonly supportId: string;
+  readonly market: string;
+  readonly reason: string;
+}
+
 export interface RawOption {
   readonly code: 'A' | 'B' | 'C';
   readonly name: string;
@@ -32,6 +44,8 @@ export interface RawOption {
   readonly discounts: readonly RawDiscount[];
   /** Interruptor por opción (CLAUDE.md §4.5, ronda 9): ver `OptionInput.volumeDiscountDisabled`. */
   readonly volumeDiscountDisabled: boolean;
+  /** Antelaciones insuficientes forzadas a mano, por soporte+mercado (CLAUDE.md §5.3, ronda 11). */
+  readonly leadTimeOverrides: readonly RawLeadTimeOverride[];
 }
 
 export type BuildOptionsPayloadResult =
@@ -116,36 +130,54 @@ export function buildProposalOptionsPayload(
       margin_rate: priced.marginRate,
       max_lead_time_business_days: priced.maxLeadTimeBusinessDays,
       volume_discount_disabled: raw.volumeDiscountDisabled,
-      lines: priced.lines.map((l, idx) => ({
-        support_id: l.supportId,
-        market: l.market,
-        quantity: l.quantity,
-        media_budget_cents: l.isMediaBuy ? l.mediaBudgetCents : null,
-        media_months: l.mediaMonths,
-        is_lead_market: l.isLeadMarket,
-        unit_cost_cents: l.unitCostCents,
-        cost_cents: l.costCents,
-        gross_price_cents: l.grossPriceCents,
-        margin_floor_cents: l.marginFloorCents,
-        floor_applied: l.floorApplied,
-        list_price_cents: l.listPriceCents,
-        discount_cents: l.discountCents,
-        net_price_cents: l.netPriceCents,
-        // Reparto forzado a mano (CLAUDE.md §4.4, ronda 10): fijo, registrado
-        // en `overrides` por `create_and_send_proposal` cuando no es null.
-        manual_fee_cents: l.isMediaBuy && l.feeForced ? l.netPriceCents : null,
-        manual_fee_reason:
-          l.isMediaBuy && l.feeForced
-            ? (raw.lines.find((rl) => rl.supportId === l.supportId)?.manualFeeReason ?? '')
-            : null,
-        media_real_spend_cents: l.isMediaBuy ? l.mediaRealSpendCents : null,
-        billed_total_cents: l.billedTotalCents,
-        sort_order: idx,
-      })),
+      lines: priced.lines.map((l, idx) => {
+        const leadTimeOverride = raw.leadTimeOverrides.find(
+          (o) => o.supportId === l.supportId && o.market === l.market,
+        );
+        return {
+          support_id: l.supportId,
+          market: l.market,
+          quantity: l.quantity,
+          media_budget_cents: l.isMediaBuy ? l.mediaBudgetCents : null,
+          media_months: l.mediaMonths,
+          is_lead_market: l.isLeadMarket,
+          unit_cost_cents: l.unitCostCents,
+          cost_cents: l.costCents,
+          gross_price_cents: l.grossPriceCents,
+          margin_floor_cents: l.marginFloorCents,
+          floor_applied: l.floorApplied,
+          list_price_cents: l.listPriceCents,
+          discount_cents: l.discountCents,
+          net_price_cents: l.netPriceCents,
+          // Reparto forzado a mano (CLAUDE.md §4.4, ronda 10): fijo, registrado
+          // en `overrides` por `create_and_send_proposal` cuando no es null.
+          manual_fee_cents: l.isMediaBuy && l.feeForced ? l.netPriceCents : null,
+          manual_fee_reason:
+            l.isMediaBuy && l.feeForced
+              ? (raw.lines.find((rl) => rl.supportId === l.supportId)?.manualFeeReason ?? '')
+              : null,
+          media_real_spend_cents: l.isMediaBuy ? l.mediaRealSpendCents : null,
+          // Antelación insuficiente forzada a mano (CLAUDE.md §5.3, ronda
+          // 11): constancia visible en el detalle interno del presupuesto,
+          // por soporte+mercado — el único bloqueo duro forzable.
+          lead_time_forced: leadTimeOverride !== undefined,
+          lead_time_force_reason: leadTimeOverride?.reason ?? null,
+          billed_total_cents: l.billedTotalCents,
+          sort_order: idx,
+        };
+      }),
       discounts: priced.discounts.map((d) => ({
         kind: d.kind,
         rate: d.rate,
         reason: d.reason,
+      })),
+      // El registro en `overrides` (autor, motivo, marca de tiempo) lo hace
+      // `create_and_send_proposal`, que lee este array — nunca se calcula ni
+      // se valida aquí, igual que el resto de la persistencia (§10.1.1).
+      lead_time_overrides: raw.leadTimeOverrides.map((o) => ({
+        support_id: o.supportId,
+        market: o.market,
+        reason: o.reason,
       })),
     });
   }

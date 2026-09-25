@@ -6,8 +6,10 @@ import { priceOption, volumeDiscountRate } from '../engine.js';
 import {
   addLineDraft,
   addOptionDiscount,
+  clearLeadTimeOverride,
   createLineDraft,
   createOptionDraft,
+  forceLeadTimeOverride,
   removeLineDraft,
   resyncLineQuantity,
   setLineQuantityManually,
@@ -502,5 +504,69 @@ describe('volumeDiscountDisabled: interruptor por opción (ronda 9)', () => {
     const sinDescuento = priceOption(input, ctx);
     expect(sinDescuento.discounts).toEqual([]);
     expect(sinDescuento.netRevenueCents).toBe(sinDescuento.grossNetOfMediaCents);
+  });
+});
+
+// =============================================================================
+// Antelación insuficiente forzada a mano (CLAUDE.md §5.3, ronda 11): el
+// único bloqueo duro forzable, por soporte+mercado.
+// =============================================================================
+
+describe('leadTimeOverrides: forzar antelación insuficiente (ronda 11)', () => {
+  it('una opción recién creada empieza sin ningún forzado', () => {
+    expect(freshOption().leadTimeOverrides).toEqual([]);
+  });
+
+  it('forceLeadTimeOverride añade un forzado con motivo', () => {
+    let option = freshOption();
+    option = forceLeadTimeOverride(option, 'ON-01', 'FR', 'Cliente grande, acepta el riesgo.');
+    expect(option.leadTimeOverrides).toEqual([
+      { supportId: 'ON-01', market: 'FR', reason: 'Cliente grande, acepta el riesgo.' },
+    ]);
+  });
+
+  it('un motivo vacío o solo espacios no tiene ningún efecto', () => {
+    let option = freshOption();
+    option = forceLeadTimeOverride(option, 'ON-01', 'FR', '');
+    expect(option.leadTimeOverrides).toEqual([]);
+
+    option = forceLeadTimeOverride(option, 'ON-01', 'FR', '   ');
+    expect(option.leadTimeOverrides).toEqual([]);
+  });
+
+  it('el motivo se recorta de espacios al guardarse', () => {
+    let option = freshOption();
+    option = forceLeadTimeOverride(option, 'ON-01', 'FR', '  motivo con espacios  ');
+    expect(option.leadTimeOverrides[0]!.reason).toBe('motivo con espacios');
+  });
+
+  it('forzar de nuevo el mismo soporte+mercado sustituye el forzado anterior, no lo duplica', () => {
+    let option = freshOption();
+    option = forceLeadTimeOverride(option, 'ON-01', 'FR', 'primer motivo');
+    option = forceLeadTimeOverride(option, 'ON-01', 'FR', 'motivo actualizado');
+    expect(option.leadTimeOverrides).toHaveLength(1);
+    expect(option.leadTimeOverrides[0]!.reason).toBe('motivo actualizado');
+  });
+
+  it('el mismo soporte en dos mercados distintos son dos forzados independientes', () => {
+    let option = freshOption();
+    option = forceLeadTimeOverride(option, 'ON-01', 'FR', 'motivo FR');
+    option = forceLeadTimeOverride(option, 'ON-01', 'ES', 'motivo ES');
+    expect(option.leadTimeOverrides).toHaveLength(2);
+    expect(option.leadTimeOverrides.find((o) => o.market === 'FR')?.reason).toBe('motivo FR');
+    expect(option.leadTimeOverrides.find((o) => o.market === 'ES')?.reason).toBe('motivo ES');
+  });
+
+  it('clearLeadTimeOverride retira solo el forzado indicado', () => {
+    let option = freshOption();
+    option = forceLeadTimeOverride(option, 'ON-01', 'FR', 'motivo FR');
+    option = forceLeadTimeOverride(option, 'ON-01', 'ES', 'motivo ES');
+    option = clearLeadTimeOverride(option, 'ON-01', 'FR');
+    expect(option.leadTimeOverrides).toEqual([{ supportId: 'ON-01', market: 'ES', reason: 'motivo ES' }]);
+  });
+
+  it('clearLeadTimeOverride sobre un forzado inexistente no tiene efecto', () => {
+    const option = freshOption();
+    expect(clearLeadTimeOverride(option, 'ON-01', 'FR')).toEqual(option);
   });
 });

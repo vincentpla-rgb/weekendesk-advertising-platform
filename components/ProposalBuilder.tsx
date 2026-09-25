@@ -13,7 +13,9 @@ import {
   suggestedQuantityForSupport,
   addLineDraft,
   addOptionDiscount,
+  clearLeadTimeOverride,
   createOptionDraft,
+  forceLeadTimeOverride,
   removeLineDraft,
   removeOptionDiscount,
   resyncLineQuantity,
@@ -169,6 +171,22 @@ export function ProposalBuilder({
     }
   }
 
+  // Antelación insuficiente forzada a mano (CLAUDE.md §5.3, ronda 11): el
+  // ÚNICO bloqueo duro forzable. El checklist es global a todas las
+  // opciones (más abajo), así que cada resultado lleva su `optionId` para
+  // enrutar el forzado a la opción correcta.
+  function forceLeadTime(optionId: string, supportId: string, market: Market, reason: string) {
+    setOptions((prev) =>
+      prev.map((o) => (o.key === optionId ? forceLeadTimeOverride(o, supportId, market, reason) : o)),
+    );
+  }
+
+  function clearForcedLeadTime(optionId: string, supportId: string, market: Market) {
+    setOptions((prev) =>
+      prev.map((o) => (o.key === optionId ? clearLeadTimeOverride(o, supportId, market) : o)),
+    );
+  }
+
   // --- Cálculo en vivo, con el mismo motor puro que corre en el servidor ---
   // Es solo una vista previa: el servidor recalcula con este mismo motor a
   // partir de los datos crudos al enviar, y esos números (no estos) son los
@@ -218,6 +236,7 @@ export function ProposalBuilder({
         ? new Date(`${draft.campaignEnd}T00:00:00Z`)
         : null,
     durationOnly: draft.scheduleMode === 'DURATION_ONLY',
+    leadTimeOverrides: draft.leadTimeOverrides,
   }));
 
   const preSend = runPreSendChecks(preSendOptions, {
@@ -274,6 +293,13 @@ export function ProposalBuilder({
               .filter((d) => d.ratePercent !== '' && d.reason.trim() !== '')
               .map((d) => ({ ratePercent: d.ratePercent, reason: d.reason })),
             volumeDiscountDisabled: o.volumeDiscountDisabled,
+            // Antelación insuficiente forzada a mano (CLAUDE.md §5.3, ronda
+            // 11): el único bloqueo duro forzable, con motivo obligatorio.
+            leadTimeOverrides: o.leadTimeOverrides.map((lto) => ({
+              supportId: lto.supportId,
+              market: lto.market,
+              reason: lto.reason,
+            })),
           })),
         }),
       });
@@ -502,7 +528,12 @@ export function ProposalBuilder({
 
       <section className="wk-card">
         <h3>{t('proposalBuilder.preSendChecks')}</h3>
-        <PreSendChecklist blockers={preSend.blockers} warnings={preSend.warnings} />
+        <PreSendChecklist
+          blockers={preSend.blockers}
+          warnings={preSend.warnings}
+          onForceLeadTime={forceLeadTime}
+          onClearLeadTimeOverride={clearForcedLeadTime}
+        />
       </section>
 
       {submitError && <div className="wk-alert wk-alert-danger">{submitError}</div>}
