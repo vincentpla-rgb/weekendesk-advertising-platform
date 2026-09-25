@@ -96,7 +96,7 @@ describe('buildProposalEmailContent', () => {
     });
   });
 
-  it('concuerda en singular cuando solo hay 1 opción (caso defensivo: CLAUDE.md exige 2–3 en producción)', () => {
+  it('concuerda en singular cuando solo hay 1 opción (CLAUDE.md §5.1, ronda 13: caso real en producción desde que 1 opción es válida)', () => {
     const es = buildProposalEmailContent({ ...BASE, numberOfOptions: 1, language: 'ES' });
     expect(es.text).toContain('con 1 fórmula entre la que elegir');
     expect(es.text).not.toContain('fórmulas');

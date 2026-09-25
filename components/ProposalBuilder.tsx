@@ -38,7 +38,7 @@ import {
 
 import { CONTENT_LANGUAGES, LANGUAGE_LABELS, type AccountRow, type ContentLanguage } from '@/lib/domain';
 import { COUNTRY_CODES, countryName } from '@/lib/countries';
-import { MARKET_LABELS, formatCents, formatPercent } from '@/lib/format';
+import { MARKET_LABELS, formatCents, formatPercent, supportLabel } from '@/lib/format';
 import { DiscountBanner } from '@/components/DiscountBanner';
 import { PreSendChecklist } from '@/components/PreSendChecklist';
 import { EmailPreviewModal } from '@/components/EmailPreviewModal';
@@ -54,6 +54,14 @@ function nextKey() {
 /** Idioma de interfaz (ES/FR/EN) → locale de Intl para `countryName` (CLAUDE.md §9, ronda 2). */
 const UI_TO_INTL_LOCALE: Record<InternalLanguage, 'es' | 'fr' | 'en'> = { ES: 'es', FR: 'fr', EN: 'en' };
 
+interface ProposalBuilderInitialData {
+  readonly accountId: string;
+  readonly contactId: string;
+  readonly language: string;
+  readonly brief: string;
+  readonly options: readonly OptionDraft[];
+}
+
 export function ProposalBuilder({
   parameters,
   supports,
@@ -61,6 +69,10 @@ export function ProposalBuilder({
   accounts,
   offerValidityDays,
   salesName,
+  initialData,
+  editingProposalId,
+  editingProposalNumber,
+  editUnavailable,
 }: {
   parameters: PricingParameters;
   supports: readonly SupportDefinition[];
@@ -70,21 +82,33 @@ export function ProposalBuilder({
   offerValidityDays: number;
   /** Nombre del comercial (creador), para la firma de la vista previa del email (ronda 12). */
   salesName: string;
+  /**
+   * Precarga para "Editar" un presupuesto DRAFT que nunca llegó a enviarse
+   * con éxito (CLAUDE.md §5.4, §10.3 ter decies, ronda 13). `undefined` en
+   * el creador normal.
+   */
+  initialData?: ProposalBuilderInitialData;
+  /** Presente en modo edición: el DRAFT que este envío sustituye al enviarse. */
+  editingProposalId?: string;
+  editingProposalNumber?: string;
+  /** `?editFrom=` apuntaba a un presupuesto que ya no es editable (no existe, o ya salió de DRAFT). */
+  editUnavailable?: boolean;
 }) {
   const { t, language: uiLanguage } = useI18n();
   const catalog = useMemo(() => buildCatalog(supports), [supports]);
 
-  const [accountId, setAccountId] = useState<string>(accounts[0]?.id ?? '__new__');
+  const [accountId, setAccountId] = useState<string>(initialData?.accountId ?? accounts[0]?.id ?? '__new__');
   const [newAccount, setNewAccount] = useState({ legal_name: '', country_code: 'FR' });
-  const [contactId, setContactId] = useState<string>('__new__');
+  const [contactId, setContactId] = useState<string>(initialData?.contactId ?? '__new__');
   const [newContact, setNewContact] = useState({ full_name: '', email: '' });
-  const [language, setLanguage] = useState<ContentLanguage>('FR');
-  const [brief, setBrief] = useState('');
+  const [language, setLanguage] = useState<ContentLanguage>((initialData?.language as ContentLanguage) ?? 'FR');
+  const [brief, setBrief] = useState(initialData?.brief ?? '');
   // Se empieza con una sola opción, sin pestañas visibles (CLAUDE.md §5.1,
-  // ronda 4): las pestañas solo aparecen al añadir la segunda.
-  const [options, setOptions] = useState<OptionDraft[]>(() => [
-    createOptionDraft(catalog, 'A', nextKey(), nextKey(), supports),
-  ]);
+  // ronda 4): las pestañas solo aparecen al añadir la segunda. En modo
+  // edición arranca directamente con las opciones del borrador.
+  const [options, setOptions] = useState<OptionDraft[]>(
+    () => initialData?.options.slice() ?? [createOptionDraft(catalog, 'A', nextKey(), nextKey(), supports)],
+  );
   const [activeOptionKey, setActiveOptionKey] = useState<string>(() => options[0]!.key);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -288,6 +312,11 @@ export function ProposalBuilder({
           newContact: contactId === '__new__' ? { ...newContact, language } : null,
           language,
           brief,
+          // En modo edición (CLAUDE.md §10.3 ter decies, ronda 13): el
+          // borrador que este envío sustituye. Se borra tras crear el nuevo
+          // con éxito — nunca antes, para no perder datos si la creación
+          // falla (p. ej. un conflicto de disponibilidad nuevo).
+          replacesDraftId: editingProposalId ?? null,
           options: options.map((o) => ({
             code: o.code,
             name: o.name,
@@ -351,6 +380,9 @@ export function ProposalBuilder({
         <p style={{ color: 'var(--wk-text-muted)' }}>
           {t('proposalBuilder.sentBody', { email: contactEmail })}
         </p>
+        {editingProposalId && (
+          <p style={{ color: 'var(--wk-text-muted)', fontSize: 13 }}>{t('proposalBuilder.draftReplacedNotice')}</p>
+        )}
         <div className="wk-input" style={{ marginBottom: 12, userSelect: 'all' }}>{publicUrl}</div>
         {/* No dejar al comercial sin salida (CLAUDE.md §10.1.1, ronda 7):
             antes solo se podía ver la pantalla pública — ni un enlace de
@@ -373,7 +405,10 @@ export function ProposalBuilder({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <h1>{t('proposalBuilder.title')}</h1>
+      <h1>{editingProposalNumber ? t('proposalBuilder.editTitle', { number: editingProposalNumber }) : t('proposalBuilder.title')}</h1>
+      {editUnavailable && (
+        <div className="wk-alert wk-alert-warning">{t('proposalBuilder.editUnavailable')}</div>
+      )}
 
       <section className="wk-card">
         <h3>{t('proposalBuilder.accountAndContact')}</h3>
@@ -542,11 +577,6 @@ export function ProposalBuilder({
           {t('proposalBuilder.addOption')}
         </button>
       )}
-      {options.length < 2 && (
-        <p style={{ fontSize: 12, color: 'var(--wk-text-muted)', margin: 0 }}>
-          {t('proposalBuilder.needsSecondOption')}
-        </p>
-      )}
 
       <section className="wk-card">
         <h3>{t('proposalBuilder.preSendChecks')}</h3>
@@ -564,11 +594,15 @@ export function ProposalBuilder({
         <button
           type="button"
           className="wk-btn wk-btn-primary"
-          disabled={!preSend.canSend || hasEngineErrors || submitting || options.length < 2}
+          disabled={!preSend.canSend || hasEngineErrors || submitting}
           onClick={handleSubmit}
           style={{ fontSize: 15, padding: '12px 24px' }}
         >
-          {submitting ? t('proposalBuilder.sending') : t('proposalBuilder.send')}
+          {submitting
+            ? t('proposalBuilder.sending')
+            : editingProposalId
+              ? t('proposalBuilder.saveAndSend')
+              : t('proposalBuilder.send')}
         </button>
         <button
           type="button"
@@ -859,7 +893,7 @@ function OptionEditor({
                   >
                     {supports.map((s) => (
                       <option key={s.id} value={s.id}>
-                        {s.id} — {s.name}
+                        {supportLabel(s.name, s.id)}
                       </option>
                     ))}
                   </select>

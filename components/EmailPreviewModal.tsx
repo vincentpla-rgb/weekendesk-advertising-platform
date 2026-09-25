@@ -2,21 +2,29 @@
 
 import { useState } from 'react';
 
-import { useI18n } from '@/lib/i18n-internal';
+import { useI18n, type I18nKey } from '@/lib/i18n-internal';
 import type { EmailContent } from '@/lib/email/proposal-email';
 
 /**
  * Vista previa del email de envío, sin enviarlo (CLAUDE.md §10.3 duodecies,
- * ronda 12): un modal que renderiza el `EmailContent` ya construido por
- * `buildDraftProposalEmailPreview` (mismo motor que el envío real) —
+ * ronda 12): un modal que renderiza un `EmailContent` ya construido por
+ * `buildProposalEmailContent` (mismo motor que el envío real, con datos de
+ * borrador sin guardar o de un DRAFT ya persistido según el llamante) —
  * este componente solo pinta, no calcula nada.
+ *
+ * `noticeKey` es lo único que cambia según el contexto (CLAUDE.md §10.3 ter
+ * decies, ronda 13): en el creador (`/proposals/new`), el enlace y el
+ * número son marcadores de posición (aviso por defecto); en el detalle de
+ * un DRAFT ya persistido (`/proposals/[id]`), ya son los reales.
  */
 export function EmailPreviewModal({
   content,
   onClose,
+  noticeKey = 'proposalBuilder.previewEmailPlaceholderNotice',
 }: {
   content: EmailContent;
   onClose: () => void;
+  noticeKey?: I18nKey;
 }) {
   const { t } = useI18n();
   const [tab, setTab] = useState<'text' | 'html'>('html');
@@ -38,7 +46,7 @@ export function EmailPreviewModal({
         </div>
 
         <p className="wk-alert wk-alert-info" style={{ margin: '0 0 12px' }}>
-          {t('proposalBuilder.previewEmailPlaceholderNotice')}
+          {t(noticeKey)}
         </p>
 
         <div style={{ marginBottom: 8 }}>

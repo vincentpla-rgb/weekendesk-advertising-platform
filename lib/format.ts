@@ -19,6 +19,19 @@ export function formatDate(iso: string | Date, locale = 'fr-FR'): string {
   );
 }
 
+/**
+ * "Nombre completo (CÓDIGO)" — p. ej. "Marketing Block (ON-01)" — nunca solo
+ * el código a secas (CLAUDE.md §10.3 ter decies, ronda 13). Se usa tanto en
+ * el desplegable de soporte del creador, como en las tablas de líneas del
+ * detalle interno y de la pantalla pública del cliente — un único formato,
+ * un único sitio que lo define. `name` puede faltar (soporte desactivado
+ * fuera del catálogo cargado, o sin dato todavía): cae al código solo, nunca
+ * a una cadena vacía.
+ */
+export function supportLabel(name: string | null | undefined, id: string): string {
+  return name ? `${name} (${id})` : id;
+}
+
 export const MARKET_LABELS: Record<string, string> = {
   FR: 'Francia',
   ES: 'España',

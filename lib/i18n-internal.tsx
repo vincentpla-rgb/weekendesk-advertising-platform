@@ -130,7 +130,11 @@ const es = {
   'proposalBuilder.disableVolumeDiscountHelp':
     'La tarifa bruta se factura sin ningún descuento por tramo, aunque supere el umbral. Los descuentos manuales, si los hay, se siguen aplicando aparte. Se registra con autor y fecha.',
   'proposalBuilder.addOption': '+ Añadir opción',
-  'proposalBuilder.needsSecondOption': 'Añade una segunda opción para poder enviar (un envío necesita 2 o 3).',
+  'proposalBuilder.editTitle': 'Editar presupuesto {number}',
+  'proposalBuilder.editUnavailable':
+    'El presupuesto que querías editar ya no está disponible (no existe, o ya se envió con éxito). Puedes crear uno nuevo desde aquí.',
+  'proposalBuilder.saveAndSend': 'Guardar cambios y enviar',
+  'proposalBuilder.draftReplacedNotice': 'El borrador anterior se ha sustituido por este envío.',
   'proposalBuilder.preSendChecks': 'Controles previos al envío',
   'proposalBuilder.internalCost': 'Coste interno',
   'proposalBuilder.grossFee': 'Tarifa bruta (neta de medios)',
@@ -155,6 +159,8 @@ const es = {
   'proposalBuilder.previewEmailClose': 'Cerrar',
   'proposalBuilder.previewEmailPlaceholderNotice':
     'Esto no envía nada ni consume cuota de Resend. El enlace público y el número de presupuesto son marcadores de posición: solo existen de verdad tras enviar.',
+  'proposalBuilder.previewEmailRealDataNotice':
+    'Esto no envía nada ni consume cuota de Resend. El enlace y el número de presupuesto ya son los reales: es exactamente lo que recibiría el cliente si el envío tuviera éxito ahora mismo.',
   'proposalBuilder.previewEmailNeedsData':
     'Rellena al menos la razón social y el nombre del contacto para ver la vista previa.',
 
@@ -216,6 +222,7 @@ const es = {
   'proposalDetail.retrying': 'Reintentando…',
   'proposalDetail.retrySuccess': 'Email enviado. El presupuesto ya está marcado como enviado.',
   'proposalDetail.duplicateButton': 'Duplicar',
+  'proposalDetail.editButton': 'Editar',
   'proposalDetail.duplicating': 'Duplicando…',
   'proposalDetail.publicLink': 'Enlace público',
   'proposalDetail.sentAt': 'Enviado el',
@@ -342,7 +349,11 @@ const fr: Dict = {
   'proposalBuilder.disableVolumeDiscountHelp':
     "Le tarif brut est facturé sans aucune remise par palier, même au-delà du seuil. Les remises manuelles, s'il y en a, continuent de s'appliquer à part. Enregistré avec auteur et date.",
   'proposalBuilder.addOption': '+ Ajouter une option',
-  'proposalBuilder.needsSecondOption': "Ajoute une deuxième option pour pouvoir envoyer (un envoi a besoin de 2 ou 3 options).",
+  'proposalBuilder.editTitle': 'Modifier le devis {number}',
+  'proposalBuilder.editUnavailable':
+    "Le devis que tu voulais modifier n'est plus disponible (il n'existe plus, ou il a déjà été envoyé avec succès). Tu peux en créer un nouveau ici.",
+  'proposalBuilder.saveAndSend': 'Enregistrer et envoyer',
+  'proposalBuilder.draftReplacedNotice': 'Le brouillon précédent a été remplacé par cet envoi.',
   'proposalBuilder.preSendChecks': "Contrôles avant l'envoi",
   'proposalBuilder.internalCost': 'Coût interne',
   'proposalBuilder.grossFee': 'Tarif brut (net de médias)',
@@ -367,6 +378,8 @@ const fr: Dict = {
   'proposalBuilder.previewEmailClose': 'Fermer',
   'proposalBuilder.previewEmailPlaceholderNotice':
     "Ceci n'envoie rien et ne consomme aucun quota Resend. Le lien public et le numéro de devis sont des valeurs provisoires : ils n'existent vraiment qu'après l'envoi.",
+  'proposalBuilder.previewEmailRealDataNotice':
+    "Ceci n'envoie rien et ne consomme aucun quota Resend. Le lien et le numéro de devis sont déjà les vrais : c'est exactement ce que recevrait le client si l'envoi réussissait maintenant.",
   'proposalBuilder.previewEmailNeedsData':
     "Renseigne au moins la raison sociale et le nom du contact pour voir l'aperçu.",
 
@@ -428,6 +441,7 @@ const fr: Dict = {
   'proposalDetail.retrying': 'Nouvel essai…',
   'proposalDetail.retrySuccess': 'Email envoyé. Le devis est maintenant marqué comme envoyé.',
   'proposalDetail.duplicateButton': 'Dupliquer',
+  'proposalDetail.editButton': 'Modifier',
   'proposalDetail.duplicating': 'Duplication…',
   'proposalDetail.publicLink': 'Lien public',
   'proposalDetail.sentAt': 'Envoyé le',
@@ -551,7 +565,11 @@ const en: Dict = {
   'proposalBuilder.disableVolumeDiscountHelp':
     'The gross tariff is billed with no tier discount at all, even past the threshold. Manual discounts, if any, still apply separately. Recorded with author and date.',
   'proposalBuilder.addOption': '+ Add option',
-  'proposalBuilder.needsSecondOption': 'Add a second option before sending (a proposal needs 2 or 3).',
+  'proposalBuilder.editTitle': 'Edit proposal {number}',
+  'proposalBuilder.editUnavailable':
+    "The proposal you wanted to edit is no longer available (it doesn't exist, or it was already sent successfully). You can create a new one here.",
+  'proposalBuilder.saveAndSend': 'Save changes and send',
+  'proposalBuilder.draftReplacedNotice': 'The previous draft has been replaced by this send.',
   'proposalBuilder.preSendChecks': 'Pre-send checks',
   'proposalBuilder.internalCost': 'Internal cost',
   'proposalBuilder.grossFee': 'Gross fee (net of media)',
@@ -576,6 +594,8 @@ const en: Dict = {
   'proposalBuilder.previewEmailClose': 'Close',
   'proposalBuilder.previewEmailPlaceholderNotice':
     "This doesn't send anything and doesn't use any Resend quota. The public link and the proposal number are placeholders: they only exist for real after sending.",
+  'proposalBuilder.previewEmailRealDataNotice':
+    "This doesn't send anything and doesn't use any Resend quota. The link and proposal number are already the real ones: this is exactly what the client would receive if the send succeeded right now.",
   'proposalBuilder.previewEmailNeedsData':
     'Fill in at least the legal name and the contact name to see the preview.',
 
@@ -637,6 +657,7 @@ const en: Dict = {
   'proposalDetail.retrying': 'Retrying…',
   'proposalDetail.retrySuccess': 'Email sent. The proposal is now marked as sent.',
   'proposalDetail.duplicateButton': 'Duplicate',
+  'proposalDetail.editButton': 'Edit',
   'proposalDetail.duplicating': 'Duplicating…',
   'proposalDetail.publicLink': 'Public link',
   'proposalDetail.sentAt': 'Sent on',
