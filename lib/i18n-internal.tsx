@@ -93,6 +93,12 @@ const es = {
   'proposalBuilder.markets': 'Mercados de la opción',
   'proposalBuilder.marketsHelp':
     'Se eligen una vez para toda la opción: todos los soportes se venden automáticamente en todos ellos.',
+  'market.FR': 'Francia',
+  'market.ES': 'España',
+  'market.IT': 'Italia',
+  'market.BE_FR': 'Bélgica (FR)',
+  'market.BE_NL': 'Bélgica (NL)',
+  'market.NL': 'Países Bajos',
   'proposalBuilder.scheduleMode': 'Periodo de campaña',
   'proposalBuilder.scheduleDates': 'Fechas concretas',
   'proposalBuilder.scheduleDurationOnly': 'Solo duración (sin fechas)',
@@ -312,6 +318,12 @@ const fr: Dict = {
   'proposalBuilder.markets': "Marchés de l'option",
   'proposalBuilder.marketsHelp':
     "Choisis une fois pour toute l'option : tous les supports se vendent automatiquement sur chacun d'eux.",
+  'market.FR': 'France',
+  'market.ES': 'Espagne',
+  'market.IT': 'Italie',
+  'market.BE_FR': 'Belgique (FR)',
+  'market.BE_NL': 'Belgique (NL)',
+  'market.NL': 'Pays-Bas',
   'proposalBuilder.scheduleMode': 'Période de campagne',
   'proposalBuilder.scheduleDates': 'Dates précises',
   'proposalBuilder.scheduleDurationOnly': 'Durée seule (sans dates)',
@@ -528,6 +540,12 @@ const en: Dict = {
   'proposalBuilder.markets': 'Option markets',
   'proposalBuilder.marketsHelp':
     'Chosen once for the whole option: every support sells automatically in all of them.',
+  'market.FR': 'France',
+  'market.ES': 'Spain',
+  'market.IT': 'Italy',
+  'market.BE_FR': 'Belgium (FR)',
+  'market.BE_NL': 'Belgium (NL)',
+  'market.NL': 'Netherlands',
   'proposalBuilder.scheduleMode': 'Campaign period',
   'proposalBuilder.scheduleDates': 'Specific dates',
   'proposalBuilder.scheduleDurationOnly': 'Duration only (no dates)',
@@ -683,6 +701,9 @@ const en: Dict = {
 };
 
 const DICTS: Record<InternalLanguage, Dict> = { ES: es, FR: fr, EN: en };
+
+/** Solo para tests: los tres diccionarios completos (ronda 14, verificar market.*). */
+export const DICTS_FOR_TESTING = DICTS;
 
 function readStoredLanguage(): InternalLanguage {
   if (typeof window === 'undefined') return 'ES';

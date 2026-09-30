@@ -10,6 +10,16 @@ import type { PricingParameters } from './types.js';
  * El fichero original (ADVERTISING DEALS — GLOBAL OVERVIEW) usa 50 €/h y 45 % de
  * margen. Están obsoletos.
  */
+/**
+ * Coeficiente de Países Bajos (NL, ronda 14) — PROVISIONAL, ajustable si el
+ * negocio lo requiere. No validado por Quentin Heliot, a diferencia del
+ * resto de coeficientes de esta tabla. Es una extrapolación lógica de la
+ * serie existente (FR 1,00 → ES 0,88 → BE_FR 0,79 → BE_NL 0,75 → IT 0,74),
+ * cuyos saltos decrecientes (-0,12, -0,09, -0,04, -0,01) sugieren un
+ * siguiente salto de -0,01: IT 0,74 − 0,01 = 0,73. Ver CLAUDE.md §3/§9.
+ */
+export const NL_MARKET_COEFFICIENT_PROVISIONAL = 0.73;
+
 export const DEFAULT_PRICING_PARAMETERS: PricingParameters = {
   hourlyRateCents: 3500, // 35 €/h interna cargada — validado por Quentin Heliot (CFO)
   minMarginRate: 0.5, // suelo duro por línea y por opción
@@ -20,6 +30,7 @@ export const DEFAULT_PRICING_PARAMETERS: PricingParameters = {
     BE_FR: 0.79,
     BE_NL: 0.75,
     IT: 0.74,
+    NL: NL_MARKET_COEFFICIENT_PROVISIONAL,
   },
   // Base = tarifa neta de medios. Umbrales inclusivos (CLAUDE.md §4.5).
   volumeDiscountTiers: [
@@ -37,4 +48,5 @@ export const MULTIMARKET_DISCOUNT_GUIDANCE: Readonly<Record<number, number>> = {
   3: 0.15,
   4: 0.2,
   5: 0.2,
+  6: 0.2,
 };

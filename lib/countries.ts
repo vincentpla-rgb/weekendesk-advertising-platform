@@ -7,8 +7,8 @@
  * Weekendesk tiene hoteles o clientes de publicidad: Francia, España,
  * Portugal, Andorra, Italia, Suiza, Alemania, Luxemburgo, Bélgica, Países
  * Bajos. Es el país DEL CLIENTE (`accounts.country_code`) — distinto de los
- * 5 mercados de venta de Weekendesk (FR/ES/IT/BE-FR/BE-NL, `Market` en
- * `src/pricing/types.ts`): un cliente puede estar en un país (p. ej.
+ * 6 mercados de venta de Weekendesk (FR/ES/IT/BE-FR/BE-NL/NL, ronda 14,
+ * `Market` en `src/pricing/types.ts`): un cliente puede estar en un país (p. ej.
  * Andorra o Suiza) donde Weekendesk no vende ningún soporte todavía. Antes
  * de esta ronda la lista tenía ~60 países de toda Europa/mundo; se acotó a
  * los que de verdad pueden aparecer como cuenta real, no una lista completa

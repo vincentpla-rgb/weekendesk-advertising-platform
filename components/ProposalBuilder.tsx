@@ -38,12 +38,12 @@ import {
 
 import { CONTENT_LANGUAGES, LANGUAGE_LABELS, type AccountRow, type ContentLanguage } from '@/lib/domain';
 import { COUNTRY_CODES, countryName } from '@/lib/countries';
-import { MARKET_LABELS, formatCents, formatPercent, supportLabel } from '@/lib/format';
+import { formatCents, formatPercent, supportLabel } from '@/lib/format';
 import { DiscountBanner } from '@/components/DiscountBanner';
 import { PreSendChecklist } from '@/components/PreSendChecklist';
 import { EmailPreviewModal } from '@/components/EmailPreviewModal';
 import { buildDraftProposalEmailPreview } from '@/lib/email/proposal-email-preview';
-import { useI18n, type InternalLanguage } from '@/lib/i18n-internal';
+import { useI18n, type InternalLanguage, type I18nKey } from '@/lib/i18n-internal';
 
 let lineKeySeq = 0;
 function nextKey() {
@@ -772,7 +772,7 @@ function OptionEditor({
               onChange={() => onToggleMarket(m)}
               style={{ display: 'none' }}
             />
-            {MARKET_LABELS[m]}
+            {t(`market.${m}` as I18nKey)}
           </label>
         ))}
       </div>
@@ -904,7 +904,8 @@ function OptionEditor({
                   )}
                   {notSellableIn.length > 0 && (
                     <div className="wk-badge wk-badge-danger" style={{ marginTop: 4 }}>
-                      {t('proposalBuilder.notSellableIn')} {notSellableIn.map((m) => MARKET_LABELS[m]).join(', ')}
+                      {t('proposalBuilder.notSellableIn')}{' '}
+                      {notSellableIn.map((m) => t(`market.${m}` as I18nKey)).join(', ')}
                     </div>
                   )}
                 </td>

@@ -3,10 +3,16 @@
  *
  * BE-NL es la edición neerlandófona de Bélgica (Flandes), no los Países Bajos:
  * comparte el calendario de festivos nacionales belgas con BE-FR (son
- * festivos federales, no de comunidad lingüística).
+ * festivos federales, no de comunidad lingüística). NL (ronda 14) es el
+ * mercado de Países Bajos como país — distinto de BE-NL, sin relación con él.
  *
  * España e Italia tienen además festivos regionales/municipales que no se
  * incluyen aquí: solo el calendario nacional.
+ *
+ * NL no tiene festivos cargados todavía — sin dato, no se inventa (CLAUDE.md
+ * §8): mientras no se añadan, el control de antelación (§5.3) no puede
+ * excluir festivos neerlandeses de sus días laborables para este mercado.
+ * Ver CLAUDE.md §9.
  */
 
 import type { Market } from './types.js';

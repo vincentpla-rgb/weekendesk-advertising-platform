@@ -75,6 +75,7 @@ const SUPPORTS: readonly SupportDefinition[] = [
       IT:    { sellable: false, note: 'TikTok solo confirmado en FR' },
       BE_FR: { sellable: false, note: 'TikTok solo confirmado en FR' },
       BE_NL: { sellable: false, note: 'TikTok solo confirmado en FR' },
+      NL:    { sellable: false, note: 'TikTok solo confirmado en FR' },
     } },
 
   // --- Media buy (CLAUDE.md §4.4) -------------------------------------------

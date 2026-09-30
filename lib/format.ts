@@ -38,4 +38,5 @@ export const MARKET_LABELS: Record<string, string> = {
   IT: 'Italia',
   BE_FR: 'Bélgica (FR)',
   BE_NL: 'Bélgica (NL)',
+  NL: 'Países Bajos',
 };
