@@ -17,6 +17,15 @@ interface RawBody {
   language: string;
   brief: string;
   options: RawOption[];
+  /**
+   * Modo "Editar" (CLAUDE.md §5.4, §10.3 ter decies, ronda 13): el DRAFT que
+   * este envío sustituye, si lo hay — nunca uno que ya salió de DRAFT
+   * (bloqueado desde el primer envío EXITOSO, no antes). Se borra DESPUÉS de
+   * crear el reemplazo con éxito, nunca antes: si la creación fallara (p.
+   * ej. un conflicto de disponibilidad nuevo), el borrador original no debe
+   * perderse.
+   */
+  replacesDraftId?: string | null;
 }
 
 /**
@@ -44,8 +53,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'JSON inválido' }, { status: 400 });
   }
 
-  if (!Array.isArray(body.options) || body.options.length < 2 || body.options.length > 3) {
-    return NextResponse.json({ error: 'Un envío necesita entre 2 y 3 opciones' }, { status: 400 });
+  // CLAUDE.md §5.1, ronda 13: 1 a 3 opciones (antes 2-3 — exigir un mínimo
+  // de 2 era una validación de más, no una limitación real del modelo).
+  if (!Array.isArray(body.options) || body.options.length < 1 || body.options.length > 3) {
+    return NextResponse.json({ error: 'Un envío necesita entre 1 y 3 opciones' }, { status: 400 });
   }
 
   let ctx;
@@ -105,6 +116,17 @@ export async function POST(request: Request) {
     contact_full_name: string;
     account_legal_name: string;
   };
+
+  // Modo "Editar" (CLAUDE.md §5.4, §10.3 ter decies, ronda 13): el
+  // reemplazo YA se creó con éxito arriba — ahora se descarta el borrador
+  // original. `.eq('status', 'DRAFT')` es una guarda defensiva, no la
+  // autoridad: si alguien lo hubiera mandado con éxito mientras tanto, esta
+  // llamada no borra nada (0 filas), y el fallo se ignora — el presupuesto
+  // nuevo ya existe, que es lo que de verdad importa; un borrador huérfano
+  // que se quede atrás no es un error que deba tumbar la respuesta.
+  if (body.replacesDraftId) {
+    await supabase.from('proposals').delete().eq('id', body.replacesDraftId).eq('status', 'DRAFT');
+  }
 
   // Falta configuración de Resend: se trata igual que un envío de email
   // fallido (log_proposal_send_failure, el presupuesto se queda en DRAFT) —

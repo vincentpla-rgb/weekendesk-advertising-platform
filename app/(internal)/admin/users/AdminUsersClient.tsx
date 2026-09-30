@@ -72,7 +72,6 @@ export function AdminUsersClient({ users }: { users: readonly TeamUserRow[] }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       <h1>{t('admin.title')}</h1>
-      <p style={{ color: 'var(--wk-text-muted)', maxWidth: 640 }}>{t('admin.subtitle')}</p>
 
       <section className="wk-card" style={{ maxWidth: 480 }}>
         <form onSubmit={handleCreate}>
@@ -112,6 +111,9 @@ export function AdminUsersClient({ users }: { users: readonly TeamUserRow[] }) {
               {t('admin.generatePassword')}
             </button>
           </div>
+          <p style={{ color: 'var(--wk-text-muted)', fontSize: 12, marginTop: -4, marginBottom: 10 }}>
+            {t('admin.passwordNote')}
+          </p>
 
           <label className="wk-label">{t('admin.note')}</label>
           <input

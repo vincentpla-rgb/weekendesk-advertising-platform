@@ -6,8 +6,10 @@ import { COUNTRY_CODES, countryName } from './countries.js';
  * Ronda 9 (CLAUDE.md §10.3 novies): el desplegable de país en "Cuenta y
  * contacto" se restringe a los países donde Weekendesk tiene hoteles o
  * clientes de publicidad — antes tenía ~60 países de toda Europa/mundo.
- * Es el país DEL CLIENTE, no debe confundirse con los 5 mercados de venta
- * de Weekendesk (FR/ES/IT/BE-FR/BE-NL).
+ * Es el país DEL CLIENTE, no debe confundirse con los 6 mercados de venta
+ * de Weekendesk (FR/ES/IT/BE-FR/BE-NL/NL, ronda 14) — 'NL' aparece aquí
+ * como país (Países Bajos) y también como mercado de venta, pero son dos
+ * conceptos distintos que conviven con el mismo código ISO-2/mercado.
  */
 describe('COUNTRY_CODES (ronda 9)', () => {
   it('contiene exactamente los 10 países pedidos, ni más ni menos', () => {

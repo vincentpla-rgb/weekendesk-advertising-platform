@@ -241,6 +241,75 @@ button {
   color: var(--wk-navy);
 }
 
+/* Vista previa del email (CLAUDE.md §10.3 duodecies, ronda 12): modal
+   sencillo, sin librería — mismo patrón "CSS plano" del resto del proyecto. */
+.wk-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(16, 21, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+
+.wk-modal {
+  background: var(--wk-surface);
+  border-radius: var(--wk-radius);
+  box-shadow: var(--wk-shadow);
+  padding: 20px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.wk-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  gap: 12px;
+}
+
+.wk-modal-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--wk-border);
+}
+
+.wk-modal-tab {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 8px 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--wk-text-muted);
+  cursor: pointer;
+}
+
+.wk-modal-tab-active {
+  color: var(--wk-navy);
+  border-bottom-color: var(--wk-red);
+}
+
+.wk-modal-pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 13px;
+  background: var(--wk-bg);
+  border: 1px solid var(--wk-border);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 0;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
 .wk-grid-options {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));

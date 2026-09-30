@@ -49,12 +49,11 @@ const es = {
   'nav.admin': 'Usuarios',
 
   'admin.title': 'Usuarios del equipo',
-  'admin.subtitle':
-    'Da de alta a alguien del equipo: se crea su acceso (email + contraseña) en Supabase Auth y se añade a la lista blanca en el mismo paso.',
   'admin.fullName': 'Nombre completo',
   'admin.email': 'Email',
   'admin.password': 'Contraseña inicial',
   'admin.generatePassword': 'Generar',
+  'admin.passwordNote': 'De un solo uso: la persona deberá cambiarla la primera vez que entre.',
   'admin.note': 'Nota (opcional)',
   'admin.create': 'Crear acceso',
   'admin.creating': 'Creando…',
@@ -69,6 +68,15 @@ const es = {
     'Contraseña inicial creada. Compártela con la persona por un canal seguro (no por email): no se puede volver a ver.',
   'admin.onlyAllowedEmailNotice':
     'Este email ya estaba en la lista blanca pero sin usuario de Supabase Auth: se ha creado el acceso ahora.',
+
+  'changePassword.title': 'Define tu nueva contraseña',
+  'changePassword.subtitle':
+    'Por seguridad, antes de continuar tienes que cambiar la contraseña inicial que te dieron.',
+  'changePassword.newPassword': 'Nueva contraseña',
+  'changePassword.confirmPassword': 'Repite la contraseña',
+  'changePassword.submit': 'Guardar y continuar',
+  'changePassword.submitting': 'Guardando…',
+  'changePassword.mismatchError': 'Las contraseñas no coinciden.',
 
   'proposalBuilder.title': 'Nuevo presupuesto',
   'proposalBuilder.accountAndContact': 'Cuenta y contacto',
@@ -93,6 +101,12 @@ const es = {
   'proposalBuilder.markets': 'Mercados de la opción',
   'proposalBuilder.marketsHelp':
     'Se eligen una vez para toda la opción: todos los soportes se venden automáticamente en todos ellos.',
+  'market.FR': 'Francia',
+  'market.ES': 'España',
+  'market.IT': 'Italia',
+  'market.BE_FR': 'Bélgica (FR)',
+  'market.BE_NL': 'Bélgica (NL)',
+  'market.NL': 'Países Bajos',
   'proposalBuilder.scheduleMode': 'Periodo de campaña',
   'proposalBuilder.scheduleDates': 'Fechas concretas',
   'proposalBuilder.scheduleDurationOnly': 'Solo duración (sin fechas)',
@@ -130,7 +144,11 @@ const es = {
   'proposalBuilder.disableVolumeDiscountHelp':
     'La tarifa bruta se factura sin ningún descuento por tramo, aunque supere el umbral. Los descuentos manuales, si los hay, se siguen aplicando aparte. Se registra con autor y fecha.',
   'proposalBuilder.addOption': '+ Añadir opción',
-  'proposalBuilder.needsSecondOption': 'Añade una segunda opción para poder enviar (un envío necesita 2 o 3).',
+  'proposalBuilder.editTitle': 'Editar presupuesto {number}',
+  'proposalBuilder.editUnavailable':
+    'El presupuesto que querías editar ya no está disponible (no existe, o ya se envió con éxito). Puedes crear uno nuevo desde aquí.',
+  'proposalBuilder.saveAndSend': 'Guardar cambios y enviar',
+  'proposalBuilder.draftReplacedNotice': 'El borrador anterior se ha sustituido por este envío.',
   'proposalBuilder.preSendChecks': 'Controles previos al envío',
   'proposalBuilder.internalCost': 'Coste interno',
   'proposalBuilder.grossFee': 'Tarifa bruta (neta de medios)',
@@ -147,6 +165,18 @@ const es = {
   'proposalBuilder.autoQuantityHint': 'Automático según duración',
   'proposalBuilder.viewProposal': 'Ver presupuesto enviado',
   'proposalBuilder.createAnother': 'Crear otro presupuesto',
+  'proposalBuilder.previewEmail': 'Vista previa del email',
+  'proposalBuilder.previewEmailModalTitle': 'Vista previa del email',
+  'proposalBuilder.previewEmailSubject': 'Asunto',
+  'proposalBuilder.previewEmailTabHtml': 'HTML',
+  'proposalBuilder.previewEmailTabText': 'Texto plano',
+  'proposalBuilder.previewEmailClose': 'Cerrar',
+  'proposalBuilder.previewEmailPlaceholderNotice':
+    'Esto no envía nada ni consume cuota de Resend. El enlace público y el número de presupuesto son marcadores de posición: solo existen de verdad tras enviar.',
+  'proposalBuilder.previewEmailRealDataNotice':
+    'Esto no envía nada ni consume cuota de Resend. El enlace y el número de presupuesto ya son los reales: es exactamente lo que recibiría el cliente si el envío tuviera éxito ahora mismo.',
+  'proposalBuilder.previewEmailNeedsData':
+    'Rellena al menos la razón social y el nombre del contacto para ver la vista previa.',
 
   'checklist.allPass': 'Todos los controles previos al envío pasan.',
   'checklist.blocks': 'Bloquea el envío',
@@ -206,6 +236,7 @@ const es = {
   'proposalDetail.retrying': 'Reintentando…',
   'proposalDetail.retrySuccess': 'Email enviado. El presupuesto ya está marcado como enviado.',
   'proposalDetail.duplicateButton': 'Duplicar',
+  'proposalDetail.editButton': 'Editar',
   'proposalDetail.duplicating': 'Duplicando…',
   'proposalDetail.publicLink': 'Enlace público',
   'proposalDetail.sentAt': 'Enviado el',
@@ -251,12 +282,11 @@ const fr: Dict = {
   'nav.admin': 'Utilisateurs',
 
   'admin.title': "Utilisateurs de l'équipe",
-  'admin.subtitle':
-    "Ajoute quelqu'un à l'équipe : son accès (email + mot de passe) est créé dans Supabase Auth et ajouté à la liste blanche en une seule étape.",
   'admin.fullName': 'Nom complet',
   'admin.email': 'Email',
   'admin.password': 'Mot de passe initial',
   'admin.generatePassword': 'Générer',
+  'admin.passwordNote': "À usage unique : la personne devra le changer dès sa première connexion.",
   'admin.note': 'Note (optionnelle)',
   'admin.create': "Créer l'accès",
   'admin.creating': 'Création…',
@@ -271,6 +301,15 @@ const fr: Dict = {
     "Mot de passe initial créé. Partage-le par un canal sécurisé (pas par email) : il ne pourra plus être affiché.",
   'admin.onlyAllowedEmailNotice':
     "Cet email était déjà dans la liste blanche mais sans utilisateur Supabase Auth : l'accès vient d'être créé.",
+
+  'changePassword.title': 'Définis ton nouveau mot de passe',
+  'changePassword.subtitle':
+    "Par sécurité, tu dois changer le mot de passe initial qu'on t'a donné avant de continuer.",
+  'changePassword.newPassword': 'Nouveau mot de passe',
+  'changePassword.confirmPassword': 'Répète le mot de passe',
+  'changePassword.submit': 'Enregistrer et continuer',
+  'changePassword.submitting': 'Enregistrement…',
+  'changePassword.mismatchError': 'Les mots de passe ne correspondent pas.',
 
   'proposalBuilder.title': 'Nouveau devis',
   'proposalBuilder.accountAndContact': 'Compte et contact',
@@ -295,6 +334,12 @@ const fr: Dict = {
   'proposalBuilder.markets': "Marchés de l'option",
   'proposalBuilder.marketsHelp':
     "Choisis une fois pour toute l'option : tous les supports se vendent automatiquement sur chacun d'eux.",
+  'market.FR': 'France',
+  'market.ES': 'Espagne',
+  'market.IT': 'Italie',
+  'market.BE_FR': 'Belgique (FR)',
+  'market.BE_NL': 'Belgique (NL)',
+  'market.NL': 'Pays-Bas',
   'proposalBuilder.scheduleMode': 'Période de campagne',
   'proposalBuilder.scheduleDates': 'Dates précises',
   'proposalBuilder.scheduleDurationOnly': 'Durée seule (sans dates)',
@@ -332,7 +377,11 @@ const fr: Dict = {
   'proposalBuilder.disableVolumeDiscountHelp':
     "Le tarif brut est facturé sans aucune remise par palier, même au-delà du seuil. Les remises manuelles, s'il y en a, continuent de s'appliquer à part. Enregistré avec auteur et date.",
   'proposalBuilder.addOption': '+ Ajouter une option',
-  'proposalBuilder.needsSecondOption': "Ajoute une deuxième option pour pouvoir envoyer (un envoi a besoin de 2 ou 3 options).",
+  'proposalBuilder.editTitle': 'Modifier le devis {number}',
+  'proposalBuilder.editUnavailable':
+    "Le devis que tu voulais modifier n'est plus disponible (il n'existe plus, ou il a déjà été envoyé avec succès). Tu peux en créer un nouveau ici.",
+  'proposalBuilder.saveAndSend': 'Enregistrer et envoyer',
+  'proposalBuilder.draftReplacedNotice': 'Le brouillon précédent a été remplacé par cet envoi.',
   'proposalBuilder.preSendChecks': "Contrôles avant l'envoi",
   'proposalBuilder.internalCost': 'Coût interne',
   'proposalBuilder.grossFee': 'Tarif brut (net de médias)',
@@ -349,6 +398,18 @@ const fr: Dict = {
   'proposalBuilder.autoQuantityHint': 'Automatique selon la durée',
   'proposalBuilder.viewProposal': 'Voir le devis envoyé',
   'proposalBuilder.createAnother': 'Créer un autre devis',
+  'proposalBuilder.previewEmail': "Aperçu de l'email",
+  'proposalBuilder.previewEmailModalTitle': "Aperçu de l'email",
+  'proposalBuilder.previewEmailSubject': 'Objet',
+  'proposalBuilder.previewEmailTabHtml': 'HTML',
+  'proposalBuilder.previewEmailTabText': 'Texte brut',
+  'proposalBuilder.previewEmailClose': 'Fermer',
+  'proposalBuilder.previewEmailPlaceholderNotice':
+    "Ceci n'envoie rien et ne consomme aucun quota Resend. Le lien public et le numéro de devis sont des valeurs provisoires : ils n'existent vraiment qu'après l'envoi.",
+  'proposalBuilder.previewEmailRealDataNotice':
+    "Ceci n'envoie rien et ne consomme aucun quota Resend. Le lien et le numéro de devis sont déjà les vrais : c'est exactement ce que recevrait le client si l'envoi réussissait maintenant.",
+  'proposalBuilder.previewEmailNeedsData':
+    "Renseigne au moins la raison sociale et le nom du contact pour voir l'aperçu.",
 
   'checklist.allPass': "Tous les contrôles avant l'envoi passent.",
   'checklist.blocks': "Bloque l'envoi",
@@ -408,6 +469,7 @@ const fr: Dict = {
   'proposalDetail.retrying': 'Nouvel essai…',
   'proposalDetail.retrySuccess': 'Email envoyé. Le devis est maintenant marqué comme envoyé.',
   'proposalDetail.duplicateButton': 'Dupliquer',
+  'proposalDetail.editButton': 'Modifier',
   'proposalDetail.duplicating': 'Duplication…',
   'proposalDetail.publicLink': 'Lien public',
   'proposalDetail.sentAt': 'Envoyé le',
@@ -450,12 +512,11 @@ const en: Dict = {
   'nav.admin': 'Users',
 
   'admin.title': 'Team users',
-  'admin.subtitle':
-    'Add someone to the team: their access (email + password) is created in Supabase Auth and added to the whitelist in one step.',
   'admin.fullName': 'Full name',
   'admin.email': 'Email',
   'admin.password': 'Initial password',
   'admin.generatePassword': 'Generate',
+  'admin.passwordNote': 'One-time use: the person will have to change it the first time they sign in.',
   'admin.note': 'Note (optional)',
   'admin.create': 'Create access',
   'admin.creating': 'Creating…',
@@ -470,6 +531,15 @@ const en: Dict = {
     "Initial password created. Share it over a secure channel (not email) — it can't be shown again.",
   'admin.onlyAllowedEmailNotice':
     'This email was already whitelisted but had no Supabase Auth user: the access was just created.',
+
+  'changePassword.title': 'Set your new password',
+  'changePassword.subtitle':
+    'For security, you need to change the initial password you were given before continuing.',
+  'changePassword.newPassword': 'New password',
+  'changePassword.confirmPassword': 'Confirm password',
+  'changePassword.submit': 'Save and continue',
+  'changePassword.submitting': 'Saving…',
+  'changePassword.mismatchError': 'Passwords do not match.',
 
   'proposalBuilder.title': 'New proposal',
   'proposalBuilder.accountAndContact': 'Account and contact',
@@ -494,6 +564,12 @@ const en: Dict = {
   'proposalBuilder.markets': 'Option markets',
   'proposalBuilder.marketsHelp':
     'Chosen once for the whole option: every support sells automatically in all of them.',
+  'market.FR': 'France',
+  'market.ES': 'Spain',
+  'market.IT': 'Italy',
+  'market.BE_FR': 'Belgium (FR)',
+  'market.BE_NL': 'Belgium (NL)',
+  'market.NL': 'Netherlands',
   'proposalBuilder.scheduleMode': 'Campaign period',
   'proposalBuilder.scheduleDates': 'Specific dates',
   'proposalBuilder.scheduleDurationOnly': 'Duration only (no dates)',
@@ -531,7 +607,11 @@ const en: Dict = {
   'proposalBuilder.disableVolumeDiscountHelp':
     'The gross tariff is billed with no tier discount at all, even past the threshold. Manual discounts, if any, still apply separately. Recorded with author and date.',
   'proposalBuilder.addOption': '+ Add option',
-  'proposalBuilder.needsSecondOption': 'Add a second option before sending (a proposal needs 2 or 3).',
+  'proposalBuilder.editTitle': 'Edit proposal {number}',
+  'proposalBuilder.editUnavailable':
+    "The proposal you wanted to edit is no longer available (it doesn't exist, or it was already sent successfully). You can create a new one here.",
+  'proposalBuilder.saveAndSend': 'Save changes and send',
+  'proposalBuilder.draftReplacedNotice': 'The previous draft has been replaced by this send.',
   'proposalBuilder.preSendChecks': 'Pre-send checks',
   'proposalBuilder.internalCost': 'Internal cost',
   'proposalBuilder.grossFee': 'Gross fee (net of media)',
@@ -548,6 +628,18 @@ const en: Dict = {
   'proposalBuilder.autoQuantityHint': 'Automatic from duration',
   'proposalBuilder.viewProposal': 'View sent proposal',
   'proposalBuilder.createAnother': 'Create another proposal',
+  'proposalBuilder.previewEmail': 'Preview email',
+  'proposalBuilder.previewEmailModalTitle': 'Email preview',
+  'proposalBuilder.previewEmailSubject': 'Subject',
+  'proposalBuilder.previewEmailTabHtml': 'HTML',
+  'proposalBuilder.previewEmailTabText': 'Plain text',
+  'proposalBuilder.previewEmailClose': 'Close',
+  'proposalBuilder.previewEmailPlaceholderNotice':
+    "This doesn't send anything and doesn't use any Resend quota. The public link and the proposal number are placeholders: they only exist for real after sending.",
+  'proposalBuilder.previewEmailRealDataNotice':
+    "This doesn't send anything and doesn't use any Resend quota. The link and proposal number are already the real ones: this is exactly what the client would receive if the send succeeded right now.",
+  'proposalBuilder.previewEmailNeedsData':
+    'Fill in at least the legal name and the contact name to see the preview.',
 
   'checklist.allPass': 'All pre-send checks pass.',
   'checklist.blocks': 'Blocks sending',
@@ -607,6 +699,7 @@ const en: Dict = {
   'proposalDetail.retrying': 'Retrying…',
   'proposalDetail.retrySuccess': 'Email sent. The proposal is now marked as sent.',
   'proposalDetail.duplicateButton': 'Duplicate',
+  'proposalDetail.editButton': 'Edit',
   'proposalDetail.duplicating': 'Duplicating…',
   'proposalDetail.publicLink': 'Public link',
   'proposalDetail.sentAt': 'Sent on',
@@ -632,6 +725,9 @@ const en: Dict = {
 };
 
 const DICTS: Record<InternalLanguage, Dict> = { ES: es, FR: fr, EN: en };
+
+/** Solo para tests: los tres diccionarios completos (ronda 14, verificar market.*). */
+export const DICTS_FOR_TESTING = DICTS;
 
 function readStoredLanguage(): InternalLanguage {
   if (typeof window === 'undefined') return 'ES';

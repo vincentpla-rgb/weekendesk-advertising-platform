@@ -54,6 +54,14 @@ const singleProfile = vi.fn();
 const sendEmail = vi.fn();
 const buildProposalEmailContent = vi.fn(() => ({ subject: 's', html: '<p>h</p>', text: 't' }));
 
+// Cadena `.from('proposals').delete().eq('id', ...).eq('status', 'DRAFT')`
+// (modo "Editar", CLAUDE.md §10.3 ter decies, ronda 13): mockeada aparte de
+// select/single, para poder comprobar con qué columnas y valores se llama
+// cada `.eq()` de la cadena.
+const deleteEqStatus = vi.fn(async () => ({ error: null }));
+const deleteEqId = vi.fn((_col: string, _val: string) => ({ eq: deleteEqStatus }));
+const deleteMock = vi.fn(() => ({ eq: deleteEqId }));
+
 const supabaseClient = {
   auth: { getUser },
   rpc,
@@ -63,6 +71,7 @@ const supabaseClient = {
         single: singleProfile,
       })),
     })),
+    delete: deleteMock,
   })),
 };
 
@@ -141,6 +150,9 @@ describe('POST /api/proposals — persiste aunque falte la configuración de Res
     rpc.mockReset();
     singleProfile.mockReset();
     sendEmail.mockReset();
+    deleteMock.mockClear();
+    deleteEqId.mockClear();
+    deleteEqStatus.mockClear();
     getUser.mockResolvedValue({ data: { user: { id: 'u1', email: 'vincent.pla@weekendesk.fr' } } });
     singleProfile.mockResolvedValue({ data: { full_name: 'Vincent Pla' }, error: null });
     process.env = { ...originalEnv };
@@ -216,5 +228,132 @@ describe('POST /api/proposals — persiste aunque falte la configuración de Res
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.proposalNumber).toBe('2026-001');
+    // Un envío normal (sin `replacesDraftId`) nunca borra nada.
+    expect(deleteMock).not.toHaveBeenCalled();
+  });
+});
+
+// =============================================================================
+// CLAUDE.md §5.1, ronda 13: 1 a 3 opciones (antes 2-3 — exigir un mínimo de
+// 2 era una validación de más, no una limitación real del modelo).
+// =============================================================================
+
+describe('POST /api/proposals — 1 a 3 opciones (ronda 13)', () => {
+  beforeEach(() => {
+    getUser.mockReset();
+    rpc.mockReset();
+    singleProfile.mockReset();
+    sendEmail.mockReset();
+    deleteMock.mockClear();
+    deleteEqId.mockClear();
+    deleteEqStatus.mockClear();
+    getUser.mockResolvedValue({ data: { user: { id: 'u1', email: 'vincent.pla@weekendesk.fr' } } });
+    singleProfile.mockResolvedValue({ data: { full_name: 'Vincent Pla' }, error: null });
+    process.env.RESEND_API_KEY = 'test-key';
+    process.env.RESEND_FROM_EMAIL = 'Weekendesk Advertising <onboarding@resend.dev>';
+    rpc.mockImplementation(async (fn: string) => {
+      if (fn === 'create_and_send_proposal') {
+        return {
+          data: {
+            proposal_id: 'p1',
+            proposal_number: '2026-001',
+            public_token: 'tok123',
+            contact_email: 'jean@example.com',
+            contact_full_name: 'Jean Dupont',
+            account_legal_name: 'Office de tourisme Test',
+          },
+          error: null,
+        };
+      }
+      if (fn === 'mark_proposal_sent') return { data: {}, error: null };
+      throw new Error(`rpc inesperado: ${fn}`);
+    });
+    sendEmail.mockResolvedValue({ ok: true, id: 'resend-1' });
+  });
+
+  it('acepta un envío con una sola opción (ya no exige un mínimo de 2)', async () => {
+    const body = validBody();
+    const res = await POST(request({ ...body, options: [body.options[0]] }));
+    expect(res.status).toBe(200);
+    expect(rpc).toHaveBeenCalledWith('create_and_send_proposal', expect.anything());
+  });
+
+  it('rechaza un envío sin ninguna opción', async () => {
+    const res = await POST(request({ ...validBody(), options: [] }));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/entre 1 y 3/);
+    expect(rpc).not.toHaveBeenCalledWith('create_and_send_proposal', expect.anything());
+  });
+
+  it('sigue rechazando más de 3 opciones', async () => {
+    const body = validBody();
+    const res = await POST(request({ ...body, options: [...body.options, body.options[0], body.options[0]] }));
+    expect(res.status).toBe(400);
+  });
+});
+
+// =============================================================================
+// Modo "Editar" (CLAUDE.md §5.4, §10.3 ter decies, ronda 13): un presupuesto
+// DRAFT que nunca llegó a enviarse con éxito se puede editar y reenviar. El
+// borrador original se borra DESPUÉS de crear el reemplazo con éxito, nunca
+// antes — si la creación fallara, no debe perderse ningún dato.
+// =============================================================================
+
+describe('POST /api/proposals — replacesDraftId (modo Editar, ronda 13)', () => {
+  beforeEach(() => {
+    getUser.mockReset();
+    rpc.mockReset();
+    singleProfile.mockReset();
+    sendEmail.mockReset();
+    deleteMock.mockClear();
+    deleteEqId.mockClear();
+    deleteEqStatus.mockClear();
+    getUser.mockResolvedValue({ data: { user: { id: 'u1', email: 'vincent.pla@weekendesk.fr' } } });
+    singleProfile.mockResolvedValue({ data: { full_name: 'Vincent Pla' }, error: null });
+    process.env.RESEND_API_KEY = 'test-key';
+    process.env.RESEND_FROM_EMAIL = 'Weekendesk Advertising <onboarding@resend.dev>';
+  });
+
+  it('borra el borrador original después de crear el reemplazo con éxito', async () => {
+    rpc.mockImplementation(async (fn: string) => {
+      if (fn === 'create_and_send_proposal') {
+        return {
+          data: {
+            proposal_id: 'p2',
+            proposal_number: '2026-002',
+            public_token: 'tok456',
+            contact_email: 'jean@example.com',
+            contact_full_name: 'Jean Dupont',
+            account_legal_name: 'Office de tourisme Test',
+          },
+          error: null,
+        };
+      }
+      if (fn === 'mark_proposal_sent') return { data: {}, error: null };
+      throw new Error(`rpc inesperado: ${fn}`);
+    });
+    sendEmail.mockResolvedValue({ ok: true, id: 'resend-2' });
+
+    const res = await POST(request({ ...validBody(), replacesDraftId: 'draft-1' }));
+
+    expect(res.status).toBe(200);
+    expect(deleteMock).toHaveBeenCalledTimes(1);
+    expect(deleteEqId).toHaveBeenCalledWith('id', 'draft-1');
+    expect(deleteEqStatus).toHaveBeenCalledWith('status', 'DRAFT');
+  });
+
+  it('si create_and_send_proposal falla, no intenta borrar nada (el borrador original no se pierde)', async () => {
+    rpc.mockImplementation(async (fn: string) => {
+      if (fn === 'create_and_send_proposal') {
+        return { data: null, error: { message: 'conflicto de disponibilidad' } };
+      }
+      throw new Error(`rpc inesperado: ${fn}`);
+    });
+
+    const res = await POST(request({ ...validBody(), replacesDraftId: 'draft-1' }));
+
+    expect(res.status).toBe(400);
+    expect(deleteMock).not.toHaveBeenCalled();
   });
 });

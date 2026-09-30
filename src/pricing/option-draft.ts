@@ -373,6 +373,120 @@ export function clearLeadTimeOverride(draft: OptionDraft, supportId: string, mar
 }
 
 /**
+ * Forma de una opción dentro de `proposals.frozen_snapshot` (CLAUDE.md
+ * §10.1.1, el mismo jsonb que `create_and_send_proposal` guarda tal cual se
+ * le mandó) — el subconjunto de campos que hace falta para reconstruir un
+ * `OptionDraft` editable, sin más dependencias. Mismo shape que usa
+ * `duplicateProposal` (`app/(internal)/proposals/[id]/actions.ts`) para
+ * reconstruir `RawOption[]`, pero declarado aquí aparte a propósito: ese
+ * módulo es `'use server'` y este es puro/isomorfo (CLAUDE.md §10.1, "no lee
+ * de la base de datos"), así que no se comparte el tipo entre los dos para
+ * no acoplar un módulo puro a la capa de servidor.
+ */
+export interface SnapshotLineInput {
+  readonly support_id: string;
+  readonly quantity: number;
+  readonly media_budget_cents: number | null;
+  readonly is_lead_market: boolean;
+  readonly manual_fee_cents: number | null;
+  readonly manual_fee_reason: string | null;
+}
+
+export interface SnapshotDiscountInput {
+  readonly kind: 'VOLUME' | 'MANUAL';
+  readonly rate: number;
+  readonly reason: string | null;
+}
+
+export interface SnapshotLeadTimeOverrideInput {
+  readonly support_id: string;
+  readonly market: Market;
+  readonly reason: string;
+}
+
+export interface SnapshotOptionInput {
+  readonly code: 'A' | 'B' | 'C';
+  readonly name: string;
+  readonly pitch: string | null;
+  readonly markets: readonly Market[];
+  readonly campaign_start: string | null;
+  readonly campaign_end: string | null;
+  readonly campaign_duration_count: number | null;
+  readonly campaign_duration_unit: 'WEEK' | 'MONTH' | null;
+  readonly lines: readonly SnapshotLineInput[];
+  readonly discounts: readonly SnapshotDiscountInput[];
+  readonly volume_discount_disabled: boolean;
+  readonly lead_time_overrides: readonly SnapshotLeadTimeOverrideInput[] | undefined;
+}
+
+/**
+ * Reconstruye un `OptionDraft` editable a partir de una opción ya persistida
+ * (CLAUDE.md §10.3 ter decies, ronda 13: "Editar" en un presupuesto DRAFT
+ * que nunca llegó a enviarse con éxito). Solo se queda con la fila del
+ * MERCADO LÍDER de cada soporte (`is_lead_market`) — igual que
+ * `duplicateProposal` — porque `lines` en el snapshot viene expandida por
+ * mercado (una fila por soporte+mercado, CLAUDE.md §4.2) y la cantidad, el
+ * presupuesto de medios y el reparto forzado son los mismos en todos los
+ * mercados de la opción, así que da igual cuál se use como fuente.
+ *
+ * `quantityAutoSynced` se deja siempre en `false`: son valores que el
+ * comercial ya confirmó al enviar la primera vez, no una sugerencia recién
+ * calculada — un cambio posterior del periodo no debe pisarlos en silencio,
+ * a diferencia de una línea nueva (CLAUDE.md §4, ronda 6).
+ */
+export function optionDraftFromSnapshot(
+  option: SnapshotOptionInput,
+  optionKey: string,
+  nextLineKey: () => string,
+): OptionDraft {
+  const hasDates = Boolean(option.campaign_start && option.campaign_end);
+  return {
+    key: optionKey,
+    code: option.code,
+    name: option.name,
+    pitch: option.pitch ?? '',
+    markets: option.markets,
+    scheduleMode: hasDates ? 'DATES' : 'DURATION_ONLY',
+    campaignStart: option.campaign_start ?? '',
+    campaignEnd: option.campaign_end ?? '',
+    durationCount: option.campaign_duration_count ?? '',
+    durationUnit: option.campaign_duration_unit ?? 'WEEK',
+    lines: option.lines
+      .filter((l) => l.is_lead_market)
+      .map((l): LineDraft => ({
+        key: nextLineKey(),
+        supportId: l.support_id,
+        quantity: l.quantity,
+        quantityAutoSynced: false,
+        // Convención ya establecida en `toOptionInput`: 0 € de presupuesto de
+        // medios equivale a "vacío" — nunca una entrada real (CLAUDE.md §4.4).
+        mediaBudgetEuros: l.media_budget_cents ? l.media_budget_cents / 100 : '',
+        // Distinto del presupuesto de medios: un fee forzado a 0 € es una
+        // entrada válida (trueque, CLAUDE.md §10.3 decies) — se distingue por
+        // `null`, no por el valor.
+        manualFeeEuros: l.manual_fee_cents !== null ? l.manual_fee_cents / 100 : '',
+        manualFeeReason: l.manual_fee_reason ?? '',
+      })),
+    // Solo los descuentos MANUALES sobreviven; los de volumen (VOLUME) se
+    // recalculan solos a partir de la base nueva (CLAUDE.md §4.5) — mismo
+    // criterio que `duplicateProposal`.
+    discounts: option.discounts
+      .filter((d) => d.kind === 'MANUAL')
+      .map((d, idx): DiscountDraft => ({
+        key: `${optionKey}-d${idx}`,
+        ratePercent: d.rate * 100,
+        reason: d.reason ?? '',
+      })),
+    volumeDiscountDisabled: option.volume_discount_disabled,
+    leadTimeOverrides: (option.lead_time_overrides ?? []).map((o) => ({
+      supportId: o.support_id,
+      market: o.market,
+      reason: o.reason,
+    })),
+  };
+}
+
+/**
  * Convierte el borrador de la interfaz al `OptionInput` que consume el motor
  * puro (`priceOption`) — la MISMA conversión que usa la vista previa en vivo
  * del creador y que, en el servidor, se vuelve a aplicar sobre los datos

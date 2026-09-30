@@ -1,8 +1,9 @@
 import type { Cents } from './money.js';
 
-export type Market = 'FR' | 'ES' | 'IT' | 'BE_FR' | 'BE_NL';
+/** BE_NL = Bélgica de habla neerlandesa (comparte festivos con BE_FR). NL = Países Bajos, mercado distinto (ronda 14). */
+export type Market = 'FR' | 'ES' | 'IT' | 'BE_FR' | 'BE_NL' | 'NL';
 
-export const MARKETS: readonly Market[] = ['FR', 'ES', 'IT', 'BE_FR', 'BE_NL'] as const;
+export const MARKETS: readonly Market[] = ['FR', 'ES', 'IT', 'BE_FR', 'BE_NL', 'NL'] as const;
 
 export type Channel =
   | 'ONSITE' | 'CRM' | 'SOCIAL' | 'SOCIAL_ADS' | 'DISPLAY_SEA' | 'CONTENT' | 'INFLUENCER';

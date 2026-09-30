@@ -652,6 +652,44 @@ describe('validación', () => {
     expect(l.sellable).toBe(false);
     expect(l.warnings.map((w) => w.code)).toContain('NOT_SELLABLE_IN_MARKET');
   });
+
+  it('marca SOC-05 como no vendible en NL, la misma excepción que en el resto de mercados no-FR (ronda 14)', () => {
+    const nl = priceOption({ markets: ['NL'], lines: [{ supportId: 'SOC-05' }] }, ctx);
+    const l = line(nl, 'SOC-05', 'NL');
+    expect(l.sellable).toBe(false);
+    expect(l.warnings.map((w) => w.code)).toContain('NOT_SELLABLE_IN_MARKET');
+  });
+});
+
+describe('mercado NL — Países Bajos (ronda 14, CLAUDE.md §3/§9)', () => {
+  it('MARKETS incluye NL como sexto mercado, distinto de BE_NL', () => {
+    expect(MARKETS).toContain('NL');
+    expect(MARKETS).toContain('BE_NL');
+    expect(MARKETS).toHaveLength(6);
+  });
+
+  it('aplica el coeficiente provisional 0,73 a NL, sin afectar a BE_NL', () => {
+    const option = priceOption({ markets: ['FR', 'NL'], lines: [{ supportId: 'ON-01' }] }, ctx);
+    // ON-01: base 430 €. NL no es el mercado líder (coeficiente 0,73 < FR 1,00),
+    // así que solo paga horas de negocio + externo (CLAUDE.md §4.2): sin diseño.
+    expect(eur(line(option, 'ON-01', 'NL').grossPriceCents)).toBeCloseTo(430 * 0.73, 5);
+    expect(line(option, 'ON-01', 'NL').isLeadMarket).toBe(false);
+    expect(line(option, 'ON-01', 'FR').isLeadMarket).toBe(true);
+
+    const beNl = priceOption({ markets: ['BE_NL'], lines: [{ supportId: 'ON-01' }] }, ctx);
+    expect(eur(line(beNl, 'ON-01', 'BE_NL').grossPriceCents)).toBeCloseTo(430 * 0.75, 5);
+  });
+
+  it('NL es sellable por defecto (18 de los 19 soportes, salvo SOC-05)', () => {
+    const option = priceOption({ markets: ['NL'], lines: [{ supportId: 'CRM-01' }] }, ctx);
+    expect(line(option, 'CRM-01', 'NL').sellable).toBe(true);
+  });
+
+  it('una opción cotizada en los 6 mercados calcula sin errores y respeta el suelo', () => {
+    const option = priceOption({ markets: MARKETS, lines: [{ supportId: 'ON-01' }] }, ctx);
+    expect(option.lines).toHaveLength(6);
+    expect(option.meetsMarginFloor).toBe(true);
+  });
 });
 
 describe('totales de opción', () => {

@@ -10,7 +10,7 @@
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export type Market = 'FR' | 'ES' | 'IT' | 'BE_FR' | 'BE_NL';
+export type Market = 'FR' | 'ES' | 'IT' | 'BE_FR' | 'BE_NL' | 'NL';
 export type Channel = 'ONSITE' | 'CRM' | 'SOCIAL' | 'SOCIAL_ADS' | 'DISPLAY_SEA' | 'CONTENT' | 'INFLUENCER';
 export type SupportUnit =
   | 'WEEK'

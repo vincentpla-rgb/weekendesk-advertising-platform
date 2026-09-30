@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { interpolate } from './i18n-internal';
+import { DICTS_FOR_TESTING, INTERNAL_LANGUAGES, interpolate } from './i18n-internal';
 
 describe('interpolate', () => {
   it('sin vars, devuelve el texto tal cual', () => {
@@ -22,5 +22,26 @@ describe('interpolate', () => {
 
   it('sustituye varias variables distintas', () => {
     expect(interpolate('{a} y {b}', { a: '1', b: '2' })).toBe('1 y 2');
+  });
+});
+
+describe('market.* (ronda 14, sexto mercado NL)', () => {
+  const MARKET_KEYS = ['market.FR', 'market.ES', 'market.IT', 'market.BE_FR', 'market.BE_NL', 'market.NL'] as const;
+
+  it.each(INTERNAL_LANGUAGES)('%s tiene una etiqueta para los 6 mercados', (lang) => {
+    for (const key of MARKET_KEYS) {
+      expect(DICTS_FOR_TESTING[lang][key]).toBeTruthy();
+    }
+  });
+
+  it('NL y BE_NL tienen etiquetas distintas en cada idioma (no se confunden)', () => {
+    for (const lang of INTERNAL_LANGUAGES) {
+      expect(DICTS_FOR_TESTING[lang]['market.NL']).not.toBe(DICTS_FOR_TESTING[lang]['market.BE_NL']);
+    }
+  });
+
+  it('ES usa "Países Bajos" para NL, distinto de "Bélgica (NL)"', () => {
+    expect(DICTS_FOR_TESTING.ES['market.NL']).toBe('Países Bajos');
+    expect(DICTS_FOR_TESTING.ES['market.BE_NL']).toBe('Bélgica (NL)');
   });
 });

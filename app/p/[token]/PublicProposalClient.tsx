@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
-import { formatCents, formatDate, MARKET_LABELS } from '@/lib/format';
+import { formatCents, formatDate, MARKET_LABELS, supportLabel } from '@/lib/format';
 import { getPublicCopy, getVatNotice } from '@/lib/i18n';
 
 import type { PublicOption, PublicProposal } from './page';
@@ -178,7 +178,7 @@ export function PublicProposalClient({
                   {option.lines.map((line, idx) => (
                     <tr key={idx}>
                       <td>
-                        <strong>{line.support_name}</strong>
+                        <strong>{supportLabel(line.support_name, line.support_id)}</strong>
                         <div style={{ fontSize: 12, color: 'var(--wk-text-muted)' }}>
                           {MARKET_LABELS[line.market] ?? line.market} · {line.quantity}{' '}
                           {UNIT_LABELS[line.unit] ?? line.unit}

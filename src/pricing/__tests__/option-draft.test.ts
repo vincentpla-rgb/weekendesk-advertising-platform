@@ -10,6 +10,7 @@ import {
   createLineDraft,
   createOptionDraft,
   forceLeadTimeOverride,
+  optionDraftFromSnapshot,
   removeLineDraft,
   resyncLineQuantity,
   setLineQuantityManually,
@@ -19,6 +20,7 @@ import {
   updateLineDraft,
   updateOptionDraft,
   type OptionDraft,
+  type SnapshotOptionInput,
 } from '../option-draft.js';
 
 const ctx = { parameters: DEFAULT_PRICING_PARAMETERS, catalog: DEFAULT_CATALOG };
@@ -568,5 +570,181 @@ describe('leadTimeOverrides: forzar antelación insuficiente (ronda 11)', () => 
   it('clearLeadTimeOverride sobre un forzado inexistente no tiene efecto', () => {
     const option = freshOption();
     expect(clearLeadTimeOverride(option, 'ON-01', 'FR')).toEqual(option);
+  });
+});
+
+// =============================================================================
+// optionDraftFromSnapshot (CLAUDE.md §10.3 ter decies, ronda 13): reconstruye
+// un OptionDraft editable a partir de una opción ya persistida —
+// `proposals.frozen_snapshot`, el mismo jsonb que `duplicateProposal` ya lee
+// (CLAUDE.md §10.3 octies) — para el flujo nuevo "Editar" sobre un DRAFT que
+// nunca llegó a enviarse con éxito.
+// =============================================================================
+
+describe('optionDraftFromSnapshot (ronda 13)', () => {
+  function baseSnapshot(overrides: Partial<SnapshotOptionInput> = {}): SnapshotOptionInput {
+    return {
+      code: 'A',
+      name: 'Entrada',
+      pitch: 'Pitch de la opción',
+      markets: ['FR'],
+      campaign_start: '2027-10-01',
+      campaign_end: '2027-10-28',
+      campaign_duration_count: null,
+      campaign_duration_unit: null,
+      lines: [
+        {
+          support_id: 'ON-01',
+          quantity: 4,
+          media_budget_cents: null,
+          is_lead_market: true,
+          manual_fee_cents: null,
+          manual_fee_reason: null,
+        },
+      ],
+      discounts: [],
+      volume_discount_disabled: false,
+      lead_time_overrides: [],
+      ...overrides,
+    };
+  }
+
+  it('con fechas concretas, reconstruye en modo DATES con las mismas fechas', () => {
+    const draft = optionDraftFromSnapshot(baseSnapshot(), 'k1', () => 'l1');
+    expect(draft.scheduleMode).toBe('DATES');
+    expect(draft.campaignStart).toBe('2027-10-01');
+    expect(draft.campaignEnd).toBe('2027-10-28');
+    expect(draft.durationCount).toBe('');
+  });
+
+  it('sin fechas concretas, reconstruye en modo DURATION_ONLY con la duración guardada', () => {
+    const snapshot = baseSnapshot({
+      campaign_start: null,
+      campaign_end: null,
+      campaign_duration_count: 4,
+      campaign_duration_unit: 'WEEK',
+    });
+    const draft = optionDraftFromSnapshot(snapshot, 'k1', () => 'l1');
+    expect(draft.scheduleMode).toBe('DURATION_ONLY');
+    expect(draft.campaignStart).toBe('');
+    expect(draft.durationCount).toBe(4);
+    expect(draft.durationUnit).toBe('WEEK');
+  });
+
+  it('se queda solo con la línea del mercado líder cuando la opción es multimercado', () => {
+    const snapshot = baseSnapshot({
+      markets: ['FR', 'ES'],
+      lines: [
+        {
+          support_id: 'ON-01',
+          quantity: 4,
+          media_budget_cents: null,
+          is_lead_market: true,
+          manual_fee_cents: null,
+          manual_fee_reason: null,
+        },
+        {
+          support_id: 'ON-01',
+          quantity: 4,
+          media_budget_cents: null,
+          is_lead_market: false,
+          manual_fee_cents: null,
+          manual_fee_reason: null,
+        },
+      ],
+    });
+    const draft = optionDraftFromSnapshot(snapshot, 'k1', () => 'l1');
+    expect(draft.lines).toHaveLength(1);
+    expect(draft.markets).toEqual(['FR', 'ES']);
+  });
+
+  it('quantityAutoSynced arranca en false: un cambio de periodo no pisa la cantidad ya confirmada', () => {
+    const draft = optionDraftFromSnapshot(baseSnapshot(), 'k1', () => 'l1');
+    expect(draft.lines[0]!.quantityAutoSynced).toBe(false);
+  });
+
+  it('presupuesto de medios: 0 cents equivale a vacío (misma convención que toOptionInput)', () => {
+    const withBudget = optionDraftFromSnapshot(
+      baseSnapshot({
+        lines: [
+          {
+            support_id: 'ADS-01',
+            quantity: 1,
+            media_budget_cents: 200_000,
+            is_lead_market: true,
+            manual_fee_cents: null,
+            manual_fee_reason: null,
+          },
+        ],
+      }),
+      'k1',
+      () => 'l1',
+    );
+    expect(withBudget.lines[0]!.mediaBudgetEuros).toBe(2000);
+
+    const withoutBudget = optionDraftFromSnapshot(baseSnapshot(), 'k1', () => 'l1');
+    expect(withoutBudget.lines[0]!.mediaBudgetEuros).toBe('');
+  });
+
+  it('fee forzado a mano: 0 € es una entrada real (trueque), distinta de "sin forzar" (null)', () => {
+    const forcedToZero = optionDraftFromSnapshot(
+      baseSnapshot({
+        lines: [
+          {
+            support_id: 'ADS-01',
+            quantity: 1,
+            media_budget_cents: 200_000,
+            is_lead_market: true,
+            manual_fee_cents: 0,
+            manual_fee_reason: 'Trueque acordado',
+          },
+        ],
+      }),
+      'k1',
+      () => 'l1',
+    );
+    expect(forcedToZero.lines[0]!.manualFeeEuros).toBe(0);
+    expect(forcedToZero.lines[0]!.manualFeeReason).toBe('Trueque acordado');
+
+    const notForced = optionDraftFromSnapshot(baseSnapshot(), 'k1', () => 'l1');
+    expect(notForced.lines[0]!.manualFeeEuros).toBe('');
+  });
+
+  it('solo los descuentos MANUAL sobreviven; los VOLUME se descartan (se recalculan solos)', () => {
+    const snapshot = baseSnapshot({
+      discounts: [
+        { kind: 'VOLUME', rate: 0.1, reason: null },
+        { kind: 'MANUAL', rate: 0.05, reason: 'Cliente fiel' },
+      ],
+    });
+    const draft = optionDraftFromSnapshot(snapshot, 'k1', () => 'l1');
+    expect(draft.discounts).toHaveLength(1);
+    expect(draft.discounts[0]!.ratePercent).toBe(5);
+    expect(draft.discounts[0]!.reason).toBe('Cliente fiel');
+  });
+
+  it('traslada el interruptor de descuento por volumen y las antelaciones forzadas', () => {
+    const snapshot = baseSnapshot({
+      volume_discount_disabled: true,
+      lead_time_overrides: [{ support_id: 'ON-01', market: 'FR', reason: 'Cliente grande, plazo ajustado' }],
+    });
+    const draft = optionDraftFromSnapshot(snapshot, 'k1', () => 'l1');
+    expect(draft.volumeDiscountDisabled).toBe(true);
+    expect(draft.leadTimeOverrides).toEqual([
+      { supportId: 'ON-01', market: 'FR', reason: 'Cliente grande, plazo ajustado' },
+    ]);
+  });
+
+  it('lead_time_overrides ausente (frozen_snapshot de antes de la ronda 11) no revienta: cae a un array vacío', () => {
+    const snapshot = baseSnapshot({ lead_time_overrides: undefined });
+    const draft = optionDraftFromSnapshot(snapshot, 'k1', () => 'l1');
+    expect(draft.leadTimeOverrides).toEqual([]);
+  });
+
+  it('el resultado pasa por el motor real sin errores (toOptionInput + priceOption)', () => {
+    const draft = optionDraftFromSnapshot(baseSnapshot(), 'k1', () => 'l1');
+    const priced = priceOption(toOptionInput(DEFAULT_CATALOG, draft), ctx);
+    expect(priced.lines).toHaveLength(1);
+    expect(priced.billedTotalCents).toBeGreaterThan(0);
   });
 });
