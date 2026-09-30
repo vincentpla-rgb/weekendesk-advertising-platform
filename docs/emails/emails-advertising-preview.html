@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weekendesk Advertising · Preview de emails transaccionales</title>
+<!--
+  Weekendesk HTML Artifact
+  Design system: UltraHand v0.3 / Brandbook 2025
+  Tokens used (preview shell): --foreground-primary/secondary/tertiary, --background-primary/secondary,
+  --border-primary/secondary, --radius-sm/md/full, --padding-*, --gap-*, --success*, --danger*, --brand-navy-blue
+  Fonts: Host Grotesk (headings), Inter (body/buttons/fields)
+  NOTE: los emails renderizados dentro del iframe llevan estilos INLINE con los valores hex equivalentes a los tokens
+  (los clientes de correo no soportan CSS custom properties). Mapa token -> hex en el bloque "EMAIL_TOKENS" del script.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  /* ── FOREGROUND ─────────────────────────────────────────── */
+  --foreground-primary:        #1E1E1E;
+  --foreground-secondary:      #4F4F4F;
+  --foreground-tertiary:       #888888;
+  --foreground-inverse:        #FFFFFF;
+  --foreground-overlay:        rgba(30,30,30,0.80);
+  --foreground-link:           #4F4F4F;
+  --foreground-link-hover:     #1E1E1E;
+
+  /* ── BACKGROUND ─────────────────────────────────────────── */
+  --background-primary:        #FFFFFF;
+  --background-secondary:      #F6F6F6;
+  --background-tertiary:       #E7E7E7;
+  --background-inverse:        #001C4D;
+
+  /* ── BORDER ─────────────────────────────────────────────── */
+  --border-primary:            #D1D1D1;
+  --border-secondary:          #E7E7E7;
+  --border-primary-inverse:    #848484;
+  --border-secondary-inverse:  #5C5C5C;
+
+  /* ── ACCENT (primary button = brand red ONLY) ───────────── */
+  --accent-primary:            #F8443A;
+  --accent-primary-hover:      #EB6E67;
+  --accent-primary-active:     #DF3D34;
+  --accent-primary-disabled:   #F6F6F6;
+  --accent-primary-foreground: #FFFFFF;
+  --accent-secondary:          #FFFFFF;
+  --accent-secondary-hover:    #4F4F4F;
+  --accent-secondary-active:   #888888;
+  --accent-secondary-disabled: #F6F6F6;
+  --accent-secondary-foreground: #1E1E1E;
+  --accent-background-soft:    #FEECEB;
+  --accent-background-soft-hover: #FDC7C4;
+  --focus-ring:                #0060CC;
+
+  /* ── STATUS ─────────────────────────────────────────────── */
+  --success:                   #198571;
+  --success-background:        #E3FDED;
+  --success-foreground:        #1E1E1E;
+  --info:                      #0771EE;
+  --info-background:           #E1EFFE;
+  --info-foreground:           #1E1E1E;
+  --warning:                   #F2C00D;
+  --warning-background:        #FDF7E2;
+  --warning-foreground:        #1E1E1E;
+  --danger:                    #EC0202;
+  --danger-background:         #FFE1E1;
+  --danger-foreground:         #1E1E1E;
+
+  /* ── FIELD ──────────────────────────────────────────────── */
+  --field-radius:              8px;
+  --field-border-width:        1px;
+  --field-border:              #D1D1D1;
+  --field-border-hover:        #1E1E1E;
+  --field-placeholder:         #4F4F4F;
+  --field-foreground:          #1E1E1E;
+  --field-background:          #FFFFFF;
+  --field-shadow:              rgba(0,0,0,0.04);
+  --field-shadow-2:            rgba(0,0,0,0.06);
+  --focus-ring-field:          #FFC888;
+
+  /* ── BRAND (decorative — editorial only) ────────────────── */
+  --brand-deep-blue:           #006A95;
+  --brand-soft-pink:           #FFA6AE;
+  --brand-lavender:            #9B7DB3;
+  --brand-yellow:              #FFECAD;
+  --brand-navy-blue:           #001C4D;
+
+  /* ── NEUTRALS (utility anchors) ─────────────────────────── */
+  --neutrals-white:            #FFFFFF;
+  --neutrals-black:            #000000;
+
+  /* ── CHART ──────────────────────────────────────────────── */
+  --chart-brand-1:             #F8443A;
+  --chart-brand-2:             #FFA2A3;
+  --chart-brand-3:             #FFCACA;
+  --chart-brand-4:             #FFE2E3;
+  --chart-brand-5:             #FFE2E3;
+  --chart-neutral-1:           #333333;
+  --chart-neutral-2:           #555555;
+  --chart-neutral-3:           #777777;
+  --chart-neutral-4:           #999999;
+  --chart-neutral-5:           #BBBBBB;
+  --chart-categorical-1:       #F8443A;
+  --chart-categorical-2:       #006A95;
+  --chart-categorical-3:       #9B7DB3;
+  --chart-categorical-4:       #001C4D;
+  --chart-categorical-5:       #FFA6AE;
+
+  /* ── HELPER GRADIENTS ───────────────────────────────────── */
+  --linear-gradient-top:         linear-gradient(180deg, rgba(0,6,40,0.12) 75%, rgba(0,25,48,0.00) 100%);
+  --linear-gradient-bottom:      linear-gradient(180deg, rgba(5,0,35,0.00) 0%, rgba(5,0,35,0.40) 100%);
+  --linear-gradient-left:        linear-gradient(270deg, rgba(0,0,0,0.00) 0%, rgba(0,0,0,0.72) 100%);
+  --linear-gradient-right:       linear-gradient(90deg, rgba(0,0,0,0.00) 0%, rgba(0,0,0,0.72) 100%);
+  --linear-gradient-banner:      linear-gradient(180deg, #000000 0%, #1e1e1e 10.12%, #21156f 54.12%, #171b5e 100%);
+  --linear-gradient-clamp:       linear-gradient(180deg, rgba(255,255,255,0.00) 0%, #ffffff 50%, #ffffff 100%);
+  --linear-gradient-clamp-info:  linear-gradient(180deg, rgba(255,255,255,0.00) 0%, #cadae5 50%, #cadae5 100%);
+
+  /* ── GIFT PRODUCT GRADIENTS ─────────────────────────────── */
+  --linear-gradient-wellness:      linear-gradient(180deg, #0e85c1 0%, #93d0cf 100%);
+  --linear-gradient-gastro:        linear-gradient(180deg, #ec4c47 0%, #fabd81 100%);
+  --linear-gradient-romantic:      linear-gradient(180deg, #e43442 0%, #ef8094 100%);
+  --linear-gradient-disconnection: linear-gradient(180deg, #8373a3 0%, #c6818c 49.52%, #eda26e 100%);
+  --linear-gradient-unexpected:    linear-gradient(180deg, #917cb1 0%, #066c96 100%);
+
+  /* ── BRAND GRADIENTS (editorial/marketing only) ─────────── */
+  --linear-gradient-candy:   linear-gradient(64deg,  #f8443a 0%, #ffca8d 100%);
+  --linear-gradient-sunrise: linear-gradient(180deg, #a280b4 0%, #fba3ad 100%);
+  --linear-gradient-night:   linear-gradient(180deg, #052153 0%, #9278ae 100%);
+  --linear-gradient-dawn:    linear-gradient(180deg, #1a7099 0%, #fea5ad 100%);
+  --linear-gradient-fresh:   linear-gradient(180deg, #107296 0%, #f5e7ac 100%);
+
+  /* ── RADIUS ─────────────────────────────────────────────── */
+  --radius-none:               0px;
+  --radius-sm:                 8px;
+  --radius-md:                 16px;
+  --radius-lg:                 24px;
+  --radius-full:               9999px;
+
+  /* ── PADDING (internal container space) ─────────────────── */
+  --padding-none:              0px;
+  --padding-xs:                4px;
+  --padding-sm:                8px;
+  --padding-md:                16px;
+  --padding-lg:                24px;
+  --padding-xl:                40px;
+
+  /* ── GAP (space between siblings) ──────────────────────── */
+  --gap-none:                  0px;
+  --gap-xs:                    4px;
+  --gap-sm:                    8px;
+  --gap-md:                    12px;
+  --gap-lg:                    16px;
+  --gap-xl:                    20px;
+  --gap-2xl:                   24px;
+  --gap-3xl:                   32px;
+  --gap-4xl:                   40px;
+  --gap-5xl:                   64px;
+  --gap-6xl:                   80px;
+  --gap-7xl:                   112px;
+
+  /* ── Z-INDEX ────────────────────────────────────────────── */
+  --z-index-base:              0;
+  --z-index-sticky:            100;
+  --z-index-overlay:           1000;
+  --z-index-dialog:            1100;
+  --z-index-popover:           1500;
+  --z-index-tooltip:           1600;
+  --z-index-toast:             1700;
+
+  /* ── TRANSITIONS ────────────────────────────────────────── */
+  --transition-ultrafast:      50ms;
+  --transition-faster:         100ms;
+  --transition-fast:           150ms;
+  --transition-normal:         200ms;
+  --transition-slow:           300ms;
+  --transition-slower:         400ms;
+  --transition-ultra-slow:     500ms;
+
+  /* ── BREAKPOINTS (reference — use in @media, not var()) ─── */
+  /* --breakpoint-m:  600px  */
+  /* --breakpoint-l:  960px  */
+  /* --breakpoint-tablet: 1120px */
+
+  /* ── TYPOGRAPHY ─────────────────────────────────────────── */
+  --font-heading:              'Host Grotesk', system-ui, sans-serif;
+  --font-body:                 'Inter', system-ui, sans-serif;
+  --heading-3xl:               56px;
+  --heading-2xl:               44px;
+  --heading-xl:                36px;
+  --heading-lg:                24px;
+  --heading-md:                20px;
+  --heading-sm:                16px;
+  --text-md:                   16px;
+  --text-sm:                   14px;
+  --text-xs:                   12px;
+
+  /* ── SHADOWS (from effectStyle tokens) ──────────────────── */
+  --shadow-level-1: 0px 0px 2px 0px rgba(5,0,35,0.06), 0px 1px 3px 0px rgba(5,0,35,0.10);
+  --shadow-level-2: 0px 0px 6px 0px rgba(5,0,35,0.08), 0px 10px 15px 0px rgba(5,0,35,0.10);
+  --shadow-level-3: 0px 0px 15px 0px rgba(5,0,35,0.06), 0px 25px 50px 0px rgba(5,0,35,0.15);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { font-family: var(--font-body); font-size: var(--text-md); color: var(--foreground-primary); background: var(--background-secondary); line-height: 1.4; }
+
+.app { display: grid; grid-template-columns: 300px 1fr; min-height: 100%; }
+.side { background: var(--background-primary); border-right: 1px solid var(--border-primary); padding: var(--padding-lg) var(--padding-md); position: sticky; top: 0; height: 100vh; overflow: auto; }
+.side h1 { font-family: var(--font-heading); font-weight: 800; font-size: var(--heading-md); letter-spacing: -0.5px; margin: 0 0 var(--gap-sm); }
+.side p.sub { margin: 0 0 var(--gap-2xl); color: var(--foreground-secondary); font-size: var(--text-sm); }
+.nav { display: flex; flex-direction: column; gap: var(--gap-sm); }
+.nav button { text-align: left; font-family: var(--font-body); font-size: var(--text-sm); color: var(--foreground-primary); background: var(--background-primary); border: 1px solid var(--border-primary); border-radius: var(--radius-sm); padding: var(--padding-md); cursor: pointer; display: flex; gap: var(--gap-md); align-items: flex-start; transition: border-color var(--transition-fast) ease, background var(--transition-fast) ease; }
+.nav button:hover { border-color: var(--foreground-primary); }
+.nav button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.nav button[aria-current="true"] { border-color: var(--foreground-primary); background: var(--background-secondary); }
+.nav .num { font-family: var(--font-heading); font-weight: 800; font-size: var(--heading-md); line-height: 1; min-width: 20px; }
+.nav .t { display: block; font-weight: 600; margin-bottom: var(--gap-xs); }
+.badge-sm { display: inline-flex; align-items: center; border-radius: var(--radius-sm); padding: 2px var(--padding-sm); font-size: var(--text-xs); }
+.badge--client { background: var(--info-background); color: var(--info-foreground); }
+.badge--internal { background: var(--warning-background); color: var(--warning-foreground); }
+
+.main { padding: var(--padding-lg) var(--padding-xl) var(--gap-5xl); min-width: 0; }
+.toolbar { display: flex; flex-wrap: wrap; gap: var(--gap-lg); align-items: center; margin-bottom: var(--gap-2xl); }
+.seg { display: inline-flex; border: 1px solid var(--border-primary); border-radius: var(--radius-sm); overflow: hidden; background: var(--background-primary); }
+.seg button { font-family: var(--font-body); font-size: var(--text-sm); border: 0; background: transparent; color: var(--foreground-secondary); padding: 10px 14px; cursor: pointer; border-right: 1px solid var(--border-secondary); }
+.seg button:last-child { border-right: 0; }
+.seg button[aria-pressed="true"] { background: var(--foreground-primary); color: var(--foreground-inverse); }
+.seg button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; }
+.tlabel { font-size: var(--text-xs); color: var(--foreground-tertiary); margin-right: var(--gap-xs); }
+
+.env { background: var(--background-primary); border: 1px solid var(--border-primary); border-radius: var(--radius-md); padding: var(--padding-md) var(--padding-lg); margin-bottom: var(--gap-2xl); max-width: 760px; }
+.env .subj { font-family: var(--font-heading); font-weight: 700; font-size: 18px; margin: 0 0 var(--gap-xs); }
+.env .pre { color: var(--foreground-tertiary); font-size: var(--text-sm); margin: 0 0 var(--gap-lg); }
+.env dl { display: grid; grid-template-columns: 96px 1fr; gap: var(--gap-xs) var(--gap-lg); margin: 0; font-size: var(--text-sm); }
+.env dt { color: var(--foreground-tertiary); }
+.env dd { margin: 0; color: var(--foreground-primary); }
+.note { max-width: 760px; margin: 0 0 var(--gap-lg); padding: var(--padding-md); border-radius: var(--radius-sm); background: var(--info-background); font-size: var(--text-sm); }
+.note.warn { background: var(--warning-background); }
+
+.stage { display: flex; justify-content: center; }
+.frame { background: var(--background-primary); border: 1px solid var(--border-primary); border-radius: var(--radius-md); overflow: hidden; transition: width var(--transition-slow) ease; }
+.frame iframe { display: block; width: 100%; border: 0; }
+
+@media (max-width: 960px) {
+  .app { grid-template-columns: 1fr; }
+  .side { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--border-primary); }
+  .nav { flex-direction: row; overflow-x: auto; }
+  .nav button { min-width: 220px; }
+  .main { padding: var(--padding-lg) var(--padding-md) var(--gap-5xl); }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <h1>emails · advertising</h1>
+    <p class="sub">Preview de los 14 emails transaccionales. Datos de ejemplo.</p>
+    <nav class="nav" id="nav" aria-label="Emails"></nav>
+  </aside>
+  <main class="main">
+    <div class="toolbar">
+      <div><span class="tlabel">idioma</span>
+        <div class="seg" id="langSeg" role="group" aria-label="Idioma"></div></div>
+      <div><span class="tlabel">pantalla</span>
+        <div class="seg" id="devSeg" role="group" aria-label="Pantalla">
+          <button data-d="desktop" aria-pressed="true">escritorio</button>
+          <button data-d="mobile" aria-pressed="false">móvil</button>
+        </div></div>
+      <div id="scenWrap" hidden><span class="tlabel">contrapropuesta</span>
+        <div class="seg" id="scenSeg" role="group" aria-label="Escenario">
+          <button data-s="ko" aria-pressed="true">4.800 € · bajo mínimo</button>
+          <button data-s="ok" aria-pressed="false">5.400 € · sobre mínimo</button>
+        </div></div>
+    </div>
+    <div class="note warn" id="fallbackNote" hidden></div>
+    <section class="env" id="env" aria-live="polite"></section>
+    <div class="stage"><div class="frame" id="frame"><iframe id="ifr" title="Preview del email"></iframe></div></div>
+  </main>
+</div>
+
+<script>
+const COPY = {"labels": {"es": {"proposal": "Presupuesto", "client": "Cliente", "validUntil": "Válido hasta", "option": "Opción", "markets": "Mercados", "amount": "Importe (sin IVA)", "agreedAmount": "Importe acordado (sin IVA)", "billedTo": "Facturación a", "sentBy": "Enviado por", "role": "Rol", "invitedBy": "Invitado por", "submittedBy": "Enviada por", "sale": "Precio de venta", "cost": "Coste total", "margin": "Margen bruto", "marginPct": "Margen bruto (%)", "minMargin": "Mínimo exigido", "original": "Original", "counter": "Contrapropuesta", "diff": "Diferencia", "minPrice": "Precio mínimo para un 50 % de margen", "internal": "Uso interno", "attached": "Adjunto", "statusOk": "Sobre el mínimo", "statusKo": "Bajo el mínimo", "pts": "pts", "footerClient": "Recibes este correo por el presupuesto {{proposalNumber}}, gestionado por {{creatorName}}, de Weekendesk Advertising.", "footerInternal": "Notificación automática de la plataforma Weekendesk Advertising.", "legal": "Weekendesk SAS · 28 rue de Londres · 75009 París", "fileClient": "Presupuesto-{{proposalNumber}}.pdf", "fileInternal": "Presupuesto-{{proposalNumber}}-interno.pdf", "support": "Soporte", "dates": "Fechas", "version": "Versión"}, "fr": {"proposal": "Proposition", "client": "Client", "validUntil": "Valable jusqu’au", "option": "Option", "markets": "Marchés", "amount": "Montant (HT)", "agreedAmount": "Montant convenu (HT)", "billedTo": "Facturation à", "sentBy": "Envoyée par", "role": "Rôle", "invitedBy": "Invité par", "submittedBy": "Envoyée par", "sale": "Prix de vente", "cost": "Coût total", "margin": "Marge brute", "marginPct": "Marge brute (%)", "minMargin": "Minimum requis", "original": "Original", "counter": "Contre-proposition", "diff": "Écart", "minPrice": "Prix minimum pour 50 % de marge", "internal": "Usage interne", "attached": "Pièce jointe", "statusOk": "Au-dessus du minimum", "statusKo": "Sous le minimum", "pts": "pts", "footerClient": "Vous recevez cet e-mail au sujet de la proposition {{proposalNumber}}, suivie par {{creatorName}}, de Weekendesk Advertising.", "footerInternal": "Notification automatique de la plateforme Weekendesk Advertising.", "legal": "Weekendesk SAS · 28 rue de Londres · 75009 Paris", "fileClient": "Proposition-{{proposalNumber}}.pdf", "fileInternal": "Proposition-{{proposalNumber}}-interne.pdf", "support": "Support", "dates": "Dates", "version": "Version"}, "en": {"proposal": "Proposal", "client": "Client", "validUntil": "Valid until", "option": "Option", "markets": "Markets", "amount": "Amount (excl. VAT)", "agreedAmount": "Agreed amount (excl. VAT)", "billedTo": "Billed to", "sentBy": "Sent by", "role": "Role", "invitedBy": "Invited by", "submittedBy": "Submitted by", "sale": "Sale price", "cost": "Total cost", "margin": "Gross margin", "marginPct": "Gross margin (%)", "minMargin": "Required minimum", "original": "Original", "counter": "Counter-proposal", "diff": "Difference", "minPrice": "Minimum price for a 50% margin", "internal": "Internal use", "attached": "Attached", "statusOk": "Above minimum", "statusKo": "Below minimum", "pts": "pts", "footerClient": "You are receiving this email about proposal {{proposalNumber}}, managed by {{creatorName}} at Weekendesk Advertising.", "footerInternal": "Automatic notification from the Weekendesk Advertising platform.", "legal": "Weekendesk SAS · 28 rue de Londres · 75009 Paris", "fileClient": "Proposal-{{proposalNumber}}.pdf", "fileInternal": "Proposal-{{proposalNumber}}-internal.pdf", "support": "Placement", "dates": "Dates", "version": "Version"}, "it": {"proposal": "Proposta", "client": "Cliente", "validUntil": "Valida fino al", "option": "Opzione", "markets": "Mercati", "amount": "Importo (IVA esclusa)", "agreedAmount": "Importo concordato (IVA esclusa)", "billedTo": "Fatturazione a", "sentBy": "Inviata da", "role": "Ruolo", "invitedBy": "Invitato da", "submittedBy": "Inviata da", "sale": "Prezzo di vendita", "cost": "Costo totale", "margin": "Margine lordo", "marginPct": "Margine lordo (%)", "minMargin": "Minimo richiesto", "original": "Originale", "counter": "Controproposta", "diff": "Differenza", "minPrice": "Prezzo minimo per un margine del 50 %", "internal": "Uso interno", "attached": "Allegato", "statusOk": "Sopra il minimo", "statusKo": "Sotto il minimo", "pts": "pt.", "footerClient": "Ricevi questa e-mail in merito alla proposta {{proposalNumber}}, seguita da {{creatorName}} di Weekendesk Advertising.", "footerInternal": "Notifica automatica della piattaforma Weekendesk Advertising.", "legal": "Weekendesk SAS · 28 rue de Londres · 75009 Parigi", "fileClient": "Proposta-{{proposalNumber}}.pdf", "fileInternal": "Proposta-{{proposalNumber}}-interno.pdf", "support": "Supporto", "dates": "Date", "version": "Versione"}, "nl": {"proposal": "Voorstel", "client": "Klant", "validUntil": "Geldig tot", "option": "Optie", "markets": "Markten", "amount": "Bedrag (excl. btw)", "agreedAmount": "Overeengekomen bedrag (excl. btw)", "billedTo": "Facturatie aan", "sentBy": "Verzonden door", "role": "Rol", "invitedBy": "Uitgenodigd door", "submittedBy": "Ingediend door", "sale": "Verkoopprijs", "cost": "Totale kosten", "margin": "Brutomarge", "marginPct": "Brutomarge (%)", "minMargin": "Vereist minimum", "original": "Oorspronkelijk", "counter": "Tegenvoorstel", "diff": "Verschil", "minPrice": "Minimumprijs voor 50 % marge", "internal": "Intern gebruik", "attached": "Bijlage", "statusOk": "Boven het minimum", "statusKo": "Onder het minimum", "pts": "pnt.", "footerClient": "Je ontvangt deze e-mail over voorstel {{proposalNumber}}, opgevolgd door {{creatorName}} van Weekendesk Advertising.", "footerInternal": "Automatische melding van het Weekendesk Advertising-platform.", "legal": "Weekendesk SAS · 28 rue de Londres · 75009 Parijs", "fileClient": "Voorstel-{{proposalNumber}}.pdf", "fileInternal": "Voorstel-{{proposalNumber}}-intern.pdf", "support": "Plaatsing", "dates": "Data", "version": "Versie"}}, "emails": {"invite": {"n": 1, "audience": "internal", "title": "Invitación de nuevo usuario", "langs": {"es": {"subject": "{{inviterName}} te invita a la plataforma de Weekendesk Advertising", "preheader": "Entra con tu cuenta @weekendesk y prepara tus primeros presupuestos.", "title": "Te damos la bienvenida a Weekendesk Advertising", "intro": "Hola {{firstName}}, {{inviterName}} te ha dado acceso como <strong>Advertising Manager</strong>. Desde la plataforma preparas presupuestos, los envías a tus clientes con un enlace único y sigues cada respuesta en un solo sitio.", "points": ["Crea presupuestos de 1 a 3 opciones, con precios calculados desde la rate card.", "Envíalos por correo: el cliente los compara y responde desde su enlace.", "Recibe aquí la aceptación o la contrapropuesta, con el margen a la vista."], "cta": "entrar a la plataforma", "note": "Accede con tu cuenta de Google @weekendesk. Si no esperabas esta invitación, ignora este correo."}, "fr": {"subject": "{{inviterName}} t’invite sur la plateforme Weekendesk Advertising", "preheader": "Connecte-toi avec ton compte @weekendesk et prépare tes premières propositions.", "title": "Bienvenue sur Weekendesk Advertising", "intro": "Bonjour {{firstName}}, {{inviterName}} t’a donné accès en tant qu’<strong>Advertising Manager</strong>. Depuis la plateforme, tu prépares tes propositions, tu les envoies à tes clients via un lien unique et tu suis chaque réponse au même endroit.", "points": ["Crée des propositions de 1 à 3 options, avec des prix calculés depuis la rate card.", "Envoie-les par e-mail : le client compare et répond depuis son lien.", "Reçois ici l’acceptation ou la contre-proposition, marge à l’appui."], "cta": "accéder à la plateforme", "note": "Connecte-toi avec ton compte Google @weekendesk. Si tu n’attendais pas cette invitation, ignore cet e-mail."}, "en": {"subject": "{{inviterName}} has invited you to the Weekendesk Advertising platform", "preheader": "Sign in with your @weekendesk account and prepare your first proposals.", "title": "Welcome to Weekendesk Advertising", "intro": "Hi {{firstName}}, {{inviterName}} has given you access as an <strong>Advertising Manager</strong>. From the platform you prepare proposals, send them to your clients through a unique link, and follow every response in one place.", "points": ["Create proposals with 1 to 3 options, priced from the rate card.", "Send them by email: the client compares and responds from their link.", "Get acceptances and counter-proposals here, with the margin in plain sight."], "cta": "go to the platform", "note": "Sign in with your @weekendesk Google account. If you weren’t expecting this invitation, ignore this email."}}}, "proposal": {"n": 2, "audience": "client", "title": "Presupuesto enviado al cliente", "langs": {"es": {"subject": "Tu presupuesto de visibilidad en Weekendesk · {{proposalNumber}}", "preheader": "Compara las opciones con calma. Disponible hasta el {{validUntil}}.", "title": "Tu presupuesto está listo para revisar", "intro": "Hola {{firstName}}, {{creatorName}} ha preparado un presupuesto para <strong>{{clientCompany}}</strong>. Verás las opciones lado a lado, con formatos, mercados y fechas, para que compares sin prisa.", "cta": "ver el presupuesto", "note": "El enlace es personal y el presupuesto está disponible hasta el {{validUntil}}. ¿Dudas? Responde a este correo: {{creatorName}} te contesta directamente."}, "fr": {"subject": "Votre proposition de visibilité sur Weekendesk · {{proposalNumber}}", "preheader": "Comparez les options à votre rythme. Disponible jusqu’au {{validUntil}}.", "title": "Votre proposition est prête à être consultée", "intro": "Bonjour {{firstName}}, {{creatorName}} a préparé une proposition pour <strong>{{clientCompany}}</strong>. Vous y trouverez les options côte à côte, avec formats, marchés et dates, pour comparer sans précipitation.", "cta": "consulter la proposition", "note": "Ce lien est personnel et la proposition reste disponible jusqu’au {{validUntil}}. Une question ? Répondez à cet e-mail : {{creatorName}} vous répond directement."}, "en": {"subject": "Your Weekendesk visibility proposal · {{proposalNumber}}", "preheader": "Compare the options at your own pace. Available until {{validUntil}}.", "title": "Your proposal is ready to review", "intro": "Hi {{firstName}}, {{creatorName}} has prepared a proposal for <strong>{{clientCompany}}</strong>. You’ll see the options side by side, with formats, markets and dates, so you can compare without rushing.", "cta": "view the proposal", "note": "This link is personal and the proposal stays available until {{validUntil}}. Questions? Reply to this email and {{creatorName}} will answer you directly."}, "it": {"subject": "La sua proposta di visibilità su Weekendesk · {{proposalNumber}}", "preheader": "Confronti le opzioni con calma. Disponibile fino al {{validUntil}}.", "title": "La proposta è pronta da consultare", "intro": "Buongiorno {{firstName}}, {{creatorName}} ha preparato una proposta per <strong>{{clientCompany}}</strong>. Troverà le opzioni affiancate, con formati, mercati e date, per confrontarle senza fretta.", "cta": "consulta la proposta", "note": "Il link è personale e la proposta resta disponibile fino al {{validUntil}}. Ha dei dubbi? Risponda a questa e-mail: {{creatorName}} le risponde direttamente."}, "nl": {"subject": "Jouw zichtbaarheidsvoorstel bij Weekendesk · {{proposalNumber}}", "preheader": "Vergelijk de opties in alle rust. Beschikbaar tot {{validUntil}}.", "title": "Je voorstel staat klaar", "intro": "Hallo {{firstName}}, {{creatorName}} heeft een voorstel voorbereid voor <strong>{{clientCompany}}</strong>. Je ziet de opties naast elkaar, met formaten, markten en data, zodat je zonder haast kunt vergelijken.", "cta": "bekijk het voorstel", "note": "Deze link is persoonlijk en het voorstel blijft beschikbaar tot {{validUntil}}. Vragen? Beantwoord deze e-mail en {{creatorName}} reageert direct."}}}, "accepted_client": {"n": 3, "audience": "client", "title": "Confirmación de aceptación al cliente", "langs": {"es": {"subject": "Presupuesto {{proposalNumber}} confirmado: gracias, {{clientCompany}}", "preheader": "Adjuntamos el presupuesto aceptado y los siguientes pasos.", "title": "Presupuesto aceptado. Empezamos.", "intro": "Hola {{firstName}}, hemos recibido tu aceptación del presupuesto <strong>{{proposalNumber}}</strong>. Gracias por confiar en Weekendesk: tu visibilidad queda reservada en las fechas acordadas.", "nextTitle": "Qué pasa ahora", "steps": ["{{creatorName}} te escribirá muy pronto para coordinar materiales y calendario.", "El PDF adjunto recoge lo que has aceptado. Guárdalo como referencia."], "attachDesc": "Presupuesto aceptado", "note": "¿Algo que corregir? Responde a este correo y lo vemos juntos."}, "fr": {"subject": "Proposition {{proposalNumber}} confirmée : merci, {{clientCompany}}", "preheader": "La proposition acceptée est en pièce jointe, avec les prochaines étapes.", "title": "Proposition acceptée. On démarre.", "intro": "Bonjour {{firstName}}, nous avons bien reçu votre acceptation de la proposition <strong>{{proposalNumber}}</strong>. Merci de votre confiance : votre visibilité est réservée sur les dates convenues.", "nextTitle": "La suite", "steps": ["{{creatorName}} vous écrira très prochainement pour coordonner les visuels et le calendrier.", "Le PDF joint reprend ce que vous avez accepté. Conservez-le comme document de référence."], "attachDesc": "Proposition acceptée", "note": "Une correction à apporter ? Répondez à cet e-mail, nous regardons cela ensemble."}, "en": {"subject": "Proposal {{proposalNumber}} confirmed: thank you, {{clientCompany}}", "preheader": "The accepted proposal is attached, with what happens next.", "title": "Proposal accepted. We’re on.", "intro": "Hi {{firstName}}, we’ve received your acceptance of proposal <strong>{{proposalNumber}}</strong>. Thank you for your trust: your visibility is now reserved for the agreed dates.", "nextTitle": "What happens next", "steps": ["{{creatorName}} will write to you shortly to coordinate creative materials and the calendar.", "The attached PDF sets out what you’ve accepted. Keep it as your reference."], "attachDesc": "Accepted proposal", "note": "Something to correct? Reply to this email and we’ll sort it out together."}, "it": {"subject": "Proposta {{proposalNumber}} confermata: grazie, {{clientCompany}}", "preheader": "In allegato la proposta accettata e i prossimi passi.", "title": "Proposta accettata. Si parte.", "intro": "Buongiorno {{firstName}}, abbiamo ricevuto la sua accettazione della proposta <strong>{{proposalNumber}}</strong>. Grazie per la fiducia: la sua visibilità è riservata per le date concordate.", "nextTitle": "Cosa succede ora", "steps": ["{{creatorName}} le scriverà a breve per coordinare materiali e calendario.", "Il PDF allegato riepiloga ciò che ha accettato. Lo conservi come riferimento."], "attachDesc": "Proposta accettata", "note": "Qualcosa da correggere? Risponda a questa e-mail e lo verifichiamo insieme."}, "nl": {"subject": "Voorstel {{proposalNumber}} bevestigd: bedankt, {{clientCompany}}", "preheader": "Het aanvaarde voorstel zit in de bijlage, samen met de volgende stappen.", "title": "Voorstel aanvaard. We gaan van start.", "intro": "Hallo {{firstName}}, we hebben je akkoord op voorstel <strong>{{proposalNumber}}</strong> ontvangen. Bedankt voor je vertrouwen: jouw zichtbaarheid ligt vast voor de afgesproken data.", "nextTitle": "Wat er nu gebeurt", "steps": ["{{creatorName}} neemt binnenkort contact met je op om materiaal en planning af te stemmen.", "De bijgevoegde pdf bevat wat je hebt aanvaard. Bewaar hem als referentie."], "attachDesc": "Aanvaard voorstel", "note": "Klopt er iets niet? Beantwoord deze e-mail en we bekijken het samen."}}}, "accepted_am": {"n": 4, "audience": "internal", "title": "Aviso al Advertising Manager: cliente ha aceptado", "langs": {"es": {"subject": "{{clientCompany}} ha aceptado el presupuesto {{proposalNumber}}", "preheader": "Margen bruto: {{marginPct}}. PDF interno con costes adjunto.", "title": "Presupuesto aceptado", "intro": "<strong>{{clientCompany}}</strong> ha aceptado la opción «{{optionName}}» del presupuesto {{proposalNumber}}. Los soportes quedan bloqueados para otros clientes en las fechas acordadas.", "finTitle": "Rentabilidad de lo aceptado", "attachDesc": "Presupuesto detallado con costes y precios de venta", "cta": "abrir en la plataforma", "note": "Este correo y su adjunto contienen costes y márgenes. No lo reenvíes al cliente."}, "fr": {"subject": "{{clientCompany}} a accepté la proposition {{proposalNumber}}", "preheader": "Marge brute : {{marginPct}}. PDF interne avec les coûts en pièce jointe.", "title": "Proposition acceptée", "intro": "<strong>{{clientCompany}}</strong> a accepté l’option « {{optionName}} » de la proposition {{proposalNumber}}. Les supports sont désormais bloqués pour les autres clients sur les dates convenues.", "finTitle": "Rentabilité de ce qui est accepté", "attachDesc": "Proposition détaillée avec coûts et prix de vente", "cta": "ouvrir dans la plateforme", "note": "Cet e-mail et sa pièce jointe contiennent des coûts et des marges. Ne le transfère pas au client."}, "en": {"subject": "{{clientCompany}} has accepted proposal {{proposalNumber}}", "preheader": "Gross margin: {{marginPct}}. Internal PDF with costs attached.", "title": "Proposal accepted", "intro": "<strong>{{clientCompany}}</strong> has accepted the “{{optionName}}” option of proposal {{proposalNumber}}. The placements are now blocked for other clients on the agreed dates.", "finTitle": "Profitability of what was accepted", "attachDesc": "Detailed proposal with costs and sale prices", "cta": "open in the platform", "note": "This email and its attachment contain costs and margins. Do not forward it to the client."}}}, "counter_am": {"n": 5, "audience": "internal", "title": "Aviso: contrapropuesta recibida (con rentabilidad)", "langs": {"es": {"subject": "Contrapropuesta de {{clientCompany}} sobre {{proposalNumber}}: margen {{marginPct}}", "preheader": "Propone {{counterTotal}} en lugar de {{total}}. Revisa la rentabilidad antes de decidir.", "title": "{{clientCompany}} ha enviado una contrapropuesta", "intro": "El cliente ha rechazado el presupuesto {{proposalNumber}} y propone otras condiciones. Aquí ves cuánto cambia la rentabilidad para decidir si es aceptable.", "compTitle": "Original frente a contrapropuesta", "commentLabel": "Comentario del cliente", "verdictOk": "Por encima del mínimo. La contrapropuesta mantiene un margen bruto de {{marginPct}}, sobre el 50 % validado con Finanzas.", "verdictKo": "Por debajo del mínimo. Con estos importes el margen bruto es de {{marginPct}}, frente al 50 % validado con Finanzas. Para alcanzarlo, el precio de venta tendría que ser de {{minPrice}} como mínimo.", "attachDesc": "Contrapropuesta detallada con costes y márgenes", "cta": "revisar la contrapropuesta", "note": "Aceptarla o rechazarla (con motivo) se hace desde la plataforma. El cliente recibirá tu respuesta por correo."}, "fr": {"subject": "Contre-proposition de {{clientCompany}} sur {{proposalNumber}} : marge {{marginPct}}", "preheader": "Elle propose {{counterTotal}} au lieu de {{total}}. Vérifie la rentabilité avant de décider.", "title": "{{clientCompany}} a envoyé une contre-proposition", "intro": "Le client a refusé la proposition {{proposalNumber}} et suggère d’autres conditions. Voici l’impact sur la rentabilité, pour décider si elle est acceptable.", "compTitle": "Original face à la contre-proposition", "commentLabel": "Commentaire du client", "verdictOk": "Au-dessus du minimum. La contre-proposition conserve une marge brute de {{marginPct}}, au-delà des 50 % validés avec la Finance.", "verdictKo": "Sous le minimum. Avec ces montants, la marge brute est de {{marginPct}}, contre 50 % validés avec la Finance. Pour l’atteindre, le prix de vente devrait être d’au moins {{minPrice}}.", "attachDesc": "Contre-proposition détaillée avec coûts et marges", "cta": "examiner la contre-proposition", "note": "L’acceptation ou le refus (avec motif) se fait depuis la plateforme. Le client recevra ta réponse par e-mail."}, "en": {"subject": "{{clientCompany}} counter-proposal on {{proposalNumber}}: margin {{marginPct}}", "preheader": "They propose {{counterTotal}} instead of {{total}}. Check profitability before deciding.", "title": "{{clientCompany}} has sent a counter-proposal", "intro": "The client has declined proposal {{proposalNumber}} and suggests different terms. Here is how profitability changes, so you can decide whether it’s acceptable.", "compTitle": "Original vs counter-proposal", "commentLabel": "Client comment", "verdictOk": "Above the minimum. The counter-proposal keeps a gross margin of {{marginPct}}, above the 50% validated with Finance.", "verdictKo": "Below the minimum. At these amounts the gross margin is {{marginPct}}, against the 50% validated with Finance. To reach it, the sale price would need to be at least {{minPrice}}.", "attachDesc": "Detailed counter-proposal with costs and margins", "cta": "review the counter-proposal", "note": "Accepting or declining it (with a reason) is done in the platform. The client will receive your answer by email."}}}, "counter_accepted": {"n": 6, "audience": "client", "title": "Confirmación: aceptamos la contrapropuesta", "langs": {"es": {"subject": "Hemos aceptado tu contrapropuesta · {{proposalNumber}}", "preheader": "Adjuntamos el presupuesto con las condiciones acordadas.", "title": "Contrapropuesta aceptada", "intro": "Hola {{firstName}}, buenas noticias: hemos aceptado tu contrapropuesta para el presupuesto <strong>{{proposalNumber}}</strong>. Adjuntamos el documento con las condiciones acordadas.", "nextTitle": "Qué pasa ahora", "steps": ["{{creatorName}} te escribirá muy pronto para coordinar materiales y calendario.", "El PDF adjunto recoge las condiciones finales. Guárdalo como referencia."], "attachDesc": "Presupuesto con las condiciones acordadas", "note": "¿Algo que corregir? Responde a este correo y lo vemos juntos."}, "fr": {"subject": "Nous avons accepté votre contre-proposition · {{proposalNumber}}", "preheader": "La proposition avec les conditions convenues est en pièce jointe.", "title": "Contre-proposition acceptée", "intro": "Bonjour {{firstName}}, bonne nouvelle : nous avons accepté votre contre-proposition pour la proposition <strong>{{proposalNumber}}</strong>. Vous trouverez en pièce jointe le document reprenant les conditions convenues.", "nextTitle": "La suite", "steps": ["{{creatorName}} vous écrira très prochainement pour coordonner les visuels et le calendrier.", "Le PDF joint reprend les conditions finales. Conservez-le comme document de référence."], "attachDesc": "Proposition aux conditions convenues", "note": "Une correction à apporter ? Répondez à cet e-mail, nous regardons cela ensemble."}, "en": {"subject": "We’ve accepted your counter-proposal · {{proposalNumber}}", "preheader": "The proposal with the agreed terms is attached.", "title": "Counter-proposal accepted", "intro": "Hi {{firstName}}, good news: we’ve accepted your counter-proposal for proposal <strong>{{proposalNumber}}</strong>. The document with the agreed terms is attached.", "nextTitle": "What happens next", "steps": ["{{creatorName}} will write to you shortly to coordinate creative materials and the calendar.", "The attached PDF sets out the final terms. Keep it as your reference."], "attachDesc": "Proposal with the agreed terms", "note": "Something to correct? Reply to this email and we’ll sort it out together."}, "it": {"subject": "Abbiamo accettato la sua controproposta · {{proposalNumber}}", "preheader": "In allegato la proposta con le condizioni concordate.", "title": "Controproposta accettata", "intro": "Buongiorno {{firstName}}, buone notizie: abbiamo accettato la sua controproposta per la proposta <strong>{{proposalNumber}}</strong>. In allegato il documento con le condizioni concordate.", "nextTitle": "Cosa succede ora", "steps": ["{{creatorName}} le scriverà a breve per coordinare materiali e calendario.", "Il PDF allegato riepiloga le condizioni finali. Lo conservi come riferimento."], "attachDesc": "Proposta con le condizioni concordate", "note": "Qualcosa da correggere? Risponda a questa e-mail e lo verifichiamo insieme."}, "nl": {"subject": "We hebben je tegenvoorstel aanvaard · {{proposalNumber}}", "preheader": "Het voorstel met de afgesproken voorwaarden zit in de bijlage.", "title": "Tegenvoorstel aanvaard", "intro": "Hallo {{firstName}}, goed nieuws: we hebben je tegenvoorstel voor voorstel <strong>{{proposalNumber}}</strong> aanvaard. In de bijlage vind je het document met de afgesproken voorwaarden.", "nextTitle": "Wat er nu gebeurt", "steps": ["{{creatorName}} neemt binnenkort contact met je op om materiaal en planning af te stemmen.", "De bijgevoegde pdf bevat de definitieve voorwaarden. Bewaar hem als referentie."], "attachDesc": "Voorstel met de afgesproken voorwaarden", "note": "Klopt er iets niet? Beantwoord deze e-mail en we bekijken het samen."}}}, "counter_rejected": {"n": 7, "audience": "client", "title": "Rechazo de la contrapropuesta (con motivo)", "langs": {"es": {"subject": "Sobre tu contrapropuesta · {{proposalNumber}}", "preheader": "No podemos aceptarla tal como está. Te explicamos por qué y cómo seguir.", "title": "No podemos aceptar la contrapropuesta", "intro": "Hola {{firstName}}, gracias por proponer otras condiciones para el presupuesto <strong>{{proposalNumber}}</strong>. La hemos estudiado con atención y, tal como está, no podemos aceptarla.", "reasonLabel": "El motivo", "after": "Si quieres explorar otra combinación de formatos, mercados o fechas, responde a este correo: {{creatorName}} prepara contigo una nueva versión.", "cta": "escribir a {{creatorName}}"}, "fr": {"subject": "À propos de votre contre-proposition · {{proposalNumber}}", "preheader": "Nous ne pouvons pas l’accepter en l’état. Voici pourquoi, et comment continuer.", "title": "Nous ne pouvons pas accepter la contre-proposition", "intro": "Bonjour {{firstName}}, merci d’avoir proposé d’autres conditions pour la proposition <strong>{{proposalNumber}}</strong>. Nous l’avons étudiée avec attention et, en l’état, nous ne pouvons pas l’accepter.", "reasonLabel": "Le motif", "after": "Si vous souhaitez explorer une autre combinaison de formats, de marchés ou de dates, répondez à cet e-mail : {{creatorName}} prépare avec vous une nouvelle version.", "cta": "écrire à {{creatorName}}"}, "en": {"subject": "About your counter-proposal · {{proposalNumber}}", "preheader": "We can’t accept it as it stands. Here is why, and how we can continue.", "title": "We can’t accept the counter-proposal", "intro": "Hi {{firstName}}, thank you for suggesting different terms for proposal <strong>{{proposalNumber}}</strong>. We’ve looked at it carefully and, as it stands, we can’t accept it.", "reasonLabel": "The reason", "after": "If you’d like to explore another mix of formats, markets or dates, reply to this email: {{creatorName}} will prepare a new version with you.", "cta": "write to {{creatorName}}"}, "it": {"subject": "Sulla sua controproposta · {{proposalNumber}}", "preheader": "Così com’è non possiamo accettarla. Le spieghiamo perché e come proseguire.", "title": "Non possiamo accettare la controproposta", "intro": "Buongiorno {{firstName}}, grazie per aver proposto condizioni diverse per la proposta <strong>{{proposalNumber}}</strong>. L’abbiamo valutata con attenzione e, così com’è, non possiamo accettarla.", "reasonLabel": "Il motivo", "after": "Se desidera esplorare un’altra combinazione di formati, mercati o date, risponda a questa e-mail: {{creatorName}} prepara con lei una nuova versione.", "cta": "scrivi a {{creatorName}}"}, "nl": {"subject": "Over je tegenvoorstel · {{proposalNumber}}", "preheader": "Zoals het er nu ligt kunnen we het niet aanvaarden. Hier lees je waarom en hoe we verder kunnen.", "title": "We kunnen het tegenvoorstel niet aanvaarden", "intro": "Hallo {{firstName}}, bedankt voor je voorstel van andere voorwaarden voor voorstel <strong>{{proposalNumber}}</strong>. We hebben het aandachtig bekeken en kunnen het zoals het er nu ligt niet aanvaarden.", "reasonLabel": "De reden", "after": "Wil je een andere combinatie van formaten, markten of data bekijken? Beantwoord dan deze e-mail: {{creatorName}} werkt samen met je een nieuwe versie uit.", "cta": "schrijf naar {{creatorName}}"}}}, "rejected_am": {"n": 8, "audience": "internal", "title": "Aviso: cliente rechaza el presupuesto (con motivo)", "langs": {"es": {"subject": "{{clientCompany}} ha rechazado el presupuesto {{proposalNumber}}", "preheader": "El cliente explica el motivo. No ha enviado contrapropuesta.", "title": "Presupuesto rechazado", "intro": "<strong>{{clientCompany}}</strong> ha rechazado el presupuesto {{proposalNumber}} y no ha enviado contrapropuesta. Este es el motivo que ha indicado.", "reasonLabel": "Motivo del cliente", "after": "Los soportes siguen disponibles para otros clientes. Si ves margen para retomarlo, escribe al cliente o prepara una nueva versión desde la plataforma.", "cta": "abrir en la plataforma", "note": "El cliente no recibe ningún aviso adicional: la conversación sigue en tus manos."}, "fr": {"subject": "{{clientCompany}} a refusé la proposition {{proposalNumber}}", "preheader": "Le client explique son motif. Aucune contre-proposition n’a été envoyée.", "title": "Proposition refusée", "intro": "<strong>{{clientCompany}}</strong> a refusé la proposition {{proposalNumber}} sans envoyer de contre-proposition. Voici le motif indiqué.", "reasonLabel": "Motif du client", "after": "Les supports restent disponibles pour les autres clients. Si tu vois une marge de manœuvre, écris au client ou prépare une nouvelle version depuis la plateforme.", "cta": "ouvrir dans la plateforme", "note": "Le client ne reçoit aucun message supplémentaire : la suite est entre tes mains."}, "en": {"subject": "{{clientCompany}} has declined proposal {{proposalNumber}}", "preheader": "The client explains why. No counter-proposal was sent.", "title": "Proposal declined", "intro": "<strong>{{clientCompany}}</strong> has declined proposal {{proposalNumber}} without sending a counter-proposal. Here is the reason they gave.", "reasonLabel": "Client’s reason", "after": "The placements remain available for other clients. If you see room to reopen the conversation, write to the client or prepare a new version from the platform.", "cta": "open in the platform", "note": "The client receives no further message: what happens next is in your hands."}}}, "counter_received": {"n": 9, "audience": "client", "title": "Acuse de recibo de la contrapropuesta al cliente", "langs": {"es": {"subject": "Hemos recibido tu contrapropuesta · {{proposalNumber}}", "preheader": "La estudiamos con el equipo y te respondemos por correo.", "title": "Contrapropuesta recibida", "intro": "Hola {{firstName}}, hemos recibido tu contrapropuesta para el presupuesto <strong>{{proposalNumber}}</strong>. {{creatorName}} la estudia con el equipo y te responde por correo.", "note": "Mientras tanto no tienes que hacer nada. Si quieres añadir algo, responde a este correo."}, "fr": {"subject": "Nous avons bien reçu votre contre-proposition · {{proposalNumber}}", "preheader": "Nous l’étudions avec l’équipe et vous répondons par e-mail.", "title": "Contre-proposition reçue", "intro": "Bonjour {{firstName}}, nous avons bien reçu votre contre-proposition pour la proposition <strong>{{proposalNumber}}</strong>. {{creatorName}} l’étudie avec l’équipe et vous répond par e-mail.", "note": "Vous n’avez rien à faire pour le moment. Pour ajouter un élément, répondez à cet e-mail."}, "en": {"subject": "We’ve received your counter-proposal · {{proposalNumber}}", "preheader": "We’re reviewing it with the team and will reply by email.", "title": "Counter-proposal received", "intro": "Hi {{firstName}}, we’ve received your counter-proposal for proposal <strong>{{proposalNumber}}</strong>. {{creatorName}} is reviewing it with the team and will reply by email.", "note": "Nothing to do in the meantime. If you’d like to add anything, reply to this email."}, "it": {"subject": "Abbiamo ricevuto la sua controproposta · {{proposalNumber}}", "preheader": "La valutiamo con il team e le rispondiamo via e-mail.", "title": "Controproposta ricevuta", "intro": "Buongiorno {{firstName}}, abbiamo ricevuto la sua controproposta per la proposta <strong>{{proposalNumber}}</strong>. {{creatorName}} la valuta con il team e le risponde via e-mail.", "note": "Nel frattempo non deve fare nulla. Se desidera aggiungere qualcosa, risponda a questa e-mail."}, "nl": {"subject": "We hebben je tegenvoorstel ontvangen · {{proposalNumber}}", "preheader": "We bekijken het met het team en antwoorden per e-mail.", "title": "Tegenvoorstel ontvangen", "intro": "Hallo {{firstName}}, we hebben je tegenvoorstel voor voorstel <strong>{{proposalNumber}}</strong> ontvangen. {{creatorName}} bekijkt het met het team en antwoordt per e-mail.", "note": "Je hoeft ondertussen niets te doen. Wil je iets toevoegen, beantwoord dan deze e-mail."}}}, "reminder": {"n": 10, "audience": "client", "title": "Recordatorio de caducidad al cliente", "langs": {"es": {"subject": "Tu presupuesto {{proposalNumber}} sigue disponible hasta el {{validUntil}}", "preheader": "Tómate el tiempo que necesites hasta esa fecha.", "title": "Tu presupuesto sigue a tu disposición", "intro": "Hola {{firstName}}, te recordamos que el presupuesto <strong>{{proposalNumber}}</strong> para {{clientCompany}} está disponible hasta el <strong>{{validUntil}}</strong>. Pasada esa fecha habrá que prepararlo de nuevo, y precios y disponibilidad podrían cambiar.", "cta": "ver el presupuesto", "note": "¿Necesitas ajustar algo? Responde a este correo y {{creatorName}} lo revisa contigo."}, "fr": {"subject": "Votre proposition {{proposalNumber}} reste disponible jusqu’au {{validUntil}}", "preheader": "Prenez le temps qu’il vous faut jusqu’à cette date.", "title": "Votre proposition reste à votre disposition", "intro": "Bonjour {{firstName}}, nous vous rappelons que la proposition <strong>{{proposalNumber}}</strong> pour {{clientCompany}} est disponible jusqu’au <strong>{{validUntil}}</strong>. Passé ce délai, elle devra être préparée à nouveau, et tarifs et disponibilités pourraient évoluer.", "cta": "consulter la proposition", "note": "Un ajustement à demander ? Répondez à cet e-mail, {{creatorName}} en discute avec vous."}, "en": {"subject": "Your proposal {{proposalNumber}} is available until {{validUntil}}", "preheader": "Take the time you need until then.", "title": "Your proposal is still waiting for you", "intro": "Hi {{firstName}}, a reminder that proposal <strong>{{proposalNumber}}</strong> for {{clientCompany}} is available until <strong>{{validUntil}}</strong>. After that date it will need to be prepared again, and prices and availability may change.", "cta": "view the proposal", "note": "Need to adjust something? Reply to this email and {{creatorName}} will go through it with you."}, "it": {"subject": "La sua proposta {{proposalNumber}} è disponibile fino al {{validUntil}}", "preheader": "Si prenda il tempo che le serve fino a quella data.", "title": "La sua proposta è ancora a disposizione", "intro": "Buongiorno {{firstName}}, le ricordiamo che la proposta <strong>{{proposalNumber}}</strong> per {{clientCompany}} è disponibile fino al <strong>{{validUntil}}</strong>. Dopo tale data andrà preparata di nuovo e prezzi e disponibilità potrebbero cambiare.", "cta": "consulta la proposta", "note": "Ha bisogno di modificare qualcosa? Risponda a questa e-mail e {{creatorName}} ne parla con lei."}, "nl": {"subject": "Je voorstel {{proposalNumber}} is beschikbaar tot {{validUntil}}", "preheader": "Neem de tijd die je nodig hebt tot die datum.", "title": "Je voorstel ligt nog voor je klaar", "intro": "Hallo {{firstName}}, een herinnering: voorstel <strong>{{proposalNumber}}</strong> voor {{clientCompany}} is beschikbaar tot <strong>{{validUntil}}</strong>. Daarna moet het opnieuw worden opgesteld en kunnen prijzen en beschikbaarheid veranderen.", "cta": "bekijk het voorstel", "note": "Wil je iets aanpassen? Beantwoord deze e-mail en {{creatorName}} loopt het met je door."}}}, "expired_am": {"n": 11, "audience": "internal", "title": "Aviso al AM: presupuesto caducado", "langs": {"es": {"subject": "El presupuesto {{proposalNumber}} de {{clientCompany}} ha caducado", "preheader": "Sin respuesta del cliente. Puedes retomarlo con una nueva versión.", "title": "Presupuesto caducado", "intro": "El presupuesto {{proposalNumber}} enviado a <strong>{{clientCompany}}</strong> ha caducado sin respuesta el {{validUntil}}.", "after": "Puedes escribir al cliente o crear una nueva versión desde la plataforma.", "cta": "abrir en la plataforma", "note": "El cliente ya no puede aceptar este presupuesto."}, "fr": {"subject": "La proposition {{proposalNumber}} de {{clientCompany}} a expiré", "preheader": "Sans réponse du client. Tu peux la relancer avec une nouvelle version.", "title": "Proposition expirée", "intro": "La proposition {{proposalNumber}} envoyée à <strong>{{clientCompany}}</strong> a expiré le {{validUntil}} sans réponse.", "after": "Tu peux écrire au client ou créer une nouvelle version depuis la plateforme.", "cta": "ouvrir dans la plateforme", "note": "Le client ne peut plus accepter cette proposition."}, "en": {"subject": "Proposal {{proposalNumber}} for {{clientCompany}} has expired", "preheader": "No response from the client. You can pick it up again with a new version.", "title": "Proposal expired", "intro": "Proposal {{proposalNumber}} sent to <strong>{{clientCompany}}</strong> expired without a response on {{validUntil}}.", "after": "You can write to the client or create a new version from the platform.", "cta": "open in the platform", "note": "The client can no longer accept this proposal."}}}, "blocked_am": {"n": 12, "audience": "internal", "title": "Aviso al AM: soporte ocupado por otro cliente", "langs": {"es": {"subject": "{{supportName}} ya no está disponible para el presupuesto {{proposalNumber}}", "preheader": "Otro cliente ha ocupado el soporte en fechas que se solapan.", "title": "Soporte ocupado", "intro": "Otro cliente ha aceptado una campaña en <strong>{{supportName}}</strong> en fechas que se solapan con el presupuesto {{proposalNumber}} de {{clientCompany}}. Ya no se puede aceptar tal como está.", "after": "Propón otras fechas al cliente con una nueva versión, o busca un soporte alternativo.", "cta": "crear una nueva versión", "note": "No compartas con el cliente qué anunciante ha reservado el soporte."}, "fr": {"subject": "{{supportName}} n’est plus disponible pour la proposition {{proposalNumber}}", "preheader": "Un autre client a réservé le support sur des dates qui se chevauchent.", "title": "Support occupé", "intro": "Un autre client a accepté une campagne sur <strong>{{supportName}}</strong> à des dates qui chevauchent la proposition {{proposalNumber}} de {{clientCompany}}. Elle ne peut plus être acceptée telle quelle.", "after": "Propose d’autres dates au client avec une nouvelle version, ou cherche un support alternatif.", "cta": "créer une nouvelle version", "note": "Ne communique pas au client le nom de l’annonceur qui a réservé le support."}, "en": {"subject": "{{supportName}} is no longer available for proposal {{proposalNumber}}", "preheader": "Another client has taken the placement on overlapping dates.", "title": "Placement taken", "intro": "Another client has accepted a campaign on <strong>{{supportName}}</strong> on dates that overlap proposal {{proposalNumber}} for {{clientCompany}}. It can no longer be accepted as it stands.", "after": "Offer the client other dates with a new version, or look for an alternative placement.", "cta": "create a new version", "note": "Don’t tell the client which advertiser has booked the placement."}}}, "new_version": {"n": 13, "audience": "client", "title": "Nueva versión del presupuesto al cliente", "langs": {"es": {"subject": "Hemos actualizado tu presupuesto · {{proposalNumber}}", "preheader": "El enlace anterior ya no es válido. Usa este.", "title": "Tienes una nueva versión del presupuesto", "intro": "Hola {{firstName}}, {{creatorName}} ha actualizado el presupuesto para <strong>{{clientCompany}}</strong>. La versión anterior deja de estar disponible: a partir de ahora vale esta.", "cta": "ver la nueva versión", "note": "Tienes hasta el {{validUntil}} para revisarla. ¿Dudas? Responde a este correo."}, "fr": {"subject": "Nous avons mis à jour votre proposition · {{proposalNumber}}", "preheader": "L’ancien lien n’est plus valable. Utilisez celui-ci.", "title": "Une nouvelle version de votre proposition est disponible", "intro": "Bonjour {{firstName}}, {{creatorName}} a mis à jour la proposition pour <strong>{{clientCompany}}</strong>. La version précédente n’est plus disponible : c’est désormais celle-ci qui fait foi.", "cta": "consulter la nouvelle version", "note": "Vous avez jusqu’au {{validUntil}} pour l’examiner. Une question ? Répondez à cet e-mail."}, "en": {"subject": "We’ve updated your proposal · {{proposalNumber}}", "preheader": "The previous link is no longer valid. Use this one.", "title": "There’s a new version of your proposal", "intro": "Hi {{firstName}}, {{creatorName}} has updated the proposal for <strong>{{clientCompany}}</strong>. The previous version is no longer available: this is the one that counts from now on.", "cta": "view the new version", "note": "You have until {{validUntil}} to review it. Questions? Reply to this email."}, "it": {"subject": "Abbiamo aggiornato la sua proposta · {{proposalNumber}}", "preheader": "Il link precedente non è più valido. Usi questo.", "title": "È disponibile una nuova versione della proposta", "intro": "Buongiorno {{firstName}}, {{creatorName}} ha aggiornato la proposta per <strong>{{clientCompany}}</strong>. La versione precedente non è più disponibile: da ora vale questa.", "cta": "consulta la nuova versione", "note": "Ha tempo fino al {{validUntil}} per esaminarla. Dubbi? Risponda a questa e-mail."}, "nl": {"subject": "We hebben je voorstel bijgewerkt · {{proposalNumber}}", "preheader": "De vorige link is niet meer geldig. Gebruik deze.", "title": "Er staat een nieuwe versie van je voorstel klaar", "intro": "Hallo {{firstName}}, {{creatorName}} heeft het voorstel voor <strong>{{clientCompany}}</strong> bijgewerkt. De vorige versie is niet meer beschikbaar: vanaf nu geldt deze.", "cta": "bekijk de nieuwe versie", "note": "Je hebt tot {{validUntil}} om het te bekijken. Vragen? Beantwoord deze e-mail."}}}, "opened_am": {"n": 14, "audience": "internal", "title": "Aviso al AM: cliente abre el presupuesto (1ª vez)", "langs": {"es": {"subject": "{{clientCompany}} ha abierto el presupuesto {{proposalNumber}}", "preheader": "Primera apertura. Buen momento para un seguimiento.", "title": "Presupuesto abierto", "intro": "<strong>{{clientCompany}}</strong> acaba de abrir por primera vez el presupuesto {{proposalNumber}}.", "after": "Solo te avisamos esta primera vez. Es buen momento para escribirle y resolver dudas.", "cta": "abrir en la plataforma", "note": "El aviso se genera al abrir el enlace del presupuesto, no al abrir el correo."}, "fr": {"subject": "{{clientCompany}} a ouvert la proposition {{proposalNumber}}", "preheader": "Première ouverture. Bon moment pour une relance.", "title": "Proposition consultée", "intro": "<strong>{{clientCompany}}</strong> vient d’ouvrir pour la première fois la proposition {{proposalNumber}}.", "after": "Nous te prévenons uniquement cette première fois. C’est le bon moment pour lui écrire et répondre à ses questions.", "cta": "ouvrir dans la plateforme", "note": "L’alerte se déclenche à l’ouverture du lien de la proposition, pas à l’ouverture de l’e-mail."}, "en": {"subject": "{{clientCompany}} has opened proposal {{proposalNumber}}", "preheader": "First open. A good moment to follow up.", "title": "Proposal opened", "intro": "<strong>{{clientCompany}}</strong> has just opened proposal {{proposalNumber}} for the first time.", "after": "We only notify you this first time. It’s a good moment to write and answer any questions.", "cta": "open in the platform", "note": "This alert is triggered when the proposal link is opened, not when the email is opened."}}}}, "reasons": {"clientReject": {"budget": {"es": "El importe supera nuestro presupuesto", "fr": "Le montant dépasse notre budget", "en": "The amount exceeds our budget", "it": "L’importo supera il nostro budget", "nl": "Het bedrag overschrijdt ons budget"}, "timing": {"es": "El calendario no nos encaja", "fr": "Le calendrier ne nous convient pas", "en": "The timing doesn’t work for us", "it": "Il calendario non ci è adatto", "nl": "De timing past niet"}, "priority": {"es": "Hemos cambiado de prioridades", "fr": "Nos priorités ont changé", "en": "Our priorities have changed", "it": "Le nostre priorità sono cambiate", "nl": "Onze prioriteiten zijn veranderd"}, "format": {"es": "Buscamos otros formatos o mercados", "fr": "Nous cherchons d’autres formats ou marchés", "en": "We’re looking for other formats or markets", "it": "Cerchiamo altri formati o mercati", "nl": "We zoeken andere formaten of markten"}, "other": {"es": "Otro motivo", "fr": "Autre motif", "en": "Other reason", "it": "Altro motivo", "nl": "Andere reden"}}, "counterReject": {"cost": {"es": "El importe propuesto no cubre los costes de producción de este formato.", "fr": "Le montant proposé ne couvre pas les coûts de production de ce format.", "en": "The proposed amount doesn’t cover the production costs of this format.", "it": "L’importo proposto non copre i costi di produzione di questo formato.", "nl": "Het voorgestelde bedrag dekt de productiekosten van dit formaat niet."}, "scope": {"es": "Con ese importe podemos ofrecer un alcance menor, por ejemplo menos mercados o menos formatos.", "fr": "Avec ce montant, nous pouvons proposer une portée réduite, par exemple moins de marchés ou de formats.", "en": "At that amount we can offer a smaller scope, for example fewer markets or formats.", "it": "Con questo importo possiamo offrire una portata ridotta, ad esempio meno mercati o formati.", "nl": "Met dat bedrag kunnen we een kleiner bereik aanbieden, bijvoorbeeld minder markten of formaten."}, "availability": {"es": "Las fechas o el soporte que propones no están disponibles.", "fr": "Les dates ou le support que vous proposez ne sont pas disponibles.", "en": "The dates or placement you suggest are not available.", "it": "Le date o il supporto che propone non sono disponibili.", "nl": "De data of de plaatsing die je voorstelt zijn niet beschikbaar."}, "other": {"es": "Otro motivo", "fr": "Autre motif", "en": "Other reason", "it": "Altro motivo", "nl": "Andere reden"}}}};
+
+/* ── EMAIL_TOKENS: token del design system -> hex (inline en el email) ── */
+const C = {
+  fg1:'#1E1E1E',   /* --foreground-primary   */
+  fg2:'#4F4F4F',   /* --foreground-secondary */
+  fg3:'#888888',   /* --foreground-tertiary  */
+  bg1:'#FFFFFF',   /* --background-primary   */
+  bg2:'#F6F6F6',   /* --background-secondary */
+  bd:'#D1D1D1',    /* --border-primary       */
+  bd2:'#E7E7E7',   /* --border-secondary     */
+  red:'#F8443A',   /* --accent-primary (SOLO botón primario) */
+  ok:'#198571',    /* --success              */
+  okBg:'#E3FDED',  /* --success-background   */
+  no:'#EC0202',    /* --danger               */
+  noBg:'#FFE1E1',  /* --danger-background    */
+  warnBg:'#FDF7E2',/* --warning-background   */
+  navy:'#001C4D'   /* --brand-navy-blue      */
+};
+const LOGO = 'https://static.booking.weekendesk.fr/storage/website/logos/logo-orange-h96.png'; /* logo oficial, PNG alojado (los clientes de correo no soportan SVG) */
+const FH = "'Host Grotesk','Helvetica Neue',Helvetica,Arial,sans-serif";
+const FB = "'Inter','Helvetica Neue',Helvetica,Arial,sans-serif";
+
+const LOCALE = {es:'es-ES', fr:'fr-FR', en:'en-GB', it:'it-IT', nl:'nl-BE'};
+const LANGS = ['es','fr','en','it','nl'];
+const LANG_NAME = {es:'ES', fr:'FR', en:'EN', it:'IT', nl:'NL'};
+
+/* ── Datos de ejemplo ── */
+const SAMPLE = {
+  clientFirst:'Camille', clientCompany:'Destination Exemple', proposalNumber:'2026-014',
+  inviterName:'Vincent',
+  creator:{es:'Mario Martínez', fr:'Rémi Challal', en:'Rémi Challal', it:'Mario Martínez', nl:'Rémi Challal'},
+  amFirst:{es:'Mario', fr:'Rémi', en:'Rémi'},
+  option:{es:'Pack Premium · Mercados de Navidad', fr:'Pack Premium · Marchés de Noël', en:'Premium pack · Christmas Markets', it:'Pack Premium · Mercatini di Natale', nl:'Premium pack · Kerstmarkten'},
+  markets:'FR · ES · BE-FR',
+  support:{es:'Newsletter dedicada', fr:'Newsletter dédiée', en:'Dedicated newsletter'},
+  clientNote:{es:'Preferimos esperar al próximo trimestre para replantear la campaña.', fr:'Nous préférons attendre le prochain trimestre pour repenser la campagne.', en:'We’d prefer to wait until next quarter to rethink the campaign.'},
+  counterNote:{es:'Si quieres, preparamos una versión centrada en un solo mercado.', fr:'Si vous le souhaitez, nous préparons une version centrée sur un seul marché.', en:'If you’d like, we can prepare a version focused on a single market.', it:'Se lo desidera, prepariamo una versione incentrata su un solo mercato.', nl:'Als je wilt, bereiden we een versie voor die op één markt is gericht.'},
+  billedTo:'Destination Exemple SAS · FR12 345678901',
+  total:6000, cost:2520, sent:new Date(2026,8,30), valid:new Date(2026,9,14),
+  comment:{
+    es:'Nuestro presupuesto para este trimestre es de 4.800 €. ¿Podríais ajustar el paquete a esa cifra?',
+    fr:'Notre budget pour ce trimestre est de 4 800 €. Pourriez-vous ajuster le pack à ce montant ?',
+    en:'Our budget for this quarter is €4,800. Could you adjust the package to that figure?'
+  },
+  clientReason:{
+    es:'El importe supera lo previsto para este año. Preferimos esperar al próximo trimestre para replantear la campaña.',
+    fr:'Le montant dépasse ce qui était prévu cette année. Nous préférons attendre le prochain trimestre pour repenser la campagne.',
+    en:'The amount exceeds what we planned for this year. We’d prefer to wait until next quarter to rethink the campaign.'
+  },
+  reason:{
+    es:'Con 4.800 € no cubrimos los costes de producción del formato de mayor visibilidad. Sí podemos acercarnos si reducimos el alcance, por ejemplo manteniendo la campaña en un solo mercado.',
+    fr:'Avec 4 800 €, nous ne couvrons pas les coûts de production du format le plus visible. Nous pouvons nous rapprocher en réduisant la portée, par exemple en gardant la campagne sur un seul marché.',
+    en:'At €4,800 we don’t cover the production costs of the highest-visibility format. We can get closer by reducing the scope, for example by keeping the campaign in a single market.',
+    it:'Con 4.800 € non copriamo i costi di produzione del formato di maggiore visibilità. Possiamo avvicinarci riducendo la portata, ad esempio mantenendo la campagna su un solo mercato.',
+    nl:'Met € 4.800 dekken we de productiekosten van het formaat met de grootste zichtbaarheid niet. We kunnen dichter komen door het bereik te beperken, bijvoorbeeld door de campagne op één markt te houden.'
+  }
+};
+
+/* ── Metadatos de envío (cabecera del email; fuera del HTML) ── */
+const META = {
+  invite:          {to:'nuevo Advertising Manager', cc:'—', bcc:'—', reply:'quien invita', att:'—'},
+  proposal:        {to:'contacto del cliente', cc:'creador del presupuesto', bcc:'contracting@weekendesk.fr', reply:'creador del presupuesto', att:'— (el presupuesto se ve en el enlace)'},
+  accepted_client: {to:'contacto del cliente', cc:'creador del presupuesto', bcc:'contracting@weekendesk.fr', reply:'creador del presupuesto', att:'PDF cliente (sin costes ni márgenes)'},
+  accepted_am:     {to:'creador del presupuesto', cc:'contracting@weekendesk.fr (propuesto)', bcc:'—', reply:'no-reply', att:'PDF interno (costes, precios de venta, margen)'},
+  counter_am:      {to:'creador del presupuesto', cc:'Head of Advertising si margen < 50 % (propuesto)', bcc:'—', reply:'no-reply', att:'PDF interno de la contrapropuesta'},
+  counter_accepted:{to:'contacto del cliente', cc:'creador del presupuesto', bcc:'contracting@weekendesk.fr', reply:'creador del presupuesto', att:'PDF cliente (sin costes ni márgenes)'},
+  rejected_am:     {to:'creador del presupuesto', cc:'—', bcc:'—', reply:'no-reply', att:'—'},
+  counter_received:{to:'contacto del cliente', cc:'creador del presupuesto', bcc:'contracting@weekendesk.fr', reply:'creador del presupuesto', att:'—'},
+  reminder:        {to:'contacto del cliente', cc:'creador del presupuesto', bcc:'contracting@weekendesk.fr', reply:'creador del presupuesto', att:'— · se envía si no hay respuesta (p. ej. día 10 de 14)'},
+  expired_am:      {to:'creador del presupuesto', cc:'—', bcc:'—', reply:'no-reply', att:'—'},
+  blocked_am:      {to:'creador del presupuesto', cc:'—', bcc:'—', reply:'no-reply', att:'—'},
+  new_version:     {to:'contacto del cliente', cc:'creador del presupuesto', bcc:'contracting@weekendesk.fr', reply:'creador del presupuesto', att:'—'},
+  opened_am:       {to:'creador del presupuesto', cc:'—', bcc:'—', reply:'no-reply', att:'— · solo la primera apertura'},
+  counter_rejected:{to:'contacto del cliente', cc:'creador del presupuesto', bcc:'contracting@weekendesk.fr', reply:'creador del presupuesto', att:'—'}
+};
+const FROM = 'Weekendesk Advertising <advertising@weekendesk.fr> (remitente propuesto · pendiente DNS)';
+
+/* ── Utilidades ── */
+const tpl = (s, d) => String(s).replace(/\{\{(\w+)\}\}/g, (_, k) => (d[k] !== undefined ? d[k] : '{{'+k+'}}'));
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const money = (n, lang, sign) => new Intl.NumberFormat(LOCALE[lang], {style:'currency', currency:'EUR', maximumFractionDigits:0, useGrouping:'always', signDisplay: sign ? 'exceptZero' : 'auto'}).format(n);
+const pct = (r, lang) => new Intl.NumberFormat(LOCALE[lang], {style:'percent', minimumFractionDigits:1, maximumFractionDigits:1}).format(r);
+const pts = (r, lang, unit) => new Intl.NumberFormat(LOCALE[lang], {minimumFractionDigits:1, maximumFractionDigits:1, signDisplay:'exceptZero'}).format(r*100) + ' ' + unit;
+const dateL = (d, lang) => new Intl.DateTimeFormat(LOCALE[lang], {dateStyle:'long'}).format(d);
+
+/* ── Bloques email-safe (tablas + estilos inline) ── */
+const P = 'font-family:'+FB+';';
+const btn = (label, href, kind) => kind === 'primary'
+  ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" class="btn"><tr><td align="center" bgcolor="${C.red}" style="border-radius:8px;"><a href="${href}" style="display:inline-block;padding:16px 20px;${P}font-size:16px;font-weight:700;line-height:1.2;color:#FFFFFF;text-decoration:none;border-radius:8px;">${label}</a></td></tr></table>`
+  : `<table role="presentation" cellpadding="0" cellspacing="0" border="0" class="btn"><tr><td align="center" bgcolor="${C.bg1}" style="border-radius:8px;border:1px solid ${C.bd};"><a href="${href}" style="display:inline-block;padding:16px 20px;${P}font-size:16px;font-weight:400;line-height:1.2;color:${C.fg1};text-decoration:none;border-radius:8px;">${label}</a></td></tr></table>`;
+const h1 = t => `<h1 style="margin:0 0 16px;font-family:${FH};font-weight:800;font-size:28px;line-height:1.15;letter-spacing:-0.5px;color:${C.fg1};">${t}</h1>`;
+const para = (t, extra) => `<p style="margin:0 0 24px;${P}font-size:16px;line-height:1.5;color:${C.fg1};${extra||''}">${t}</p>`;
+const small = t => `<p style="margin:24px 0 0;${P}font-size:14px;line-height:1.5;color:${C.fg2};">${t}</p>`;
+const sect = t => `<p style="margin:0 0 12px;font-family:${FH};font-weight:700;font-size:18px;line-height:1.22;color:${C.fg1};">${t}</p>`;
+const gap = n => `<div style="height:${n}px;line-height:${n}px;font-size:0;">&nbsp;</div>`;
+const pill = (ok, text, onTint) => `<span style="display:inline-block;padding:4px 8px;border-radius:8px;${P}font-size:12px;line-height:1.3;background:${onTint?C.bg1:(ok?C.okBg:C.noBg)};color:${ok?C.ok:C.no};font-weight:600;">${text}</span>`;
+
+const rowsCard = rows => {
+  const tr = rows.map(([l, v], i) => `<tr><td style="padding:12px 16px;${i<rows.length-1?`border-bottom:1px solid ${C.bd2};`:''}${P}font-size:14px;line-height:1.4;color:${C.fg3};width:40%;vertical-align:top;">${l}</td><td style="padding:12px 16px;${i<rows.length-1?`border-bottom:1px solid ${C.bd2};`:''}${P}font-size:14px;line-height:1.4;color:${C.fg1};font-weight:600;vertical-align:top;">${v}</td></tr>`).join('');
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${C.bd};border-radius:16px;border-collapse:separate;border-spacing:0;">${tr}</table>`;
+};
+const numbered = items => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${items.map((t,i)=>`<tr><td width="36" valign="top" style="padding:0 0 12px;"><div style="width:24px;height:24px;line-height:24px;text-align:center;border-radius:12px;background:${C.bg2};font-family:${FH};font-weight:800;font-size:13px;color:${C.fg1};">${i+1}</div></td><td valign="top" style="padding:0 0 12px;${P}font-size:16px;line-height:1.5;color:${C.fg1};">${t}</td></tr>`).join('')}</table>`;
+const checks = items => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${items.map(t=>`<tr><td width="28" valign="top" style="padding:0 0 12px;${P}font-size:16px;line-height:1.5;color:${C.ok};font-weight:700;">&#10003;</td><td valign="top" style="padding:0 0 12px;${P}font-size:16px;line-height:1.5;color:${C.fg1};">${t}</td></tr>`).join('')}</table>`;
+const attach = (file, desc) => `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${C.bd};border-radius:8px;border-collapse:separate;border-spacing:0;"><tr><td width="56" style="padding:12px 0 12px 12px;"><div style="width:40px;height:40px;line-height:40px;text-align:center;border-radius:8px;background:${C.bg2};${P}font-size:12px;font-weight:700;color:${C.fg1};">PDF</div></td><td style="padding:12px 16px 12px 12px;${P}"><div style="font-size:14px;font-weight:600;color:${C.fg1};line-height:1.3;">${file}</div><div style="font-size:12px;color:${C.fg3};line-height:1.3;margin-top:2px;">${desc}</div></td></tr></table>`;
+const quote = (label, text, note) => `<p style="margin:0 0 4px;${P}font-size:12px;color:${C.fg3};">${label}</p><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="border-left:3px solid ${C.navy};padding:4px 0 4px 16px;${P}font-size:16px;line-height:1.5;color:${C.fg1};">${esc(text)}${note?`<div style="margin-top:8px;font-size:14px;color:${C.fg2};">${esc(note)}</div>`:''}</td></tr></table>`;
+
+/* ── Cálculos de rentabilidad ── */
+function money_calc(scen) {
+  const orig = {sale:SAMPLE.total, cost:SAMPLE.cost};
+  const ctr = {sale: scen === 'ok' ? 5400 : 4800, cost: SAMPLE.cost};
+  [orig, ctr].forEach(x => { x.margin = x.sale - x.cost; x.mp = x.margin / x.sale; });
+  return {orig, ctr, minPrice: SAMPLE.cost / 0.5};
+}
+
+/* ── Render principal ── */
+function render(key, lang, scen) {
+  const email = COPY.emails[key];
+  const usedLang = email.langs[lang] ? lang : 'en';
+  const c = email.langs[usedLang];
+  const L = COPY.labels[usedLang];
+  const m = money_calc(scen);
+  const cur = m.ctr;
+  const showCtr = key === 'counter_am';
+  const base = showCtr ? cur : m.orig;
+  const d = {
+    firstName: email.audience === 'internal' ? (SAMPLE.amFirst[usedLang] || 'Rémi') : SAMPLE.clientFirst,
+    clientCompany: SAMPLE.clientCompany, proposalNumber: SAMPLE.proposalNumber,
+    creatorName: SAMPLE.creator[usedLang], inviterName: SAMPLE.inviterName,
+    validUntil: dateL(SAMPLE.valid, usedLang), optionName: SAMPLE.option[usedLang],
+    total: money(m.orig.sale, usedLang), counterTotal: money(m.ctr.sale, usedLang),
+    marginPct: pct(base.mp, usedLang), minPrice: money(m.minPrice, usedLang),
+    supportName: (SAMPLE.support[usedLang] || SAMPLE.support.en)
+  };
+  const T = s => tpl(s, d);
+  const inner = [];
+  const isClient = email.audience === 'client';
+  const cardRow = (l, v) => [l, v];
+
+  inner.push(h1(T(c.title)));
+  inner.push(para(T(c.intro)));
+
+  if (key === 'invite') {
+    inner.push(checks(c.points.map(T)));
+    inner.push(gap(4));
+    inner.push(rowsCard([[L.role, 'Advertising Manager'], [L.invitedBy, d.inviterName]]));
+    inner.push(gap(24));
+    inner.push(btn(T(c.cta), '#', 'primary'));
+    inner.push(small(T(c.note)));
+  }
+
+  if (key === 'proposal') {
+    inner.push(rowsCard([[L.proposal, d.proposalNumber], [L.sentBy, d.creatorName], [L.validUntil, d.validUntil]]));
+    inner.push(gap(24));
+    inner.push(btn(T(c.cta), '#', 'primary'));
+    inner.push(small(T(c.note)));
+  }
+
+  if (key === 'accepted_client' || key === 'counter_accepted') {
+    const amount = key === 'counter_accepted' ? m.ctr.sale : m.orig.sale;
+    inner.push(rowsCard([
+      [L.proposal, d.proposalNumber], [L.option, d.optionName], [L.markets, SAMPLE.markets],
+      [key === 'counter_accepted' ? L.agreedAmount : L.amount, money(amount, usedLang)], [L.billedTo, SAMPLE.billedTo]
+    ]));
+    inner.push(gap(24));
+    inner.push(sect(T(c.nextTitle)));
+    inner.push(numbered(c.steps.map(T)));
+    inner.push(gap(4));
+    inner.push(attach(T(L.fileClient), T(c.attachDesc)));
+    inner.push(small(T(c.note)));
+  }
+
+  if (key === 'accepted_am') {
+    inner.push(rowsCard([[L.proposal, d.proposalNumber], [L.client, d.clientCompany], [L.option, d.optionName], [L.markets, SAMPLE.markets]]));
+    inner.push(gap(24));
+    inner.push(sect(T(c.finTitle)));
+    const ok = m.orig.mp >= 0.5;
+    inner.push(rowsCard([
+      [L.sale, money(m.orig.sale, usedLang)], [L.cost, money(m.orig.cost, usedLang)],
+      [L.margin, money(m.orig.margin, usedLang)],
+      [L.marginPct, pct(m.orig.mp, usedLang) + ' &nbsp;' + pill(ok, ok ? L.statusOk : L.statusKo)],
+      [L.minMargin, pct(0.5, usedLang).replace(',0','').replace('.0','')]
+    ]));
+    inner.push(gap(24));
+    inner.push(attach(T(L.fileInternal), T(c.attachDesc)));
+    inner.push(gap(24));
+    inner.push(btn(T(c.cta), '#', 'primary'));
+    inner.push(small(T(c.note)));
+  }
+
+  if (key === 'counter_am') {
+    inner.push(rowsCard([[L.proposal, d.proposalNumber], [L.client, d.clientCompany], [L.option, d.optionName]]));
+    inner.push(gap(24));
+    inner.push(quote(T(c.commentLabel), SAMPLE.comment[usedLang]));
+    inner.push(gap(24));
+    inner.push(sect(T(c.compTitle)));
+    const th = (t, al) => `<td style="padding:10px 12px;${P}font-size:12px;color:${C.fg3};text-align:${al||'right'};border-bottom:1px solid ${C.bd};">${t}</td>`;
+    const td = (t, al, b) => `<td style="padding:10px 12px;${P}font-size:14px;line-height:1.3;color:${C.fg1};text-align:${al||'right'};${b?'font-weight:600;':''}border-bottom:1px solid ${C.bd2};">${t}</td>`;
+    const dm = (a, b) => (b - a) === 0 ? '—' : money(b - a, usedLang, true);
+    const tbl = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid ${C.bd};border-radius:16px;border-collapse:separate;border-spacing:0;">
+      <tr>${th('', 'left')}${th(L.original)}${th(L.counter)}${th(L.diff)}</tr>
+      <tr>${td(L.sale,'left')}${td(money(m.orig.sale,usedLang))}${td(money(m.ctr.sale,usedLang),'right',1)}${td(dm(m.orig.sale,m.ctr.sale))}</tr>
+      <tr>${td(L.cost,'left')}${td(money(m.orig.cost,usedLang))}${td(money(m.ctr.cost,usedLang),'right',1)}${td(dm(m.orig.cost,m.ctr.cost))}</tr>
+      <tr>${td(L.margin,'left')}${td(money(m.orig.margin,usedLang))}${td(money(m.ctr.margin,usedLang),'right',1)}${td(dm(m.orig.margin,m.ctr.margin))}</tr>
+      <tr>${td(L.marginPct,'left')}${td(pct(m.orig.mp,usedLang))}${td(pct(m.ctr.mp,usedLang),'right',1)}${td(pts(m.ctr.mp - m.orig.mp, usedLang, L.pts))}</tr>
+    </table>`;
+    inner.push(tbl);
+    inner.push(gap(16));
+    const ok = m.ctr.mp >= 0.5;
+    inner.push(`<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td style="background:${ok?C.okBg:C.noBg};border-radius:8px;padding:16px;${P}font-size:14px;line-height:1.5;color:${C.fg1};">${pill(ok, ok ? L.statusOk : L.statusKo, true)}<div style="height:8px;line-height:8px;font-size:0;">&nbsp;</div>${T(ok ? c.verdictOk : c.verdictKo)}</td></tr></table>`);
+    inner.push(gap(24));
+    inner.push(attach(T(L.fileInternal), T(c.attachDesc)));
+    inner.push(gap(24));
+    inner.push(btn(T(c.cta), '#', 'primary'));
+    inner.push(small(T(c.note)));
+  }
+
+  if (key === 'rejected_am') {
+    inner.push(rowsCard([[L.proposal, d.proposalNumber], [L.client, d.clientCompany], [L.option, d.optionName], [L.amount, money(m.orig.sale, usedLang)]]));
+    inner.push(gap(24));
+    inner.push(quote(T(c.reasonLabel), COPY.reasons.clientReject.budget[usedLang], SAMPLE.clientNote[usedLang]));
+    inner.push(gap(24));
+    inner.push(para(T(c.after), 'margin-bottom:24px;'));
+    inner.push(btn(T(c.cta), '#', 'primary'));
+    inner.push(small(T(c.note)));
+  }
+
+  if (key === 'counter_rejected') {
+    inner.push(quote(T(c.reasonLabel), COPY.reasons.counterReject.scope[usedLang], SAMPLE.counterNote[usedLang]));
+    inner.push(gap(24));
+    inner.push(para(T(c.after), 'margin-bottom:24px;'));
+    inner.push(btn(T(c.cta), 'mailto:', 'secondary'));
+  }
+
+  const rangeFmt = new Intl.DateTimeFormat(LOCALE[usedLang], {dateStyle:'medium'}).formatRange(new Date(2026,11,1), new Date(2026,11,15));
+  const standardRows = [[L.proposal, d.proposalNumber], [L.client, d.clientCompany], [L.option, d.optionName], [L.amount, money(m.orig.sale, usedLang)]];
+
+  if (key === 'counter_received') {
+    inner.push(rowsCard([[L.proposal, d.proposalNumber], [L.option, d.optionName], [L.counter, money(m.ctr.sale, usedLang)]]));
+    inner.push(small(T(c.note)));
+  }
+  if (key === 'reminder') {
+    inner.push(rowsCard([[L.proposal, d.proposalNumber], [L.validUntil, d.validUntil]]));
+    inner.push(gap(24));
+    inner.push(btn(T(c.cta), '#', 'primary'));
+    inner.push(small(T(c.note)));
+  }
+  if (key === 'new_version') {
+    inner.push(rowsCard([[L.proposal, d.proposalNumber], [L.version, '2'], [L.validUntil, d.validUntil]]));
+    inner.push(gap(24));
+    inner.push(btn(T(c.cta), '#', 'primary'));
+    inner.push(small(T(c.note)));
+  }
+  if (key === 'expired_am') {
+    inner.push(rowsCard(standardRows.concat([[L.validUntil, d.validUntil]])));
+    inner.push(gap(24));
+    inner.push(para(T(c.after), 'margin-bottom:24px;'));
+    inner.push(btn(T(c.cta), '#', 'primary'));
+    inner.push(small(T(c.note)));
+  }
+  if (key === 'blocked_am') {
+    inner.push(rowsCard([[L.proposal, d.proposalNumber], [L.client, d.clientCompany], [L.support, d.supportName], [L.dates, rangeFmt]]));
+    inner.push(gap(24));
+    inner.push(para(T(c.after), 'margin-bottom:24px;'));
+    inner.push(btn(T(c.cta), '#', 'primary'));
+    inner.push(small(T(c.note)));
+  }
+  if (key === 'opened_am') {
+    inner.push(rowsCard(standardRows.concat([[L.validUntil, d.validUntil]])));
+    inner.push(gap(24));
+    inner.push(para(T(c.after), 'margin-bottom:24px;'));
+    inner.push(btn(T(c.cta), '#', 'primary'));
+    inner.push(small(T(c.note)));
+  }
+
+  const badge = email.audience === 'internal'
+    ? `<td align="right" style="padding:0;"><span style="display:inline-block;padding:4px 8px;border-radius:8px;background:${C.bg2};${P}font-size:12px;color:${C.fg2};">${L.internal}</span></td>` : '<td></td>';
+  const footer = email.audience === 'client' ? T(L.footerClient) : L.footerInternal;
+
+  const html = `<!DOCTYPE html>
+<html lang="${usedLang}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light">
+<title>${esc(T(c.subject))}</title>
+<link href="https://fonts.googleapis.com/css2?family=Host+Grotesk:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;padding:0;background:${C.bg2};-webkit-text-size-adjust:100%;}
+  .btn{width:auto;}
+  @media only screen and (max-width:600px){
+    .wrap{width:100% !important;}
+    .px{padding-left:24px !important;padding-right:24px !important;}
+    .btn{width:100% !important;}
+    .btn a{display:block !important;}
+    h1{font-size:24px !important;}
+  }
+</style></head>
+<body style="margin:0;padding:0;background:${C.bg2};">
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;font-size:1px;line-height:1px;color:${C.bg2};">${esc(T(c.preheader))}${'&nbsp;&zwnj;'.repeat(40)}</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="${C.bg2}"><tr><td align="center" style="padding:32px 12px;">
+  <table role="presentation" class="wrap" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:${C.bg1};border:1px solid ${C.bd};border-radius:16px;border-collapse:separate;border-spacing:0;">
+    <tr><td class="px" style="padding:32px 40px 24px;">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+        <td style="padding:0;"><img src="${LOGO}" alt="Weekendesk" width="143" height="24" style="display:inline-block;vertical-align:middle;border:0;outline:none;height:24px;width:143px;"> <span style="${P}font-size:12px;color:${C.fg3};vertical-align:middle;">&nbsp;advertising</span></td>${badge}
+      </tr></table>
+    </td></tr>
+    <tr><td class="px" style="padding:0 40px 40px;">${inner.join('')}</td></tr>
+    <tr><td class="px" style="padding:24px 40px 32px;border-top:1px solid ${C.bd2};${P}font-size:12px;line-height:1.5;color:${C.fg3};">${esc(footer)}<br>${esc(L.legal)}</td></tr>
+  </table>
+</td></tr></table>
+</body></html>`;
+
+  return {html, subject: T(c.subject), pre: T(c.preheader), usedLang, fallback: usedLang !== lang};
+}
+
+/* ── UI ── */
+const state = {key:'invite', lang:'es', dev:'desktop', scen:'ko'};
+const keys = Object.keys(COPY.emails).sort((a,b) => COPY.emails[a].n - COPY.emails[b].n);
+const nav = document.getElementById('nav');
+keys.forEach(k => {
+  const e = COPY.emails[k];
+  const b = document.createElement('button');
+  b.dataset.k = k;
+  b.innerHTML = `<span class="num">${e.n}</span><span><span class="t">${e.title}</span><span class="badge-sm ${e.audience==='client'?'badge--client':'badge--internal'}">${e.audience==='client'?'cliente':'interno'}</span></span>`;
+  b.onclick = () => { state.key = k; draw(); };
+  nav.appendChild(b);
+});
+const langSeg = document.getElementById('langSeg');
+LANGS.forEach(l => {
+  const b = document.createElement('button');
+  b.dataset.l = l; b.textContent = LANG_NAME[l];
+  b.onclick = () => { state.lang = l; draw(); };
+  langSeg.appendChild(b);
+});
+document.querySelectorAll('#devSeg button').forEach(b => b.onclick = () => { state.dev = b.dataset.d; draw(); });
+document.querySelectorAll('#scenSeg button').forEach(b => b.onclick = () => { state.scen = b.dataset.s; draw(); });
+
+const ifr = document.getElementById('ifr');
+const frame = document.getElementById('frame');
+ifr.addEventListener('load', () => {
+  try { ifr.style.height = '0px'; const fit = () => { ifr.style.height = ifr.contentDocument.body.scrollHeight + 'px'; }; fit(); setTimeout(fit, 400); } catch(e) {}
+});
+
+function draw() {
+  nav.querySelectorAll('button').forEach(b => b.setAttribute('aria-current', b.dataset.k === state.key));
+  langSeg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.l === state.lang));
+  document.querySelectorAll('#devSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.d === state.dev));
+  document.querySelectorAll('#scenSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.s === state.scen));
+  document.getElementById('scenWrap').hidden = state.key !== 'counter_am';
+
+  const r = render(state.key, state.lang, state.scen);
+  const fb = document.getElementById('fallbackNote');
+  fb.hidden = !r.fallback;
+  if (r.fallback) fb.textContent = 'Los emails internos solo están previstos en ES · FR · EN (no hay Advertising Managers IT/NL). Se muestra EN.';
+
+  const mt = META[state.key];
+  const att = mt.att;
+  document.getElementById('env').innerHTML =
+    `<p class="subj">${esc(r.subject)}</p><p class="pre">${esc(r.pre)}</p>
+     <dl><dt>De</dt><dd>${esc(FROM)}</dd><dt>Para</dt><dd>${esc(mt.to)}</dd><dt>CC</dt><dd>${esc(mt.cc)}</dd><dt>BCC</dt><dd>${esc(mt.bcc)}</dd><dt>Reply-To</dt><dd>${esc(mt.reply)}</dd><dt>Adjunto</dt><dd>${esc(att)}</dd></dl>`;
+  frame.style.width = state.dev === 'mobile' ? '375px' : '100%';
+  frame.style.maxWidth = state.dev === 'mobile' ? '375px' : '760px';
+  ifr.srcdoc = r.html;
+}
+draw();
+</script>
+</body>
+</html>
