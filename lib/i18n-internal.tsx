@@ -49,12 +49,11 @@ const es = {
   'nav.admin': 'Usuarios',
 
   'admin.title': 'Usuarios del equipo',
-  'admin.subtitle':
-    'Da de alta a alguien del equipo: se crea su acceso (email + contraseña) en Supabase Auth y se añade a la lista blanca en el mismo paso.',
   'admin.fullName': 'Nombre completo',
   'admin.email': 'Email',
   'admin.password': 'Contraseña inicial',
   'admin.generatePassword': 'Generar',
+  'admin.passwordNote': 'De un solo uso: la persona deberá cambiarla la primera vez que entre.',
   'admin.note': 'Nota (opcional)',
   'admin.create': 'Crear acceso',
   'admin.creating': 'Creando…',
@@ -69,6 +68,15 @@ const es = {
     'Contraseña inicial creada. Compártela con la persona por un canal seguro (no por email): no se puede volver a ver.',
   'admin.onlyAllowedEmailNotice':
     'Este email ya estaba en la lista blanca pero sin usuario de Supabase Auth: se ha creado el acceso ahora.',
+
+  'changePassword.title': 'Define tu nueva contraseña',
+  'changePassword.subtitle':
+    'Por seguridad, antes de continuar tienes que cambiar la contraseña inicial que te dieron.',
+  'changePassword.newPassword': 'Nueva contraseña',
+  'changePassword.confirmPassword': 'Repite la contraseña',
+  'changePassword.submit': 'Guardar y continuar',
+  'changePassword.submitting': 'Guardando…',
+  'changePassword.mismatchError': 'Las contraseñas no coinciden.',
 
   'proposalBuilder.title': 'Nuevo presupuesto',
   'proposalBuilder.accountAndContact': 'Cuenta y contacto',
@@ -274,12 +282,11 @@ const fr: Dict = {
   'nav.admin': 'Utilisateurs',
 
   'admin.title': "Utilisateurs de l'équipe",
-  'admin.subtitle':
-    "Ajoute quelqu'un à l'équipe : son accès (email + mot de passe) est créé dans Supabase Auth et ajouté à la liste blanche en une seule étape.",
   'admin.fullName': 'Nom complet',
   'admin.email': 'Email',
   'admin.password': 'Mot de passe initial',
   'admin.generatePassword': 'Générer',
+  'admin.passwordNote': "À usage unique : la personne devra le changer dès sa première connexion.",
   'admin.note': 'Note (optionnelle)',
   'admin.create': "Créer l'accès",
   'admin.creating': 'Création…',
@@ -294,6 +301,15 @@ const fr: Dict = {
     "Mot de passe initial créé. Partage-le par un canal sécurisé (pas par email) : il ne pourra plus être affiché.",
   'admin.onlyAllowedEmailNotice':
     "Cet email était déjà dans la liste blanche mais sans utilisateur Supabase Auth : l'accès vient d'être créé.",
+
+  'changePassword.title': 'Définis ton nouveau mot de passe',
+  'changePassword.subtitle':
+    "Par sécurité, tu dois changer le mot de passe initial qu'on t'a donné avant de continuer.",
+  'changePassword.newPassword': 'Nouveau mot de passe',
+  'changePassword.confirmPassword': 'Répète le mot de passe',
+  'changePassword.submit': 'Enregistrer et continuer',
+  'changePassword.submitting': 'Enregistrement…',
+  'changePassword.mismatchError': 'Les mots de passe ne correspondent pas.',
 
   'proposalBuilder.title': 'Nouveau devis',
   'proposalBuilder.accountAndContact': 'Compte et contact',
@@ -496,12 +512,11 @@ const en: Dict = {
   'nav.admin': 'Users',
 
   'admin.title': 'Team users',
-  'admin.subtitle':
-    'Add someone to the team: their access (email + password) is created in Supabase Auth and added to the whitelist in one step.',
   'admin.fullName': 'Full name',
   'admin.email': 'Email',
   'admin.password': 'Initial password',
   'admin.generatePassword': 'Generate',
+  'admin.passwordNote': 'One-time use: the person will have to change it the first time they sign in.',
   'admin.note': 'Note (optional)',
   'admin.create': 'Create access',
   'admin.creating': 'Creating…',
@@ -516,6 +531,15 @@ const en: Dict = {
     "Initial password created. Share it over a secure channel (not email) — it can't be shown again.",
   'admin.onlyAllowedEmailNotice':
     'This email was already whitelisted but had no Supabase Auth user: the access was just created.',
+
+  'changePassword.title': 'Set your new password',
+  'changePassword.subtitle':
+    'For security, you need to change the initial password you were given before continuing.',
+  'changePassword.newPassword': 'New password',
+  'changePassword.confirmPassword': 'Confirm password',
+  'changePassword.submit': 'Save and continue',
+  'changePassword.submitting': 'Saving…',
+  'changePassword.mismatchError': 'Passwords do not match.',
 
   'proposalBuilder.title': 'New proposal',
   'proposalBuilder.accountAndContact': 'Account and contact',

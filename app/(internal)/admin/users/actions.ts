@@ -11,6 +11,18 @@
  * usuario con contraseña sin pasar por el flujo de registro público — exige
  * la clave `service_role`; una sesión normal no tiene ese permiso.
  *
+ * Ajuste de seguridad (ronda 15): el admin ve y comunica la contraseña
+ * inicial, así que la conoce, aunque sea de forma temporal — para que deje
+ * de servir de nada en cuanto la persona entra, el acceso se crea con
+ * `app_metadata.must_change_password = true` (ver `app/change-password/`,
+ * que la apaga al cambiar la contraseña, y `lib/supabase/auth-gate.ts`, que
+ * bloquea cualquier otra pantalla mientras siga en `true`). Va en
+ * `app_metadata`, no en `user_metadata`: `user_metadata` lo puede escribir
+ * el propio usuario con su sesión (`supabase.auth.updateUser({ data })`),
+ * así que alguien podría apagar el aviso sin llegar a cambiar la contraseña;
+ * `app_metadata` solo lo escribe la clave de servicio, así que cambiar la
+ * contraseña es la única forma de que se apague.
+ *
  * No hay una capa de roles todavía (CLAUDE.md no define "quién administra a
  * quién": el modelo de acceso es "miembro de equipo o no", is_team_member()).
  * Por eso cualquier miembro de equipo autenticado puede acceder a esta
@@ -51,6 +63,7 @@ export async function createTeamUser(input: {
     password: input.password,
     email_confirm: true,
     user_metadata: { full_name: fullName },
+    app_metadata: { must_change_password: true },
   });
 
   // Un email que ya tiene usuario en Supabase Auth no es un fallo aquí: puede
