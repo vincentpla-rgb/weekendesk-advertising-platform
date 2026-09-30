@@ -3,6 +3,10 @@ import { NextResponse } from 'next/server';
 import { checkVies } from '@/lib/vies';
 import { createPublicClient } from '@/lib/supabase/server';
 import type { Json } from '@/lib/supabase/database.types.js';
+import type { ContentLanguage } from '@/lib/domain';
+import { buildCounterProposalReceivedAmEmailContent } from '@/lib/email/counter-proposal-received-am-email';
+import { buildCounterProposalSubmittedClientEmailContent } from '@/lib/email/counter-proposal-submitted-client-email';
+import { sendEmail } from '@/lib/email/resend-client';
 
 interface CounterProposalLineBody {
   supportId: string;
@@ -103,6 +107,84 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  // Emails 5 (AM: contrapropuesta recibida) y 9 (cliente: confirmación de
+  // envío) — CLAUDE.md, ronda 17, bloque 1, puntos 1 y 3. Ninguno de los dos
+  // puede bloquear la respuesta: la contrapropuesta ya se persistió con
+  // éxito arriba, así que un fallo de Resend aquí es una degradación (el AM
+  // no se entera hasta que abra /proposals; el cliente no recibe la
+  // confirmación) nunca un motivo para deshacer lo ya guardado — mismo
+  // criterio que el resto del proyecto: los emails son una notificación
+  // sobre un hecho ya cierto, no una condición para que el hecho ocurra
+  // (compárese con create_and_send_proposal, donde SÍ importa el orden
+  // porque el estado SENT depende de la entrega — aquí no hay un estado
+  // equivalente que dependa del email).
+  const created = data as {
+    counter_proposal_id: string;
+    proposal_id: string;
+    proposal_number: string;
+    proposal_language: string;
+    option_code: string;
+    option_name: string | null;
+    advertiser_name: string | null;
+    contact_full_name: string | null;
+    contact_email: string | null;
+    owner_email: string | null;
+    owner_full_name: string | null;
+    owner_language: string | null;
+  };
+
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromAddress = process.env.RESEND_FROM_EMAIL;
+
+  if (apiKey && fromAddress) {
+    const origin = new URL(request.url).origin;
+
+    if (created.owner_email && created.owner_full_name && created.advertiser_name) {
+      const amEmail = buildCounterProposalReceivedAmEmailContent({
+        ownerFullName: created.owner_full_name,
+        advertiserName: created.advertiser_name,
+        proposalNumber: created.proposal_number,
+        optionCode: created.option_name ? `${created.option_name} (${created.option_code})` : created.option_code,
+        reviewUrl: `${origin}/proposals/${created.proposal_id}`,
+        language: created.owner_language ?? 'ES',
+      });
+      const amResult = await sendEmail(
+        {
+          from: fromAddress,
+          to: [created.owner_email],
+          subject: amEmail.subject,
+          html: amEmail.html,
+          text: amEmail.text,
+        },
+        apiKey,
+      );
+      if (!amResult.ok) {
+        console.error(`[counter-proposal] email 5 (AM) no se pudo mandar: ${amResult.error}`);
+      }
+    }
+
+    if (created.contact_email && created.contact_full_name) {
+      const clientEmail = buildCounterProposalSubmittedClientEmailContent({
+        contactFullName: created.contact_full_name,
+        proposalNumber: created.proposal_number,
+        language: created.proposal_language as ContentLanguage,
+      });
+      const clientResult = await sendEmail(
+        {
+          from: fromAddress,
+          to: [created.contact_email],
+          subject: clientEmail.subject,
+          html: clientEmail.html,
+          text: clientEmail.text,
+        },
+        apiKey,
+      );
+      if (!clientResult.ok) {
+        console.error(`[counter-proposal] email 9 (cliente) no se pudo mandar: ${clientResult.error}`);
+      }
+    }
   }
 
   return NextResponse.json(data);

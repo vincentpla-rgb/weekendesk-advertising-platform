@@ -51,6 +51,8 @@ export interface Database {
           is_active: boolean;
           /** Administrador (CLAUDE.md, ronda 16): puede decidir sobre CUALQUIER contrapropuesta, no solo las suyas. Protegido por trigger — solo la clave de servicio lo cambia. */
           is_admin: boolean;
+          /** Idioma de interfaz interna por defecto (CLAUDE.md, ronda 17, bloque 3). Copiado de `allowed_emails.invite_language` al aprovisionar; default 'ES'. */
+          preferred_language: 'ES' | 'FR' | 'EN';
           created_at: string;
         };
         Insert: Partial<Database['public']['Tables']['profiles']['Row']> & { id: string; email: string; full_name: string };
@@ -62,6 +64,8 @@ export interface Database {
           email: string;
           note: string | null;
           full_name: string | null;
+          /** Idioma elegido al dar de alta el acceso (CLAUDE.md, ronda 17, bloque 3). NULL para accesos de antes de esta ronda. */
+          invite_language: 'ES' | 'FR' | 'EN' | null;
           added_at: string;
           added_by: string | null;
         };

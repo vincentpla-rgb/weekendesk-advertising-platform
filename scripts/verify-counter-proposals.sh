@@ -84,9 +84,15 @@ $PSQL -d "$DB" -f "$WORKDIR/00_supabase_shim.sql" > /dev/null
 
 echo "=== Caso 1: profiles.is_admin — el seed solo marca a Vincent si su perfil ya existía ==="
 COUNTER_MIGRATION="20260930090000_counter_proposals.sql"
+# `break`, no `continue` (misma lección que verify-pgcrypto-schema.sh,
+# CLAUDE.md §10.3 octies): el bucle debe DETENERSE en esta migración, no
+# solo saltarla — cualquier migración POSTERIOR (ronda 17: preferred_language,
+# la extensión de submit_counter_proposal) tiene que aplicarse en su sitio
+# real, después de sembrar el perfil de Vincent y de aplicar esta migración a
+# mano más abajo, nunca colada en este primer bucle junto con las de antes.
 for f in "$WORKDIR"/2026*.sql; do
   if [[ "$(basename "$f")" == "$COUNTER_MIGRATION" ]]; then
-    continue
+    break
   fi
   $PSQL -d "$DB" -f "$f" > /dev/null
 done
@@ -100,6 +106,18 @@ insert into profiles (id, email, full_name, is_active) values ('$VINCENT', '$VIN
 SQL
 
 $PSQL -d "$DB" -f "$WORKDIR/$COUNTER_MIGRATION" > /dev/null
+
+# Ronda 17: el resto de migraciones posteriores a counter_proposals —
+# `preferred_language` (bloque 3) y la extensión de submit_counter_proposal
+# que devuelve los datos de owner/advertiser/contact para los emails 5 y 9
+# (bloque 1) — se aplican aquí, en su orden real.
+for f in "$WORKDIR"/2026*.sql; do
+  name="$(basename "$f")"
+  if [[ "$name" < "$COUNTER_MIGRATION" ]] || [[ "$name" == "$COUNTER_MIGRATION" ]]; then
+    continue
+  fi
+  $PSQL -d "$DB" -f "$f" > /dev/null
+done
 
 VINCENT_IS_ADMIN="$($PSQL -d "$DB" -At -c "select is_admin from profiles where id = '$VINCENT'::uuid;")"
 if [[ "$VINCENT_IS_ADMIN" == "t" ]]; then
@@ -261,6 +279,44 @@ if [[ "$STATUS_AFTER_COUNTER" == "COUNTERED" ]]; then
   pass "proposals.status pasa a COUNTERED tras la contrapropuesta"
 else
   fail "se esperaba COUNTERED, salió: $STATUS_AFTER_COUNTER"
+fi
+
+echo "=== Caso 2 (cont., ronda 17, bloque 1, punto 1): submit_counter_proposal devuelve los datos de owner/advertiser/contact para los emails 5 y 9 ==="
+CP1_ADVERTISER="$(extract "$R_CP1" advertiser_name)"
+CP1_CONTACT_NAME="$(extract "$R_CP1" contact_full_name)"
+CP1_CONTACT_EMAIL="$(extract "$R_CP1" contact_email)"
+CP1_OWNER_EMAIL="$(extract "$R_CP1" owner_email)"
+CP1_OWNER_NAME="$(extract "$R_CP1" owner_full_name)"
+CP1_OWNER_LANG="$(extract "$R_CP1" owner_language)"
+CP1_PROPOSAL_LANG="$(extract "$R_CP1" proposal_language)"
+CP1_NUMBER="$(extract "$R_CP1" proposal_number)"
+if [[ "$CP1_ADVERTISER" == "Office Uno" && "$CP1_CONTACT_NAME" == "Contacto" && "$CP1_CONTACT_EMAIL" == "u1@example.com" \
+  && "$CP1_OWNER_EMAIL" == "$VINCENT_EMAIL" && "$CP1_OWNER_NAME" == "Vincent Pla" && "$CP1_OWNER_LANG" == "ES" \
+  && "$CP1_PROPOSAL_LANG" == "FR" && -n "$CP1_NUMBER" ]]; then
+  pass "submit_counter_proposal devuelve advertiser/contact/owner/proposal_number correctos (email 5 y 9)"
+else
+  fail "faltan o son incorrectos los datos de notificación: advertiser=$CP1_ADVERTISER contact=$CP1_CONTACT_NAME/$CP1_CONTACT_EMAIL owner=$CP1_OWNER_EMAIL/$CP1_OWNER_NAME/$CP1_OWNER_LANG proposal_language=$CP1_PROPOSAL_LANG number=$CP1_NUMBER"
+fi
+
+echo "=== Caso 2 (cont., ronda 17, bloque 3): allowed_emails.invite_language se copia a profiles.preferred_language en el primer login ==="
+MARIO=33333333-3333-3333-3333-333333333333
+MARIO_EMAIL=mario.martinez@weekendesk.fr
+$PSQL -d "$DB" -At <<SQL > /dev/null
+insert into auth.users (id, email) values ('$MARIO', '$MARIO_EMAIL');
+insert into allowed_emails (email, full_name, invite_language) values ('$MARIO_EMAIL', 'Mario Martínez', 'FR');
+insert into profiles (id, email, full_name, preferred_language) values ('$MARIO', '$MARIO_EMAIL', 'Mario Martínez', 'FR');
+SQL
+MARIO_PREFERRED_LANG="$($PSQL -d "$DB" -At -c "select preferred_language from profiles where id = '$MARIO'::uuid;")"
+if [[ "$MARIO_PREFERRED_LANG" == "FR" ]]; then
+  pass "profiles.preferred_language guarda el idioma elegido al invitar (aprovisionado por la app, no por SQL — aquí solo se comprueba que la columna acepta y guarda el valor)"
+else
+  fail "se esperaba preferred_language=FR para Mario, salió: $MARIO_PREFERRED_LANG"
+fi
+DEFAULT_PREFERRED_LANG="$($PSQL -d "$DB" -At -c "select preferred_language from profiles where id = '$VINCENT'::uuid;")"
+if [[ "$DEFAULT_PREFERRED_LANG" == "ES" ]]; then
+  pass "profiles.preferred_language por defecto es ES para un perfil sin idioma elegido (accesos de antes de esta ronda)"
+else
+  fail "se esperaba el default ES, salió: $DEFAULT_PREFERRED_LANG"
 fi
 
 echo "=== Caso 2 (cont.): un envío que ya no está en SENT/VIEWED no admite nueva contrapropuesta ==="

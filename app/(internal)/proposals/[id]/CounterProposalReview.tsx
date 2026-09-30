@@ -85,7 +85,7 @@ export function CounterProposalReview({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<
-    | { readonly kind: 'accepted'; readonly newProposalId: string }
+    | { readonly kind: 'accepted'; readonly newProposalId: string; readonly emailWarning?: string }
     | { readonly kind: 'rejected' }
     | null
   >(null);
@@ -112,7 +112,7 @@ export function CounterProposalReview({
       setError(res.error);
       return;
     }
-    setResult({ kind: 'accepted', newProposalId: res.newProposalId });
+    setResult({ kind: 'accepted', newProposalId: res.newProposalId, emailWarning: res.emailWarning });
   }
 
   async function handleReject() {
@@ -251,6 +251,11 @@ export function CounterProposalReview({
         <div className="wk-alert wk-alert-info" style={{ marginTop: 12 }}>
           {t('counterProposal.acceptSuccess', { number: result.newProposalId })}{' '}
           <a href={`/proposals/${result.newProposalId}`}>{t('proposalDetail.title')}</a>
+        </div>
+      )}
+      {result?.kind === 'accepted' && result.emailWarning && (
+        <div className="wk-alert wk-alert-warning" style={{ marginTop: 8 }}>
+          {result.emailWarning}
         </div>
       )}
       {(result?.kind === 'rejected' || (counterProposal.status === 'REJECTED' && counterProposal.rejectionReason)) && (

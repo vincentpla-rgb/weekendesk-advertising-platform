@@ -54,6 +54,7 @@ const es = {
   'admin.password': 'Contraseña inicial',
   'admin.generatePassword': 'Generar',
   'admin.passwordNote': 'De un solo uso: la persona deberá cambiarla la primera vez que entre.',
+  'admin.inviteLanguage': 'Idioma de invitación',
   'admin.note': 'Nota (opcional)',
   'admin.create': 'Crear acceso',
   'admin.creating': 'Creando…',
@@ -322,6 +323,7 @@ const fr: Dict = {
   'admin.password': 'Mot de passe initial',
   'admin.generatePassword': 'Générer',
   'admin.passwordNote': "À usage unique : la personne devra le changer dès sa première connexion.",
+  'admin.inviteLanguage': "Langue d'invitation",
   'admin.note': 'Note (optionnelle)',
   'admin.create': "Créer l'accès",
   'admin.creating': 'Création…',
@@ -586,6 +588,7 @@ const en: Dict = {
   'admin.password': 'Initial password',
   'admin.generatePassword': 'Generate',
   'admin.passwordNote': 'One-time use: the person will have to change it the first time they sign in.',
+  'admin.inviteLanguage': 'Invitation language',
   'admin.note': 'Note (optional)',
   'admin.create': 'Create access',
   'admin.creating': 'Creating…',
@@ -841,6 +844,24 @@ function readStoredLanguage(): InternalLanguage {
     // usa el valor por defecto sin romper el render.
   }
   return 'ES';
+}
+
+/**
+ * ¿Ya eligió esta persona un idioma de interfaz EN ESTE NAVEGADOR? Distinto
+ * de `readStoredLanguage()`, que siempre devuelve un valor usable (cae a
+ * 'ES') — aquí hace falta distinguir "nunca eligió nada" de "eligió ES
+ * explícitamente", para que `profiles.preferred_language` (CLAUDE.md, ronda
+ * 17, bloque 3) solo actúe como semilla la primera vez, sin pisar nunca una
+ * preferencia ya guardada.
+ */
+export function hasExplicitStoredLanguage(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    return stored === 'ES' || stored === 'FR' || stored === 'EN';
+  } catch {
+    return false;
+  }
 }
 
 interface I18nContextValue {

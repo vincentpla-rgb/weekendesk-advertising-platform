@@ -15,10 +15,12 @@ import { revalidatePath } from 'next/cache';
 
 import type { ContentLanguage } from '@/lib/domain';
 import { buildCounterProposalRejectionEmailContent } from '@/lib/email/counter-proposal-rejection-email';
+import { buildCounterProposalAcceptedClientEmailContent } from '@/lib/email/counter-proposal-accepted-client-email';
 import { CONTRACTING_BCC } from '@/lib/email/constants';
 import { sendEmail } from '@/lib/email/resend-client';
 import { createClient } from '@/lib/supabase/server';
 import type { Json } from '@/lib/supabase/database.types.js';
+import { translateText } from '@/lib/ai/translate-text';
 
 export interface MarginOverrideInput {
   readonly supportId: string;
@@ -27,7 +29,7 @@ export interface MarginOverrideInput {
 }
 
 export type AcceptCounterProposalResult =
-  | { readonly ok: true; readonly newProposalId: string }
+  | { readonly ok: true; readonly newProposalId: string; readonly emailWarning?: string }
   | { readonly ok: false; readonly error: string };
 
 /**
@@ -68,7 +70,49 @@ export async function acceptCounterProposal(
   revalidatePath(`/proposals/${result.new_proposal_id}`);
   revalidatePath('/proposals');
 
-  return { ok: true, newProposalId: result.new_proposal_id };
+  // Email 6 (CLAUDE.md, ronda 17, bloque 1, punto 2): confirma al cliente
+  // que su contrapropuesta fue aceptada — mismo patrón que el email de
+  // rechazo más abajo, pero un fallo aquí nunca puede convertir un accept ya
+  // persistido en un `ok: false` (el nuevo presupuesto ACCEPTED ya existe,
+  // igual que `rejectCounterProposal` trata un fallo de email después de
+  // `decided: true`): se devuelve `ok: true` con un `emailWarning` legible
+  // para que la interfaz lo muestre sin fingir que todo salió perfecto.
+  const emailWarning = await sendCounterProposalAcceptedEmail(supabase, result.new_proposal_id);
+
+  return { ok: true, newProposalId: result.new_proposal_id, emailWarning };
+}
+
+async function sendCounterProposalAcceptedEmail(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  newProposalId: string,
+): Promise<string | undefined> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromAddress = process.env.RESEND_FROM_EMAIL;
+  if (!apiKey || !fromAddress) {
+    return 'Falta la configuración de email (RESEND_API_KEY / RESEND_FROM_EMAIL): el cliente no ha recibido la confirmación de aceptación.';
+  }
+
+  const { data: proposal, error } = await supabase
+    .from('proposals')
+    .select('language, proposal_number, contacts(full_name, email)')
+    .eq('id', newProposalId)
+    .maybeSingle();
+  if (error || !proposal || !proposal.contacts) {
+    return 'No se pudo cargar el presupuesto nuevo para mandar la confirmación de aceptación al cliente.';
+  }
+
+  const { subject, html, text } = buildCounterProposalAcceptedClientEmailContent({
+    contactFullName: proposal.contacts.full_name,
+    proposalNumber: proposal.proposal_number,
+    language: proposal.language as ContentLanguage,
+  });
+
+  const sendResult = await sendEmail(
+    { to: [proposal.contacts.email], bcc: [CONTRACTING_BCC], from: fromAddress, subject, html, text },
+    apiKey,
+  );
+
+  return sendResult.ok ? undefined : `La confirmación de aceptación no se pudo mandar al cliente (${sendResult.error}).`;
 }
 
 export type RejectCounterProposalResult =
@@ -136,11 +180,23 @@ export async function rejectCounterProposal(
     };
   }
 
+  // Traducción automática del motivo (CLAUDE.md, ronda 17, bloque 1, punto
+  // 4): el AM lo escribe en su propio idioma, pero el cliente debe recibirlo
+  // en el idioma de SU presupuesto — `translateText` nunca lanza y cae al
+  // texto original ante cualquier fallo (sin clave configurada, la API no
+  // responde, etc.), así que esto nunca puede bloquear el envío del email.
+  // Deliberadamente distinto de la vista previa (`EmailPreviewModal` más
+  // abajo, vía `buildCounterProposalRejectionEmailContent` directamente):
+  // esa vista previa sigue mostrando el motivo TAL CUAL se escribió — es lo
+  // que el AM está a punto de enviar, no necesita una llamada de red para
+  // renderizarse. Solo en el envío real, aquí, se traduce.
+  const translatedReason = await translateText({ text: reason, targetLanguage: proposal.language as ContentLanguage });
+
   const { subject, html, text } = buildCounterProposalRejectionEmailContent({
     advertiserName: proposal.accounts.legal_name,
     contactFullName: proposal.contacts.full_name,
     proposalNumber: proposal.proposal_number,
-    reason,
+    reason: translatedReason,
     salesName,
     language: proposal.language as ContentLanguage,
   });

@@ -35,6 +35,7 @@ import { revalidatePath } from 'next/cache';
 
 import { createServiceClient } from '@/lib/supabase/service';
 import { defaultFullName } from '@/lib/supabase/team-access';
+import type { InternalLanguage } from '@/lib/i18n-internal';
 
 export type CreateTeamUserResult =
   | { readonly ok: true; readonly alreadyExisted: boolean }
@@ -45,6 +46,16 @@ export async function createTeamUser(input: {
   fullName: string;
   password: string;
   note: string;
+  /**
+   * Idioma elegido al invitar (CLAUDE.md, ronda 17, bloque 3): decide el
+   * idioma del email de invitación (pendiente de plantilla, bloque 2 —
+   * `allowed_emails.invite_language` se guarda igual, listo para cuando
+   * exista) y queda preprogramado como idioma de interfaz por defecto para
+   * esta persona en sus siguientes logins (`profiles.preferred_language`,
+   * copiado en `resolveTeamAccess`/`lib/supabase/team-access.ts` en el
+   * momento de su primer login).
+   */
+  inviteLanguage: InternalLanguage;
 }): Promise<CreateTeamUserResult> {
   const email = input.email.trim().toLowerCase();
   const fullName = input.fullName.trim() || defaultFullName(email);
@@ -79,7 +90,10 @@ export async function createTeamUser(input: {
 
   const { error: upsertError } = await service
     .from('allowed_emails')
-    .upsert({ email, full_name: fullName, note: input.note.trim() || null }, { onConflict: 'email' });
+    .upsert(
+      { email, full_name: fullName, note: input.note.trim() || null, invite_language: input.inviteLanguage },
+      { onConflict: 'email' },
+    );
 
   if (upsertError) {
     return { ok: false, error: `Usuario creado, pero falló la lista blanca: ${upsertError.message}` };

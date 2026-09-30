@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { useI18n } from '@/lib/i18n-internal';
+import { useI18n, INTERNAL_LANGUAGES, INTERNAL_LANGUAGE_LABELS, type InternalLanguage } from '@/lib/i18n-internal';
 import { createTeamUser, removeTeamUser } from './actions';
 
 export interface TeamUserRow {
@@ -24,12 +24,17 @@ function generatePassword(): string {
 }
 
 export function AdminUsersClient({ users }: { users: readonly TeamUserRow[] }) {
-  const { t } = useI18n();
+  const { t, language } = useI18n();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [note, setNote] = useState('');
+  // CLAUDE.md, ronda 17, bloque 3: preseleccionado con el idioma de interfaz
+  // activo de quien está dando de alta — un punto de partida razonable, no
+  // una suposición sobre el idioma de la persona invitada, que sigue siendo
+  // editable en el propio selector.
+  const [inviteLanguage, setInviteLanguage] = useState<InternalLanguage>(language);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -41,7 +46,7 @@ export function AdminUsersClient({ users }: { users: readonly TeamUserRow[] }) {
     setError(null);
     setNotice(null);
 
-    const result = await createTeamUser({ email, fullName, password, note });
+    const result = await createTeamUser({ email, fullName, password, note, inviteLanguage });
 
     if (!result.ok) {
       setError(result.error);
@@ -56,6 +61,7 @@ export function AdminUsersClient({ users }: { users: readonly TeamUserRow[] }) {
     setEmail('');
     setPassword('');
     setNote('');
+    setInviteLanguage(language);
     setSubmitting(false);
   }
 
@@ -114,6 +120,20 @@ export function AdminUsersClient({ users }: { users: readonly TeamUserRow[] }) {
           <p style={{ color: 'var(--wk-text-muted)', fontSize: 12, marginTop: -4, marginBottom: 10 }}>
             {t('admin.passwordNote')}
           </p>
+
+          <label className="wk-label">{t('admin.inviteLanguage')}</label>
+          <select
+            className="wk-input"
+            value={inviteLanguage}
+            onChange={(e) => setInviteLanguage(e.target.value as InternalLanguage)}
+            style={{ marginBottom: 10 }}
+          >
+            {INTERNAL_LANGUAGES.map((lang) => (
+              <option key={lang} value={lang}>
+                {INTERNAL_LANGUAGE_LABELS[lang]}
+              </option>
+            ))}
+          </select>
 
           <label className="wk-label">{t('admin.note')}</label>
           <input

@@ -59,3 +59,52 @@ export interface CounterProposalRejectionEmailTemplate {
   readonly signOff: string;
   readonly department: string;
 }
+
+/**
+ * Email interno (email 5, ronda 17, bloque 1, punto 1): avisa al advertising
+ * manager de que ha llegado una contrapropuesta. Idioma = `profiles.preferred_language`
+ * del propio AM (ronda 17, bloque 3) — nunca el idioma del cliente, es un
+ * email para el equipo. Solo ES/FR/EN tienen fichero propio (son los tres
+ * idiomas de interfaz interna, `lib/i18n-internal.tsx`); el registro
+ * (`templates/index.ts`) cae a ES para cualquier otro valor, no a EN — es el
+ * idioma por defecto de la interfaz interna (`readStoredLanguage`), no el de
+ * cara al cliente.
+ */
+export interface CounterProposalReceivedAmEmailTemplate {
+  readonly subject: (advertiserName: string, proposalNumber: string) => string;
+  readonly greeting: (ownerFirstName: string) => string;
+  readonly body: (advertiserName: string, optionCode: string) => string;
+  readonly cta: string;
+  readonly department: string;
+}
+
+/**
+ * Email al cliente (email 6, ronda 17, bloque 1, punto 2): confirma que su
+ * contrapropuesta fue aceptada. Mismo criterio que
+ * `CounterProposalRejectionEmailTemplate`: no se aplican las reglas de §5.6
+ * (son del primer email de propuesta), pero por prudencia se sigue sin
+ * mencionar precios ni IVA — no hace falta y evita cualquier duda.
+ */
+export interface CounterProposalAcceptedClientEmailTemplate {
+  readonly subject: (proposalNumber: string) => string;
+  readonly greeting: (contactFirstName: string) => string;
+  readonly body: string;
+  readonly closingLine: string;
+  readonly signOff: string;
+  readonly department: string;
+}
+
+/**
+ * Email al cliente (email 9, ronda 17, bloque 1, punto 3): confirma que su
+ * contrapropuesta se ha recibido y está pendiente de revisión — el mismo
+ * papel que hoy hace `copy.counterProposalThankYou` en pantalla, pero
+ * también por email.
+ */
+export interface CounterProposalSubmittedClientEmailTemplate {
+  readonly subject: (proposalNumber: string) => string;
+  readonly greeting: (contactFirstName: string) => string;
+  readonly body: string;
+  readonly closingLine: string;
+  readonly signOff: string;
+  readonly department: string;
+}
