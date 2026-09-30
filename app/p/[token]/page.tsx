@@ -20,6 +20,8 @@ export interface PublicLine {
   unit: string;
   market: string;
   quantity: number;
+  /** Precio de la línea (ronda 16): necesario para el formulario editable de "Proponer cambios". */
+  billed_total_cents: number;
   reach: PublicReach | null;
 }
 

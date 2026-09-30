@@ -22,10 +22,19 @@ export type SupportUnit =
   | 'COLLABORATION';
 export type ContentLanguageEnum = 'FR' | 'ES' | 'IT' | 'NL' | 'EN';
 export type ViesResultEnum = 'VALID' | 'INVALID' | 'UNAVAILABLE';
-export type ProposalStatusEnum = 'DRAFT' | 'SENT' | 'VIEWED' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+export type ProposalStatusEnum =
+  | 'DRAFT'
+  | 'SENT'
+  | 'VIEWED'
+  | 'ACCEPTED'
+  | 'REJECTED'
+  | 'EXPIRED'
+  | 'COUNTERED';
 export type VatRegimeEnum = 'FR_VAT_20' | 'REVERSE_CHARGE';
 export type PaymentTermsEnum = 'SPLIT_30_70' | 'FULL_ON_SIGNATURE';
 export type CampaignDurationUnitEnum = 'WEEK' | 'MONTH';
+/** Contrapropuesta editable del cliente (CLAUDE.md, ronda 16). */
+export type CounterProposalStatusEnum = 'PENDING' | 'ACCEPTED' | 'REJECTED';
 
 export interface Database {
   // Marcador que @supabase/postgrest-js (v2.47+) exige en el tipo Database
@@ -40,6 +49,8 @@ export interface Database {
           email: string;
           full_name: string;
           is_active: boolean;
+          /** Administrador (CLAUDE.md, ronda 16): puede decidir sobre CUALQUIER contrapropuesta, no solo las suyas. Protegido por trigger — solo la clave de servicio lo cambia. */
+          is_admin: boolean;
           created_at: string;
         };
         Insert: Partial<Database['public']['Tables']['profiles']['Row']> & { id: string; email: string; full_name: string };
@@ -255,6 +266,59 @@ export interface Database {
           },
         ];
       };
+      // Contrapropuesta editable del cliente (CLAUDE.md, ronda 16): lo que
+      // `submit_counter_proposal` persiste. Solo lectura desde el SDK
+      // (política `team_read`) — las mutaciones pasan exclusivamente por
+      // accept_counter_proposal/reject_counter_proposal (RPC).
+      counter_proposals: {
+        Row: {
+          id: string;
+          proposal_id: string;
+          option_code: 'A' | 'B' | 'C';
+          option_name: string | null;
+          status: CounterProposalStatusEnum;
+          lines: Json;
+          campaign_start: string | null;
+          campaign_end: string | null;
+          campaign_duration_count: number | null;
+          campaign_duration_unit: CampaignDurationUnitEnum | null;
+          legal_name: string;
+          billing_address: string;
+          vat_number: string | null;
+          billing_contact_name: string;
+          billing_contact_email: string;
+          signer_name: string;
+          signer_role: string;
+          purchase_order_reference: string | null;
+          vies_check_id: string | null;
+          submitted_at: string;
+          reviewed_at: string | null;
+          reviewed_by: string | null;
+          rejection_reason: string | null;
+          resulting_proposal_id: string | null;
+        };
+        Insert: Partial<Database['public']['Tables']['counter_proposals']['Row']> & {
+          proposal_id: string;
+          option_code: 'A' | 'B' | 'C';
+          lines: Json;
+          legal_name: string;
+          billing_address: string;
+          billing_contact_name: string;
+          billing_contact_email: string;
+          signer_name: string;
+          signer_role: string;
+        };
+        Update: Partial<Database['public']['Tables']['counter_proposals']['Row']>;
+        Relationships: [
+          {
+            foreignKeyName: 'counter_proposals_proposal_id_fkey';
+            columns: ['proposal_id'];
+            isOneToOne: true;
+            referencedRelation: 'proposals';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       pricing_parameter_sets: {
         Row: {
           id: string;
@@ -410,6 +474,36 @@ export interface Database {
         Args: { p_proposal_id: string; p_email: Json };
         Returns: undefined;
       };
+      submit_counter_proposal: {
+        Args: {
+          p_token: string;
+          p_option_code: string;
+          p_lines: Json;
+          p_campaign_start: string | null;
+          p_campaign_end: string | null;
+          p_campaign_duration_count: number | null;
+          p_campaign_duration_unit: string | null;
+          p_legal_name: string;
+          p_billing_address: string;
+          p_vat_number: string | null;
+          p_billing_contact_name: string;
+          p_billing_contact_email: string;
+          p_signer_name: string;
+          p_signer_role: string;
+          p_purchase_order_reference: string | null;
+          p_vies_result: ViesResultEnum;
+          p_vies_raw: Json;
+        };
+        Returns: Json;
+      };
+      accept_counter_proposal: {
+        Args: { p_counter_proposal_id: string; p_margin_overrides: Json };
+        Returns: Json;
+      };
+      reject_counter_proposal: {
+        Args: { p_counter_proposal_id: string; p_reason: string };
+        Returns: Json;
+      };
     };
     Enums: {
       market: Market;
@@ -420,6 +514,7 @@ export interface Database {
       proposal_status: ProposalStatusEnum;
       vat_regime: VatRegimeEnum;
       payment_terms: PaymentTermsEnum;
+      counter_proposal_status: CounterProposalStatusEnum;
     };
     CompositeTypes: Record<string, never>;
   };

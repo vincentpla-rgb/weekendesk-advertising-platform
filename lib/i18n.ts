@@ -30,6 +30,25 @@ export interface PublicCopy {
   readonly accept: string;
   readonly reject: string;
   readonly rejectWholeProposal: string;
+  /** Botón "Proponer cambios" (CLAUDE.md, ronda 16): segunda vía dentro del flujo de rechazo, por opción. */
+  readonly proposeChanges: string;
+  readonly counterProposalForm: {
+    readonly title: string;
+    readonly intro: string;
+    readonly colSupport: string;
+    readonly colOriginalPrice: string;
+    readonly colYourPrice: string;
+    readonly colQuantity: string;
+    readonly removeLine: string;
+    readonly lineRemoved: string;
+    readonly campaignPeriod: string;
+    readonly campaignStart: string;
+    readonly campaignEnd: string;
+    readonly fiscalTitle: string;
+    readonly cancel: string;
+    readonly submit: string;
+  };
+  readonly counterProposalThankYou: string;
   readonly acceptForm: {
     readonly title: string;
     readonly legalName: string;
@@ -65,6 +84,26 @@ const es: PublicCopy = {
   accept: 'Aceptar esta opción',
   reject: 'Rechazar',
   rejectWholeProposal: 'Rechazar toda la propuesta',
+  proposeChanges: 'Proponer cambios',
+  counterProposalForm: {
+    title: 'Proponer cambios a esta opción',
+    intro:
+      'Puedes ajustar el precio, la cantidad y el periodo de cada soporte, o eliminar una línea entera. No es posible añadir soportes nuevos.',
+    colSupport: 'Soporte',
+    colOriginalPrice: 'Precio original',
+    colYourPrice: 'Tu propuesta',
+    colQuantity: 'Cantidad',
+    removeLine: 'Eliminar esta línea',
+    lineRemoved: 'Eliminada',
+    campaignPeriod: 'Periodo de campaña',
+    campaignStart: 'Inicio',
+    campaignEnd: 'Fin',
+    fiscalTitle: 'Tus datos fiscales',
+    cancel: 'Cancelar',
+    submit: 'Enviar propuesta',
+  },
+  counterProposalThankYou:
+    'Gracias. Hemos recibido tu propuesta y la revisaremos en breve; nos pondremos en contacto contigo.',
   acceptForm: {
     title: 'Aceptar esta opción',
     legalName: 'Razón social',
@@ -100,6 +139,25 @@ const en: PublicCopy = {
   accept: 'Accept this option',
   reject: 'Reject',
   rejectWholeProposal: 'Reject the whole proposal',
+  proposeChanges: 'Propose changes',
+  counterProposalForm: {
+    title: 'Propose changes to this option',
+    intro:
+      "You can adjust the price, quantity and period of each placement, or remove an entire line. You cannot add new placements.",
+    colSupport: 'Placement',
+    colOriginalPrice: 'Original price',
+    colYourPrice: 'Your proposal',
+    colQuantity: 'Quantity',
+    removeLine: 'Remove this line',
+    lineRemoved: 'Removed',
+    campaignPeriod: 'Campaign period',
+    campaignStart: 'Start',
+    campaignEnd: 'End',
+    fiscalTitle: 'Your fiscal details',
+    cancel: 'Cancel',
+    submit: 'Send proposal',
+  },
+  counterProposalThankYou: "Thank you. We've received your proposal and will review it shortly; we'll be in touch.",
   acceptForm: {
     title: 'Accept this option',
     legalName: 'Legal name',
@@ -138,6 +196,26 @@ const fr: PublicCopy = {
   accept: 'Accepter cette option',
   reject: 'Refuser',
   rejectWholeProposal: "Refuser l'ensemble de la proposition",
+  proposeChanges: 'Proposer des modifications',
+  counterProposalForm: {
+    title: 'Proposer des modifications à cette option',
+    intro:
+      "Vous pouvez ajuster le prix, la quantité et la période de chaque support, ou supprimer une ligne entière. Il n'est pas possible d'ajouter de nouveaux supports.",
+    colSupport: 'Support',
+    colOriginalPrice: 'Prix initial',
+    colYourPrice: 'Votre proposition',
+    colQuantity: 'Quantité',
+    removeLine: 'Supprimer cette ligne',
+    lineRemoved: 'Supprimée',
+    campaignPeriod: 'Période de campagne',
+    campaignStart: 'Début',
+    campaignEnd: 'Fin',
+    fiscalTitle: 'Vos données fiscales',
+    cancel: 'Annuler',
+    submit: 'Envoyer la proposition',
+  },
+  counterProposalThankYou:
+    'Merci. Nous avons bien reçu votre proposition et l\'examinerons rapidement ; nous reviendrons vers vous.',
   acceptForm: {
     ...en.acceptForm,
     title: 'Accepter cette option',
@@ -170,6 +248,26 @@ const it: PublicCopy = {
   accept: 'Accetta questa opzione',
   reject: 'Rifiuta',
   rejectWholeProposal: "Rifiuta l'intera proposta",
+  proposeChanges: 'Proponi modifiche',
+  counterProposalForm: {
+    title: 'Proponi modifiche a questa opzione',
+    intro:
+      'Puoi modificare il prezzo, la quantità e il periodo di ciascun supporto, oppure eliminare una riga intera. Non è possibile aggiungere nuovi supporti.',
+    colSupport: 'Supporto',
+    colOriginalPrice: 'Prezzo originale',
+    colYourPrice: 'La tua proposta',
+    colQuantity: 'Quantità',
+    removeLine: 'Elimina questa riga',
+    lineRemoved: 'Eliminata',
+    campaignPeriod: 'Periodo della campagna',
+    campaignStart: 'Inizio',
+    campaignEnd: 'Fine',
+    fiscalTitle: 'I tuoi dati fiscali',
+    cancel: 'Annulla',
+    submit: 'Invia la proposta',
+  },
+  counterProposalThankYou:
+    'Grazie. Abbiamo ricevuto la tua proposta e la esamineremo a breve; ti ricontatteremo.',
   acceptForm: {
     ...en.acceptForm,
     title: 'Accetta questa opzione',
@@ -202,6 +300,26 @@ const nl: PublicCopy = {
   accept: 'Deze optie accepteren',
   reject: 'Weigeren',
   rejectWholeProposal: 'Het hele voorstel weigeren',
+  proposeChanges: 'Wijzigingen voorstellen',
+  counterProposalForm: {
+    title: 'Wijzigingen voorstellen voor deze optie',
+    intro:
+      'U kunt de prijs, hoeveelheid en periode van elk kanaal aanpassen, of een hele regel verwijderen. Nieuwe kanalen toevoegen is niet mogelijk.',
+    colSupport: 'Kanaal',
+    colOriginalPrice: 'Oorspronkelijke prijs',
+    colYourPrice: 'Uw voorstel',
+    colQuantity: 'Aantal',
+    removeLine: 'Deze regel verwijderen',
+    lineRemoved: 'Verwijderd',
+    campaignPeriod: 'Campagneperiode',
+    campaignStart: 'Start',
+    campaignEnd: 'Einde',
+    fiscalTitle: 'Uw fiscale gegevens',
+    cancel: 'Annuleren',
+    submit: 'Voorstel versturen',
+  },
+  counterProposalThankYou:
+    'Bedankt. We hebben uw voorstel ontvangen en bekijken het binnenkort; we nemen contact met u op.',
   acceptForm: {
     ...en.acceptForm,
     title: 'Deze optie accepteren',

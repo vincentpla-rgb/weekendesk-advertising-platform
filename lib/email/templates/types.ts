@@ -39,3 +39,23 @@ export interface ProposalEmailTemplate {
   /** Locale de `Intl.DateTimeFormat` para la fecha de caducidad. */
   readonly dateLocale: string;
 }
+
+/**
+ * Plantilla del email de rechazo de una contrapropuesta (CLAUDE.md, ronda
+ * 16, bloque 4) — un fichero por idioma, mismo patrón que
+ * `ProposalEmailTemplate`. A diferencia de esa plantilla, aquí NO se aplican
+ * las tres reglas de contenido de §5.6 (sin IVA, sin precios, sin nombre de
+ * campaña en el asunto): esa regla es específica del primer email de
+ * propuesta, no de este, que es un email distinto sobre una decisión ya
+ * tomada, con el motivo que escribió el advertising manager.
+ */
+export interface CounterProposalRejectionEmailTemplate {
+  readonly subject: (advertiserName: string, proposalNumber: string) => string;
+  readonly greeting: (contactFirstName: string) => string;
+  readonly intro: string;
+  /** Frase que precede al motivo tecleado por el AM (CLAUDE.md, ronda 16, bloque 3, punto 7 y bloque 4). */
+  readonly reasonIntro: string;
+  readonly closingLine: string;
+  readonly signOff: string;
+  readonly department: string;
+}

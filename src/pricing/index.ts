@@ -9,3 +9,4 @@ export * from './fiscal.js';
 export * from './holidays.js';
 export * from './duration.js';
 export * from './option-draft.js';
+export * from './counter-proposal.js';

@@ -9,6 +9,7 @@ import { buildProposalEmailContent } from '@/lib/email/proposal-email';
 import { EmailPreviewModal } from '@/components/EmailPreviewModal';
 import { DuplicateButton } from './DuplicateButton';
 import { RetrySendButton } from './RetrySendButton';
+import { CounterProposalReview, type CounterProposalReviewData } from './CounterProposalReview';
 
 const STATUS_BADGE_CLASS: Record<ProposalStatus, string> = {
   DRAFT: 'wk-badge-neutral',
@@ -17,6 +18,7 @@ const STATUS_BADGE_CLASS: Record<ProposalStatus, string> = {
   ACCEPTED: 'wk-badge-success',
   REJECTED: 'wk-badge-danger',
   EXPIRED: 'wk-badge-danger',
+  COUNTERED: 'wk-badge-warning',
 };
 
 const STATUS_KEY: Record<ProposalStatus, I18nKey> = {
@@ -26,6 +28,7 @@ const STATUS_KEY: Record<ProposalStatus, I18nKey> = {
   ACCEPTED: 'status.ACCEPTED',
   REJECTED: 'status.REJECTED',
   EXPIRED: 'status.EXPIRED',
+  COUNTERED: 'status.COUNTERED',
 };
 
 interface DetailLine {
@@ -75,6 +78,9 @@ export function ProposalDetailClient({
   options,
   supportNames,
   offerValidityDays,
+  counterProposal,
+  canDecideCounterProposal,
+  currentUserName,
 }: {
   proposal: DetailProposal;
   options: readonly DetailOption[];
@@ -82,6 +88,11 @@ export function ProposalDetailClient({
   supportNames: Record<string, string>;
   /** CLAUDE.md §7 — para la vista previa del email en DRAFT (ronda 13), como si se mandara ahora mismo. */
   offerValidityDays: number;
+  /** Contrapropuesta del cliente (CLAUDE.md, ronda 16) — a lo sumo una por presupuesto. */
+  counterProposal: CounterProposalReviewData | null;
+  /** Solo el propietario del presupuesto o un administrador pueden decidir (calculado en el servidor). */
+  canDecideCounterProposal: boolean;
+  currentUserName: string | null;
 }) {
   const { t } = useI18n();
   const [showEmailPreview, setShowEmailPreview] = useState(false);
@@ -200,6 +211,19 @@ export function ProposalDetailClient({
           </div>
         )}
       </section>
+
+      {counterProposal && proposal.accounts && proposal.contacts && (
+        <CounterProposalReview
+          proposalId={proposal.id}
+          counterProposal={counterProposal}
+          canDecide={canDecideCounterProposal}
+          advertiserName={proposal.accounts.legal_name}
+          contactFullName={proposal.contacts.full_name}
+          proposalNumber={proposal.proposal_number}
+          language={proposal.language as ContentLanguage}
+          currentUserName={currentUserName}
+        />
+      )}
 
       {options.map((option) => (
         <section key={option.id} className="wk-card">

@@ -12,6 +12,7 @@ const STATUS_KEY: Record<ProposalStatus, I18nKey> = {
   ACCEPTED: 'status.ACCEPTED',
   REJECTED: 'status.REJECTED',
   EXPIRED: 'status.EXPIRED',
+  COUNTERED: 'status.COUNTERED',
 };
 
 /**

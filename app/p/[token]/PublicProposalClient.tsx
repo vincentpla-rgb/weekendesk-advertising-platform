@@ -7,6 +7,7 @@ import { getPublicCopy, getVatNotice } from '@/lib/i18n';
 
 import type { PublicOption, PublicProposal } from './page';
 import { AcceptForm, type AcceptFormValues } from './AcceptForm';
+import { CounterProposalForm, type CounterProposalValues } from './CounterProposalForm';
 
 const REACH_METRIC_LABELS: Record<string, string> = {
   PAGE_VIEWS: 'vistas de página',
@@ -34,10 +35,17 @@ export function PublicProposalClient({
   const copy = getPublicCopy(proposal.language);
   const vatNotice = getVatNotice(proposal.language);
 
-  const [decided, setDecided] = useState<'ACCEPTED' | 'REJECTED' | null>(
-    proposal.status === 'ACCEPTED' ? 'ACCEPTED' : proposal.status === 'REJECTED' ? 'REJECTED' : null,
+  const [decided, setDecided] = useState<'ACCEPTED' | 'REJECTED' | 'COUNTERED' | null>(
+    proposal.status === 'ACCEPTED'
+      ? 'ACCEPTED'
+      : proposal.status === 'REJECTED'
+        ? 'REJECTED'
+        : proposal.status === 'COUNTERED'
+          ? 'COUNTERED'
+          : null,
   );
   const [acceptingOption, setAcceptingOption] = useState<PublicOption | null>(null);
+  const [counteringOption, setCounteringOption] = useState<PublicOption | null>(null);
   const [showRejectForm, setShowRejectForm] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -63,6 +71,27 @@ export function PublicProposalClient({
       if (!res.ok) throw new Error(body.error ?? 'Error al aceptar');
       setDecided('ACCEPTED');
       setAcceptingOption(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Error desconocido');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function submitCounterProposal(values: CounterProposalValues) {
+    if (!counteringOption) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/public/proposals/${token}/counter`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ optionCode: counteringOption.code, ...values }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ?? 'Error al enviar la propuesta');
+      setDecided('COUNTERED');
+      setCounteringOption(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
@@ -101,6 +130,13 @@ export function PublicProposalClient({
     return (
       <div className="wk-shell" style={{ maxWidth: 480, marginTop: 60 }}>
         <div className="wk-alert wk-alert-info">{copy.rejectedThankYou}</div>
+      </div>
+    );
+  }
+  if (decided === 'COUNTERED') {
+    return (
+      <div className="wk-shell" style={{ maxWidth: 480, marginTop: 60 }}>
+        <div className="wk-alert wk-alert-info">{copy.counterProposalThankYou}</div>
       </div>
     );
   }
@@ -197,14 +233,24 @@ export function PublicProposalClient({
                 </tbody>
               </table>
 
-              <button
-                type="button"
-                className="wk-btn wk-btn-primary"
-                style={{ marginTop: 14, justifyContent: 'center' }}
-                onClick={() => setAcceptingOption(option)}
-              >
-                {copy.accept}
-              </button>
+              <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                <button
+                  type="button"
+                  className="wk-btn wk-btn-primary"
+                  style={{ justifyContent: 'center', flex: 1 }}
+                  onClick={() => setAcceptingOption(option)}
+                >
+                  {copy.accept}
+                </button>
+                <button
+                  type="button"
+                  className="wk-btn wk-btn-secondary"
+                  style={{ justifyContent: 'center' }}
+                  onClick={() => setCounteringOption(option)}
+                >
+                  {copy.proposeChanges}
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -228,6 +274,16 @@ export function PublicProposalClient({
           submitting={submitting}
           onSubmit={submitAccept}
           onCancel={() => setAcceptingOption(null)}
+        />
+      )}
+
+      {counteringOption && (
+        <CounterProposalForm
+          option={counteringOption}
+          copy={copy}
+          submitting={submitting}
+          onSubmit={submitCounterProposal}
+          onCancel={() => setCounteringOption(null)}
         />
       )}
 
