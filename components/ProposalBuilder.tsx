@@ -54,6 +54,22 @@ function nextKey() {
 /** Idioma de interfaz (ES/FR/EN) → locale de Intl para `countryName` (CLAUDE.md §9, ronda 2). */
 const UI_TO_INTL_LOCALE: Record<InternalLanguage, 'es' | 'fr' | 'en'> = { ES: 'es', FR: 'fr', EN: 'en' };
 
+/**
+ * Aclaración de qué significa "cantidad" en modo "solo duración" (§5.3 bis,
+ * ronda 21) — no aplica en modo "fechas concretas", donde la cantidad ya se
+ * auto-sincroniza con el periodo real (CLAUDE.md §4, ronda 6) y el número no
+ * se presta a la misma ambigüedad. Solo texto, sin tocar el comportamiento
+ * del campo: para ON-* se consultó antes de considerar ocultarlo o fijarlo a
+ * 1 — por ahora se deja editable, con el texto explicando que es presencia
+ * continua, no un recuento.
+ */
+function quantityHelpKey(supportId: string): I18nKey | null {
+  if (supportId.startsWith('ON-')) return 'proposalBuilder.quantityHelpOn';
+  if (supportId.startsWith('CRM-')) return 'proposalBuilder.quantityHelpCrm';
+  if (supportId.startsWith('SOC-')) return 'proposalBuilder.quantityHelpSoc';
+  return null;
+}
+
 interface ProposalBuilderInitialData {
   readonly accountId: string;
   readonly contactId: string;
@@ -883,6 +899,7 @@ function OptionEditor({
             const suggestedQuantity = suggestedQuantityForSupport(draft, support);
             const canResync = suggestedQuantity !== null && !line.quantityAutoSynced;
             const isAutoManaged = suggestedQuantity !== null && line.quantityAutoSynced;
+            const quantityHelp = quantityHelpKey(line.supportId);
             return (
               <tr key={line.key}>
                 <td>
@@ -914,10 +931,12 @@ function OptionEditor({
                     <input
                       className="wk-input"
                       type="number"
-                      min={0.5}
-                      step={0.5}
+                      min={1}
+                      step={1}
                       value={line.quantity}
-                      onChange={(e) => onSetLineQuantity(line.key, Number(e.target.value))}
+                      onChange={(e) =>
+                        onSetLineQuantity(line.key, Math.max(1, Math.round(Number(e.target.value) || 0)))
+                      }
                       style={{ width: 68 }}
                     />
                     {isAutoManaged && (
@@ -940,6 +959,11 @@ function OptionEditor({
                       </button>
                     )}
                   </div>
+                  {draft.scheduleMode === 'DURATION_ONLY' && quantityHelp && (
+                    <p style={{ fontSize: 11, color: 'var(--wk-text-muted)', margin: '4px 0 0', maxWidth: 160 }}>
+                      {t(quantityHelp)}
+                    </p>
+                  )}
                 </td>
                 <td>
                   {support?.isMediaBuy ? (

@@ -304,23 +304,6 @@ export function runPreSendChecks(
             });
           }
         }
-      } else if (durationOnly) {
-        // Cotizada solo por duración, sin fecha de inicio concreta (§5.3 bis):
-        // no se puede comprobar la antelación. Aviso visible, no bloqueo.
-        warnings.push({
-          code: 'LEAD_TIME_NOT_VERIFIABLE',
-          severity: 'WARNING',
-          messageKey: 'checklist.leadTimeNotVerifiable',
-          messageVars: {
-            option: optionLabel,
-            support: line.supportId,
-            market: line.market,
-            required: String(line.leadTimeBusinessDays),
-          },
-          optionId: option.id,
-          supportId: line.supportId,
-          market: line.market,
-        });
       }
 
       if (!line.sellable) {
@@ -334,6 +317,23 @@ export function runPreSendChecks(
           market: line.market,
         });
       }
+    }
+
+    // Cotizada solo por duración, sin fecha de inicio concreta (§5.3 bis): la
+    // antelación no se puede comprobar para NINGÚN soporte/mercado de la
+    // opción — es una propiedad del PERIODO, no de cada línea. UN SOLO aviso
+    // por opción (ronda 21), no uno por combinación soporte×mercado: con
+    // varios soportes y varios mercados en la misma opción, repetirlo por
+    // línea producía decenas de avisos idénticos en la práctica, sin aportar
+    // nada que el primero no dijera ya. Aviso visible, no bloqueo.
+    if (campaignStart === null && durationOnly && option.lines.length > 0) {
+      warnings.push({
+        code: 'LEAD_TIME_NOT_VERIFIABLE',
+        severity: 'WARNING',
+        messageKey: 'checklist.leadTimeNotVerifiable',
+        messageVars: { option: optionLabel },
+        optionId: option.id,
+      });
     }
   }
 

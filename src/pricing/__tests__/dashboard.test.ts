@@ -13,6 +13,7 @@ function proposal(overrides: Partial<DashboardProposalInput> = {}): DashboardPro
     proposalNumber: '2026-001',
     status: 'SENT',
     ownerId: 'owner-1',
+    accountId: 'account-1',
     accountLegalName: 'Office de tourisme de Amiens',
     createdAt: '2027-01-10T00:00:00Z',
     expiresAt: null,

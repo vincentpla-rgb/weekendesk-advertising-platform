@@ -643,19 +643,31 @@ describe('validación', () => {
     ).toThrow(/cantidad/);
   });
 
-  it('marca SOC-05 como no vendible fuera de Francia, sin dejar de calcularlo', () => {
-    const fr = priceOption({ markets: ['FR'], lines: [{ supportId: 'SOC-05' }] }, ctx);
-    expect(line(fr, 'SOC-05', 'FR').sellable).toBe(true);
-
-    const es = priceOption({ markets: ['ES'], lines: [{ supportId: 'SOC-05' }] }, ctx);
-    const l = line(es, 'SOC-05', 'ES');
-    expect(l.sellable).toBe(false);
-    expect(l.warnings.map((w) => w.code)).toContain('NOT_SELLABLE_IN_MARKET');
+  it('SOC-05 es vendible en los 6 mercados (ronda 21: ya no restringido a Francia)', () => {
+    // El contenido ahora se produce en inglés, así que deja de depender de
+    // un mercado concreto — la restricción original (solo FR, CLAUDE.md §3)
+    // se retira explícitamente del catálogo.
+    for (const market of MARKETS) {
+      const option = priceOption({ markets: [market], lines: [{ supportId: 'SOC-05' }] }, ctx);
+      const l = line(option, 'SOC-05', market);
+      expect(l.sellable).toBe(true);
+      expect(l.warnings.map((w) => w.code)).not.toContain('NOT_SELLABLE_IN_MARKET');
+    }
   });
 
-  it('marca SOC-05 como no vendible en NL, la misma excepción que en el resto de mercados no-FR (ronda 14)', () => {
-    const nl = priceOption({ markets: ['NL'], lines: [{ supportId: 'SOC-05' }] }, ctx);
-    const l = line(nl, 'SOC-05', 'NL');
+  it('bloquea un soporte no vendible en un mercado concreto (mecanismo genérico, con un catálogo sintético)', () => {
+    // Desde la ronda 21, ningún soporte del catálogo real lleva una
+    // restricción de mercado (SOC-05 era el único) — se construye un
+    // catálogo mínimo aparte para seguir probando el mecanismo genérico
+    // (`isSellable`/`NOT_SELLABLE_IN_MARKET`) sin depender de datos de
+    // negocio que ya no reflejan ninguna restricción real.
+    const restricted = new Map(ctx.catalog);
+    const on01 = restricted.get('ON-01')!;
+    restricted.set('ON-01', { ...on01, markets: { ES: { sellable: false, note: 'Prueba' } } });
+    const restrictedCtx: PricingContext = { parameters: ctx.parameters, catalog: restricted };
+
+    const option = priceOption({ markets: ['ES'], lines: [{ supportId: 'ON-01' }] }, restrictedCtx);
+    const l = line(option, 'ON-01', 'ES');
     expect(l.sellable).toBe(false);
     expect(l.warnings.map((w) => w.code)).toContain('NOT_SELLABLE_IN_MARKET');
   });
@@ -680,9 +692,11 @@ describe('mercado NL — Países Bajos (ronda 14, CLAUDE.md §3/§9)', () => {
     expect(eur(line(beNl, 'ON-01', 'BE_NL').grossPriceCents)).toBeCloseTo(430 * 0.75, 5);
   });
 
-  it('NL es sellable por defecto (18 de los 19 soportes, salvo SOC-05)', () => {
+  it('NL es sellable por defecto, los 19 soportes (ronda 21: SOC-05 deja de ser la excepción)', () => {
     const option = priceOption({ markets: ['NL'], lines: [{ supportId: 'CRM-01' }] }, ctx);
     expect(line(option, 'CRM-01', 'NL').sellable).toBe(true);
+    const soc05 = priceOption({ markets: ['NL'], lines: [{ supportId: 'SOC-05' }] }, ctx);
+    expect(line(soc05, 'SOC-05', 'NL').sellable).toBe(true);
   });
 
   it('una opción cotizada en los 6 mercados calcula sin errores y respeta el suelo', () => {

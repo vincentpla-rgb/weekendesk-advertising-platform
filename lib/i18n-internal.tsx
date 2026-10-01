@@ -208,6 +208,9 @@ const es = {
   'proposalBuilder.viewPublic': 'Ver pantalla pública',
   'proposalBuilder.applyDuration': 'Usar duración',
   'proposalBuilder.autoQuantityHint': 'Automático según duración',
+  'proposalBuilder.quantityHelpOn': 'Presente de forma continua durante todo el periodo, no un número de veces.',
+  'proposalBuilder.quantityHelpCrm': 'Número de envíos distintos durante el periodo (p. ej. 2 = dos newsletters).',
+  'proposalBuilder.quantityHelpSoc': 'Número de publicaciones/historias durante el periodo.',
   'proposalBuilder.viewProposal': 'Ver presupuesto enviado',
   'proposalBuilder.createAnother': 'Crear otro presupuesto',
   'proposalBuilder.previewEmail': 'Vista previa del email',
@@ -233,7 +236,7 @@ const es = {
     '{support} en {market}: quedan {available} días laborables hasta el inicio (descontando festivos de {market}) y el soporte exige {required}.',
   'checklist.leadTimeForced': '{support} en {market}: antelación insuficiente, forzada — motivo: {reason}',
   'checklist.leadTimeNotVerifiable':
-    'Opción {option}: cotizada solo por duración, sin fecha de inicio. No se puede comprobar la antelación de {support} en {market} (exige {required} días laborables).',
+    'Esta opción usa "solo duración" — no se puede verificar la antelación mínima de ningún soporte/mercado hasta que se fije una fecha de inicio.',
   'checklist.supportNotSellable': '{support} no es vendible en {market}.',
   'checklist.mediaBudgetMissing':
     '{support}: falta el presupuesto de medios (€). Es obligatorio para calcular el fee de gestión.',
@@ -522,6 +525,9 @@ const fr: Dict = {
   'proposalBuilder.viewPublic': 'Voir la page publique',
   'proposalBuilder.applyDuration': 'Utiliser la durée',
   'proposalBuilder.autoQuantityHint': 'Automatique selon la durée',
+  'proposalBuilder.quantityHelpOn': 'Présent en continu pendant toute la période, pas un nombre de fois.',
+  'proposalBuilder.quantityHelpCrm': "Nombre d'envois distincts pendant la période (ex. 2 = deux newsletters).",
+  'proposalBuilder.quantityHelpSoc': 'Nombre de publications/stories pendant la période.',
   'proposalBuilder.viewProposal': 'Voir le devis envoyé',
   'proposalBuilder.createAnother': 'Créer un autre devis',
   'proposalBuilder.previewEmail': "Aperçu de l'email",
@@ -547,7 +553,7 @@ const fr: Dict = {
     "{support} en {market} : il reste {available} jours ouvrés avant le début (hors jours fériés de {market}) et le support en exige {required}.",
   'checklist.leadTimeForced': '{support} en {market} : délai insuffisant, forcé — motif : {reason}',
   'checklist.leadTimeNotVerifiable':
-    "Option {option} : devis établi uniquement par durée, sans date de début. Impossible de vérifier le délai de {support} en {market} (exige {required} jours ouvrés).",
+    'Cette option utilise "durée seule" — impossible de vérifier le délai minimum d\'aucun support/marché tant qu\'une date de début n\'est pas fixée.',
   'checklist.supportNotSellable': "{support} n'est pas commercialisable en {market}.",
   'checklist.mediaBudgetMissing':
     '{support} : budget médias manquant (€). Obligatoire pour calculer le fee de gestion.',
@@ -832,6 +838,9 @@ const en: Dict = {
   'proposalBuilder.viewPublic': 'View public page',
   'proposalBuilder.applyDuration': 'Use duration',
   'proposalBuilder.autoQuantityHint': 'Automatic from duration',
+  'proposalBuilder.quantityHelpOn': 'Present continuously throughout the period, not a number of times.',
+  'proposalBuilder.quantityHelpCrm': 'Number of distinct sends during the period (e.g. 2 = two newsletters).',
+  'proposalBuilder.quantityHelpSoc': 'Number of posts/stories during the period.',
   'proposalBuilder.viewProposal': 'View sent proposal',
   'proposalBuilder.createAnother': 'Create another proposal',
   'proposalBuilder.previewEmail': 'Preview email',
@@ -857,7 +866,7 @@ const en: Dict = {
     '{support} in {market}: {available} business days left until the start (excluding {market} holidays) and the support requires {required}.',
   'checklist.leadTimeForced': '{support} in {market}: insufficient lead time, forced — reason: {reason}',
   'checklist.leadTimeNotVerifiable':
-    'Option {option}: quoted only by duration, with no start date. Cannot check the lead time of {support} in {market} (requires {required} business days).',
+    'This option uses "duration only" — the minimum lead time cannot be checked for any support/market until a start date is set.',
   'checklist.supportNotSellable': '{support} is not sellable in {market}.',
   'checklist.mediaBudgetMissing':
     '{support}: missing media budget (€). Required to calculate the management fee.',

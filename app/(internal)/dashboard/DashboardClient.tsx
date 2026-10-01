@@ -319,9 +319,14 @@ export function DashboardClient({ data }: { data: DashboardData }) {
                   const owner = data.profiles.find((pr) => pr.id === p.ownerId);
                   return (
                     <tr key={p.id}>
-                      <td>{p.proposalNumber ?? '—'}</td>
                       <td>
-                        <a href={`/proposals/${p.id}`}>{p.accountLegalName || '—'}</a>
+                        {/* Clicable al detalle del presupuesto (ronda 21) — la
+                            columna "Compte" enlaza a la ficha de cuenta, un
+                            destino distinto. */}
+                        <a href={`/proposals/${p.id}`}>{p.proposalNumber ?? '—'}</a>
+                      </td>
+                      <td>
+                        <a href={`/accounts/${p.accountId}`}>{p.accountLegalName || '—'}</a>
                       </td>
                       <td>
                         <span className={`wk-badge ${STATUS_BADGE_CLASS[p.status]}`}>{t(STATUS_I18N_KEY[p.status])}</span>
