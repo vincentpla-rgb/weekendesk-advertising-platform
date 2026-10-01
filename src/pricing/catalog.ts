@@ -65,18 +65,13 @@ const SUPPORTS: readonly SupportDefinition[] = [
     businessHours: 5.0, designHours: 3.0, externalCostCents: 10_000,
     leadTimeBusinessDays: 20, basePriceCents: 95_000,
     isMediaBuy: false, minMonthlyFeeCents: null, alwaysManualMediaSplit: false, requiresAvailabilityCheck: false },
+  // Vendible en los 6 mercados desde la ronda 21: el contenido se produce en
+  // inglés, así que ya no depende de un mercado concreto — antes solo FR
+  // (CLAUDE.md §3/§9, ronda 1), restricción retirada explícitamente.
   { id: 'SOC-05', name: 'Video TikTok', channel: 'SOCIAL', unit: 'UNIT',
     businessHours: 2.0, designHours: 4.0, externalCostCents: 10_000,
     leadTimeBusinessDays: 15, basePriceCents: 85_000,
-    isMediaBuy: false, minMonthlyFeeCents: null, alwaysManualMediaSplit: false, requiresAvailabilityCheck: false,
-    // Solo confirmado en FR. El resto no es vendible hasta confirmación.
-    markets: {
-      ES:    { sellable: false, note: 'TikTok solo confirmado en FR' },
-      IT:    { sellable: false, note: 'TikTok solo confirmado en FR' },
-      BE_FR: { sellable: false, note: 'TikTok solo confirmado en FR' },
-      BE_NL: { sellable: false, note: 'TikTok solo confirmado en FR' },
-      NL:    { sellable: false, note: 'TikTok solo confirmado en FR' },
-    } },
+    isMediaBuy: false, minMonthlyFeeCents: null, alwaysManualMediaSplit: false, requiresAvailabilityCheck: false },
 
   // --- Media buy (CLAUDE.md §4.4) -------------------------------------------
   { id: 'ADS-01', name: 'Campaña Meta patrocinada', channel: 'SOCIAL_ADS', unit: 'MONTH',

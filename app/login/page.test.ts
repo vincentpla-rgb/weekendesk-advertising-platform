@@ -36,4 +36,9 @@ describe('app/login/page.tsx — login con email y contraseña, sin magic link',
   it('no ofrece registro público: no llama a signUp, solo a signInWith*', () => {
     expect(SOURCE).not.toMatch(/\.signUp\(/);
   });
+
+  it('la pantalla de entrada por defecto es el dashboard, no el creador de presupuestos (ronda 21)', () => {
+    expect(SOURCE).toContain("?? '/dashboard'");
+    expect(SOURCE).not.toContain("?? '/proposals/new'");
+  });
 });

@@ -176,6 +176,35 @@ describe('controles previos al envío', () => {
     expect(informe.warnings.map((w) => w.code)).toContain('LEAD_TIME_NOT_VERIFIABLE');
   });
 
+  it('solo duración: UN único aviso por opción, no uno por combinación soporte×mercado (ronda 21)', () => {
+    // 2 soportes × 2 mercados = 4 líneas en la opción calculada. Antes de la
+    // ronda 21 esto generaba 4 avisos LEAD_TIME_NOT_VERIFIABLE idénticos —
+    // decenas en la práctica con opciones más grandes. Ahora debe ser uno
+    // solo, por opción.
+    const option = priceOption(
+      {
+        id: 'A',
+        markets: ['FR', 'ES'],
+        lines: [{ supportId: 'ON-01' }, { supportId: 'CRM-01' }],
+      },
+      ctx,
+    );
+    expect(option.lines.length).toBe(4);
+    const informe = runPreSendChecks([withDurationOnly(option)], baseContext());
+
+    const leadTimeWarnings = informe.warnings.filter((w) => w.code === 'LEAD_TIME_NOT_VERIFIABLE');
+    expect(leadTimeWarnings).toHaveLength(1);
+    expect(leadTimeWarnings[0]?.optionId).toBe('A');
+    expect(leadTimeWarnings[0]?.supportId).toBeUndefined();
+    expect(leadTimeWarnings[0]?.market).toBeUndefined();
+  });
+
+  it('solo duración sin ninguna línea: ningún aviso de antelación (nada que avisar)', () => {
+    const option = priceOption({ id: 'A', markets: ['FR'], lines: [] }, ctx);
+    const informe = runPreSendChecks([withDurationOnly(option)], baseContext());
+    expect(informe.warnings.map((w) => w.code)).not.toContain('LEAD_TIME_NOT_VERIFIABLE');
+  });
+
   it('el caso de Navidad: sin festivos pasa, con festivos bloquea', () => {
     // ON-01 exige 15 días laborables. Del 11/12/2026 al 01/01/2027 hay 15 sin
     // festivos, pero 13 con el calendario FR (25/12 y 01/01 caen en medio).
@@ -233,8 +262,17 @@ describe('controles previos al envío', () => {
     expect(informe.blockers[0]!.optionId).toBe('B');
   });
 
-  it('bloquea un soporte no vendible en ese mercado', () => {
-    const option = priceOption({ id: 'A', markets: ['IT'], lines: [{ supportId: 'SOC-05' }] }, ctx);
+  it('bloquea un soporte no vendible en ese mercado (catálogo sintético — ronda 21: SOC-05 ya no tiene restricción real)', () => {
+    // Ningún soporte del catálogo real lleva ya una restricción de mercado
+    // (SOC-05 era el único, retirada en la ronda 21) — se construye un
+    // catálogo mínimo aparte para seguir probando el bloqueo
+    // SUPPORT_NOT_SELLABLE sin depender de datos de negocio obsoletos.
+    const restricted = new Map(ctx.catalog);
+    const soc05 = restricted.get('SOC-05')!;
+    restricted.set('SOC-05', { ...soc05, markets: { IT: { sellable: false, note: 'Prueba' } } });
+    const restrictedCtx: PricingContext = { parameters: ctx.parameters, catalog: restricted };
+
+    const option = priceOption({ id: 'A', markets: ['IT'], lines: [{ supportId: 'SOC-05' }] }, restrictedCtx);
     const informe = runPreSendChecks([withStart(option)], baseContext());
     expect(informe.blockers.map((b) => b.code)).toContain('SUPPORT_NOT_SELLABLE');
   });

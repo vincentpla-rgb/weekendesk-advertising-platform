@@ -81,7 +81,7 @@ export default async function DashboardPage({
   let proposalsQuery = supabase
     .from('proposals')
     .select(
-      'id, proposal_number, status, owner_id, created_at, expires_at, accounts(legal_name), profiles(full_name), proposal_options(billed_total_cents, markets, proposal_option_lines(support_id))',
+      'id, proposal_number, status, owner_id, account_id, created_at, expires_at, accounts(legal_name), profiles(full_name), proposal_options(billed_total_cents, markets, proposal_option_lines(support_id))',
     )
     .order('created_at', { ascending: false })
     .limit(300);
@@ -130,6 +130,7 @@ export default async function DashboardPage({
     proposalNumber: p.proposal_number,
     status: p.status,
     ownerId: p.owner_id,
+    accountId: p.account_id,
     accountLegalName: p.accounts?.legal_name ?? '',
     createdAt: p.created_at,
     expiresAt: p.expires_at,

@@ -37,6 +37,8 @@ export interface DashboardProposalInput {
   readonly proposalNumber: string | null;
   readonly status: DashboardProposalStatus;
   readonly ownerId: string;
+  /** Para enlazar a la ficha de cuenta (`/accounts/[id]`, ronda 21) — distinto del enlace al presupuesto. */
+  readonly accountId: string;
   readonly accountLegalName: string;
   readonly createdAt: string;
   readonly expiresAt: string | null;

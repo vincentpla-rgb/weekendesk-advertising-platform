@@ -12,8 +12,9 @@
 #      juego de parámetros ya existente, y `multimarket_discount_guidance`
 #      gana la fila market_count=6, rate=0,20 (mismo plateau que 4-5).
 #   3. `support_market_availability` siembra NL para los 19 soportes,
-#      sellable=true salvo SOC-05 (TikTok, solo confirmado en FR) — misma
-#      excepción que ya se aplica al resto de mercados no-FR.
+#      sellable=true para los 19 (ronda 21: SOC-05/TikTok deja de estar
+#      restringido a FR, `20261003090000_soc05_all_markets.sql` — en la
+#      ronda 14 original era la única excepción, 18 de 19).
 #   4. `create_and_send_proposal`/`get_public_proposal`/`accept_public_proposal`
 #      funcionan con NL sin ningún cambio de función: ningún flujo SQL
 #      hardcodea la lista de mercados. Se envía un presupuesto con una línea
@@ -112,19 +113,19 @@ else
   fail "se esperaba 0,2000, salió: $GUIDANCE_6"
 fi
 
-echo "=== Caso 3: vendibilidad NL — 19 soportes sellable=true salvo SOC-05 ==="
+echo "=== Caso 3: vendibilidad NL — 19 soportes sellable=true (ronda 21: SOC-05 ya no es la excepción) ==="
 SELLABLE_COUNT="$($PSQL -d "$DB" -At -c "select count(*) from support_market_availability where market = 'NL' and is_sellable;")"
-if [[ "$SELLABLE_COUNT" == "18" ]]; then
-  pass "18 de 19 soportes vendibles en NL"
+if [[ "$SELLABLE_COUNT" == "19" ]]; then
+  pass "19 de 19 soportes vendibles en NL"
 else
-  fail "se esperaban 18 soportes vendibles, salieron: $SELLABLE_COUNT"
+  fail "se esperaban 19 soportes vendibles, salieron: $SELLABLE_COUNT"
 fi
 
 SOC05_NL="$($PSQL -d "$DB" -At -c "select is_sellable from support_market_availability where support_id = 'SOC-05' and market = 'NL';")"
-if [[ "$SOC05_NL" == "f" ]]; then
-  pass "SOC-05 (TikTok) no vendible en NL, misma excepción que en ES/IT/BE_FR/BE_NL"
+if [[ "$SOC05_NL" == "t" ]]; then
+  pass "SOC-05 (TikTok) vendible en NL (ronda 21: ya no restringido a FR)"
 else
-  fail "se esperaba 'f' para SOC-05 en NL, salió: $SOC05_NL"
+  fail "se esperaba 't' para SOC-05 en NL, salió: $SOC05_NL"
 fi
 
 echo "=== Caso 4: envío, pantalla pública y aceptación con una línea en mercado NL ==="
