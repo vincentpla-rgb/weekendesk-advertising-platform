@@ -21,6 +21,28 @@ vi.mock('@/lib/supabase/service', () => ({
 
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
+const getUser = vi.fn();
+const profilesSelectSingle = vi.fn();
+const sessionClient = {
+  auth: { getUser },
+  from: vi.fn((table: string) => {
+    if (table === 'profiles') {
+      return { select: () => ({ eq: () => ({ single: profilesSelectSingle }) }) };
+    }
+    throw new Error(`tabla no mockeada en la sesión: ${table}`);
+  }),
+};
+vi.mock('@/lib/supabase/server', () => ({
+  createClient: vi.fn(async () => sessionClient),
+}));
+
+vi.mock('next/headers', () => ({
+  headers: vi.fn(async () => new Map([['x-forwarded-proto', 'https'], ['host', 'advertising.weekendesk.fr']])),
+}));
+
+const sendEmail = vi.fn();
+vi.mock('@/lib/email/resend-client', () => ({ sendEmail }));
+
 const { createTeamUser, removeTeamUser } = await import('./actions.js');
 
 describe('createTeamUser', () => {
@@ -28,6 +50,14 @@ describe('createTeamUser', () => {
     createUser.mockReset();
     upsert.mockReset();
     from.mockClear();
+    getUser.mockReset();
+    profilesSelectSingle.mockReset();
+    sendEmail.mockReset();
+    getUser.mockResolvedValue({ data: { user: { id: 'inviter-1' } } });
+    profilesSelectSingle.mockResolvedValue({ data: { full_name: 'Vincent Pla' } });
+    sendEmail.mockResolvedValue({ ok: true, id: 'email_1' });
+    delete process.env.RESEND_API_KEY;
+    delete process.env.RESEND_FROM_EMAIL;
   });
 
   it(
@@ -142,6 +172,66 @@ describe('createTeamUser', () => {
     });
 
     expect(result.ok).toBe(false);
+  });
+
+  it(
+    'manda el email 1 de invitación con RESEND_API_KEY/RESEND_FROM_EMAIL configuradas, ' +
+      'en el idioma elegido al invitar y con el nombre de quien invita',
+    async () => {
+      process.env.RESEND_API_KEY = 'key';
+      process.env.RESEND_FROM_EMAIL = 'advertising@weekendesk.fr';
+      createUser.mockResolvedValue({ error: null });
+      upsert.mockResolvedValue({ error: null });
+
+      const result = await createTeamUser({
+        email: 'remi.challal@weekendesk.fr',
+        fullName: 'Rémi Challal',
+        password: 'una-contraseña-larga',
+        note: '',
+        inviteLanguage: 'FR',
+      });
+
+      expect(result.ok).toBe(true);
+      expect(sendEmail).toHaveBeenCalledTimes(1);
+      const [emailInput] = sendEmail.mock.calls[0] as [{ to: string[]; subject: string; html: string }];
+      expect(emailInput.to).toEqual(['remi.challal@weekendesk.fr']);
+      expect(emailInput.subject).toContain('Vincent Pla');
+      expect(emailInput.html).toContain('https://advertising.weekendesk.fr/login');
+    },
+  );
+
+  it('sin RESEND_API_KEY/RESEND_FROM_EMAIL, no manda el email pero el alta sigue teniendo éxito', async () => {
+    createUser.mockResolvedValue({ error: null });
+    upsert.mockResolvedValue({ error: null });
+
+    const result = await createTeamUser({
+      email: 'remi.challal@weekendesk.fr',
+      fullName: 'Rémi Challal',
+      password: 'una-contraseña-larga',
+      note: '',
+      inviteLanguage: 'FR',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it('un fallo al mandar el email de invitación no tumba el alta (el acceso ya se creó de verdad)', async () => {
+    process.env.RESEND_API_KEY = 'key';
+    process.env.RESEND_FROM_EMAIL = 'advertising@weekendesk.fr';
+    createUser.mockResolvedValue({ error: null });
+    upsert.mockResolvedValue({ error: null });
+    sendEmail.mockResolvedValue({ ok: false, error: 'Resend caído' });
+
+    const result = await createTeamUser({
+      email: 'remi.challal@weekendesk.fr',
+      fullName: 'Rémi Challal',
+      password: 'una-contraseña-larga',
+      note: '',
+      inviteLanguage: 'FR',
+    });
+
+    expect(result).toEqual({ ok: true, alreadyExisted: false });
   });
 });
 

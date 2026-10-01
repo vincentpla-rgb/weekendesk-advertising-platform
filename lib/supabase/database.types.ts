@@ -375,6 +375,34 @@ export interface Database {
           },
         ];
       };
+      // Registro de eventos por presupuesto (visto/aceptado/rechazado…). En
+      // el esquema desde la primera migración; el cron diario (ronda 18,
+      // bloque 2) es el primero en LEERLA para deduplicar (evento
+      // 'reminder_sent') y en escribir 'expired'.
+      proposal_events: {
+        Row: {
+          id: string;
+          proposal_id: string;
+          event_type: string;
+          payload: Json | null;
+          actor_id: string | null;
+          created_at: string;
+        };
+        Insert: Partial<Database['public']['Tables']['proposal_events']['Row']> & {
+          proposal_id: string;
+          event_type: string;
+        };
+        Update: Partial<Database['public']['Tables']['proposal_events']['Row']>;
+        Relationships: [
+          {
+            foreignKeyName: 'proposal_events_proposal_id_fkey';
+            columns: ['proposal_id'];
+            isOneToOne: false;
+            referencedRelation: 'proposals';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       // Objetivo por advertising manager y por quarter fiscal (CLAUDE.md §0).
       // En el esquema desde la primera migración; ronda 18, bloque 4 es su
       // primer uso real (confirmado por Vincent: la tabla sirve tal cual).
@@ -529,7 +557,7 @@ export interface Database {
       };
       mark_public_proposal_viewed: {
         Args: { token: string };
-        Returns: undefined;
+        Returns: Json;
       };
       accept_public_proposal: {
         Args: {

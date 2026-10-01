@@ -3,6 +3,9 @@ import { NextResponse } from 'next/server';
 import { checkVies } from '@/lib/vies';
 import { createPublicClient } from '@/lib/supabase/server';
 import type { Json } from '@/lib/supabase/database.types.js';
+import type { ContentLanguage } from '@/lib/domain';
+import { buildTransactionalEmailContent } from '@/lib/email/transactional-email';
+import { sendEmail } from '@/lib/email/resend-client';
 
 interface AcceptBody {
   optionCode: string;
@@ -71,6 +74,99 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+
+  // Emails 3 (cliente: confirmación de aceptación) y 4 (AM: aviso con
+  // rentabilidad) — CLAUDE.md §9/§10.3, ronda 18, bloque 2. Igual criterio
+  // que el resto del proyecto: la aceptación ya se persistió arriba, un
+  // fallo de Resend aquí nunca deshace nada, solo se registra.
+  const accepted = data as {
+    proposal_id: string;
+    proposal_number: string;
+    proposal_language: string;
+    option_name: string | null;
+    markets: string[] | null;
+    sale_cents: number | null;
+    cost_cents: number | null;
+    margin_cents: number | null;
+    margin_rate: number | null;
+    advertiser_name: string | null;
+    contact_full_name: string | null;
+    contact_email: string | null;
+    owner_email: string | null;
+    owner_full_name: string | null;
+    owner_language: string | null;
+  };
+
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromAddress = process.env.RESEND_FROM_EMAIL;
+
+  if (apiKey && fromAddress) {
+    const origin = new URL(request.url).origin;
+
+    if (
+      accepted.contact_email &&
+      accepted.contact_full_name &&
+      accepted.advertiser_name &&
+      accepted.option_name &&
+      accepted.markets &&
+      accepted.sale_cents !== null
+    ) {
+      const clientFirstName = accepted.contact_full_name.trim().split(/\s+/)[0] ?? accepted.contact_full_name;
+      const clientEmail = buildTransactionalEmailContent({
+        key: 'accepted_client',
+        language: accepted.proposal_language as ContentLanguage,
+        contactFirstName: clientFirstName,
+        clientCompany: accepted.advertiser_name,
+        proposalNumber: accepted.proposal_number,
+        optionName: accepted.option_name,
+        markets: accepted.markets.join(' · '),
+        amountCents: accepted.sale_cents,
+        billedTo: body.legalName,
+        creatorName: accepted.owner_full_name ?? 'Weekendesk Advertising',
+      });
+      const clientResult = await sendEmail(
+        { from: fromAddress, to: [accepted.contact_email], subject: clientEmail.subject, html: clientEmail.html, text: clientEmail.text },
+        apiKey,
+      );
+      if (!clientResult.ok) {
+        console.error(`[accept] email 3 (cliente) no se pudo mandar: ${clientResult.error}`);
+      }
+    }
+
+    if (
+      accepted.owner_email &&
+      accepted.owner_full_name &&
+      accepted.advertiser_name &&
+      accepted.option_name &&
+      accepted.markets &&
+      accepted.sale_cents !== null &&
+      accepted.cost_cents !== null &&
+      accepted.margin_cents !== null
+    ) {
+      const amFirstName = accepted.owner_full_name.trim().split(/\s+/)[0] ?? accepted.owner_full_name;
+      const amEmail = buildTransactionalEmailContent({
+        key: 'accepted_am',
+        language: (accepted.owner_language as ContentLanguage) ?? 'ES',
+        amFirstName,
+        clientCompany: accepted.advertiser_name,
+        proposalNumber: accepted.proposal_number,
+        optionName: accepted.option_name,
+        markets: accepted.markets.join(' · '),
+        saleCents: accepted.sale_cents,
+        costCents: accepted.cost_cents,
+        marginCents: accepted.margin_cents,
+        marginRate: accepted.margin_rate,
+        ctaUrl: `${origin}/proposals/${accepted.proposal_id}`,
+      });
+      const amResult = await sendEmail(
+        { from: fromAddress, to: [accepted.owner_email], subject: amEmail.subject, html: amEmail.html, text: amEmail.text },
+        apiKey,
+      );
+      if (!amResult.ok) {
+        console.error(`[accept] email 4 (AM) no se pudo mandar: ${amResult.error}`);
+      }
+    }
   }
 
   return NextResponse.json(data);
