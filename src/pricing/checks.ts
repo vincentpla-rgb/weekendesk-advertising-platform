@@ -19,10 +19,10 @@ import type { Market, PricedOption, PricingParameters } from './types.js';
 
 export type CheckCode =
   | 'MARGIN_BELOW_FLOOR'
+  | 'CALCULATION_ERROR'
   | 'CAMPAIGN_DATES_INVALID'
   | 'LEAD_TIME_INSUFFICIENT'
   | 'LEAD_TIME_FORCED'
-  | 'LEAD_TIME_NOT_VERIFIABLE'
   | 'SUPPORT_NOT_SELLABLE'
   | 'MEDIA_BUDGET_MISSING'
   | 'MEDIA_FEE_EXCEEDS_BUDGET'
@@ -32,10 +32,10 @@ export type CheckCode =
 /** Claves del diccionario de i18n (`lib/i18n-internal.tsx`), namespace `checklist.*`. */
 export type CheckMessageKey =
   | 'checklist.marginBelowFloor'
+  | 'checklist.calculationError'
   | 'checklist.campaignDatesInvalid'
   | 'checklist.leadTimeInsufficient'
   | 'checklist.leadTimeForced'
-  | 'checklist.leadTimeNotVerifiable'
   | 'checklist.supportNotSellable'
   | 'checklist.mediaBudgetMissing'
   | 'checklist.mediaFeeExceedsBudget'
@@ -79,19 +79,31 @@ export interface LeadTimeOverride {
 
 /**
  * Fechas de campaña de UNA opción (CLAUDE.md §5.3, ronda 2: por opción, no
- * por envío). `campaignStart: null` con `durationOnly: true` es una campaña
- * cotizada solo por duración ("1 mes"), sin fecha de inicio concreta — no se
- * puede comprobar la antelación y se avisa de forma visible en vez de
- * bloquear en silencio (§5.3 bis).
+ * por envío). `campaignStart: null` es una campaña cotizada solo por
+ * duración ("1 mes"), sin fecha de inicio concreta — no se puede comprobar
+ * la antelación, así que el control 2 simplemente no se evalúa para ella
+ * (§5.3 bis). Ese aviso se muestra una sola vez, junto al selector de
+ * periodo de la opción en la propia interfaz (`ProposalBuilder.tsx`,
+ * `proposalBuilder.durationOnlyWarning`) — no en este checklist (ronda 22:
+ * antes de esta ronda, el mismo aviso aparecía aquí TAMBIÉN, una vez por
+ * cada opción en modo duración, duplicando el de la interfaz).
  */
 export interface PreSendOptionContext {
   readonly option: PricedOption;
   readonly campaignStart: Date | null;
   /** Solo relevante en modo "fechas concretas" — `null` en modo "solo duración" o si aún no se ha rellenado. */
   readonly campaignEnd: Date | null;
-  readonly durationOnly: boolean;
   /** Antelaciones insuficientes ya forzadas a mano para esta opción (ronda 11). */
   readonly leadTimeOverrides?: readonly LeadTimeOverride[];
+  /**
+   * `true` si el motor no pudo calcular esta opción (un dato inválido en una
+   * línea hizo que `priceOption` lanzara, CLAUDE.md §10.3 — ronda 22). Con
+   * esto activo, ninguno de los demás controles de la opción se evalúa:
+   * `option.lines` está vacío y no hay nada real que comprobar, así que se
+   * bloquea con un único aviso ("no se puede calcular el margen") en vez de
+   * dar un falso "por debajo del suelo" sobre un margen que es `null`.
+   */
+  readonly calculationError?: boolean;
 }
 
 export interface PreSendContext {
@@ -154,8 +166,23 @@ export function runPreSendChecks(
   const blockers: CheckResult[] = [];
   const warnings: CheckResult[] = [];
 
-  for (const { option, campaignStart, campaignEnd, durationOnly, leadTimeOverrides } of options) {
+  for (const { option, campaignStart, campaignEnd, leadTimeOverrides, calculationError } of options) {
     const optionLabel = option.name ?? option.id ?? '—';
+
+    // El motor no pudo calcular esta opción (ronda 22): ningún otro control
+    // tiene nada real que comprobar — `option.lines` está vacío y el margen
+    // es `null`, no "bajo el suelo". Un único aviso claro, y se salta el
+    // resto de controles de esta opción.
+    if (calculationError) {
+      blockers.push({
+        code: 'CALCULATION_ERROR',
+        severity: 'BLOCKER',
+        messageKey: 'checklist.calculationError',
+        messageVars: { option: optionLabel },
+        optionId: option.id,
+      });
+      continue;
+    }
 
     // 1. Margen por debajo del 50 % en cualquier opción. No se compensa una
     //    opción floja con otra. Bloqueo duro: no forzable.
@@ -317,23 +344,6 @@ export function runPreSendChecks(
           market: line.market,
         });
       }
-    }
-
-    // Cotizada solo por duración, sin fecha de inicio concreta (§5.3 bis): la
-    // antelación no se puede comprobar para NINGÚN soporte/mercado de la
-    // opción — es una propiedad del PERIODO, no de cada línea. UN SOLO aviso
-    // por opción (ronda 21), no uno por combinación soporte×mercado: con
-    // varios soportes y varios mercados en la misma opción, repetirlo por
-    // línea producía decenas de avisos idénticos en la práctica, sin aportar
-    // nada que el primero no dijera ya. Aviso visible, no bloqueo.
-    if (campaignStart === null && durationOnly && option.lines.length > 0) {
-      warnings.push({
-        code: 'LEAD_TIME_NOT_VERIFIABLE',
-        severity: 'WARNING',
-        messageKey: 'checklist.leadTimeNotVerifiable',
-        messageVars: { option: optionLabel },
-        optionId: option.id,
-      });
     }
   }
 

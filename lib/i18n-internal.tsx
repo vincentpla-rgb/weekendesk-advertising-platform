@@ -225,18 +225,21 @@ const es = {
     'Esto no envía nada ni consume cuota de Resend. El enlace y el número de presupuesto ya son los reales: es exactamente lo que recibiría el cliente si el envío tuviera éxito ahora mismo.',
   'proposalBuilder.previewEmailNeedsData':
     'Rellena al menos la razón social y el nombre del contacto para ver la vista previa.',
+  'proposalBuilder.previewPdf': 'Vista previa del presupuesto',
+  'proposalBuilder.previewPdfLoading': 'Generando…',
+  'proposalBuilder.previewPdfError': 'No se ha podido generar la vista previa del PDF.',
 
   'checklist.allPass': 'Todos los controles previos al envío pasan.',
   'checklist.blocks': 'Bloquea el envío',
   'checklist.warning': 'Aviso',
   'checklist.marginBelowFloor': 'Opción {option}: margen del {rate} %, por debajo del {min} % exigido.',
+  'checklist.calculationError':
+    'Opción {option}: no se puede calcular el margen — hay un dato inválido en una de sus líneas (ver el aviso en la propia opción). Corrígelo para poder evaluar esta opción.',
   'checklist.campaignDatesInvalid':
     'Opción {option}: la fecha de fin de campaña no puede ser anterior a la de inicio.',
   'checklist.leadTimeInsufficient':
     '{support} en {market}: quedan {available} días laborables hasta el inicio (descontando festivos de {market}) y el soporte exige {required}.',
   'checklist.leadTimeForced': '{support} en {market}: antelación insuficiente, forzada — motivo: {reason}',
-  'checklist.leadTimeNotVerifiable':
-    'Esta opción usa "solo duración" — no se puede verificar la antelación mínima de ningún soporte/mercado hasta que se fije una fecha de inicio.',
   'checklist.supportNotSellable': '{support} no es vendible en {market}.',
   'checklist.mediaBudgetMissing':
     '{support}: falta el presupuesto de medios (€). Es obligatorio para calcular el fee de gestión.',
@@ -250,6 +253,21 @@ const es = {
   'checklist.forceLeadTimeReasonLabel': 'Motivo (obligatorio)',
   'checklist.forceLeadTimeConfirm': 'Confirmar',
   'checklist.forceLeadTimeCancel': 'Cancelar',
+
+  'pricingError.quantityNotPositive': '{support}: la cantidad debe ser mayor que cero.',
+  'pricingError.mediaBudgetMissing': '{support}: falta el presupuesto de medios.',
+  'pricingError.mediaBudgetInvalid': '{support}: el presupuesto de medios debe ser un número válido.',
+  'pricingError.mediaMonthsInvalid': '{support}: los meses del fee mínimo deben ser un número válido.',
+  'pricingError.manualFeeInvalid': '{support}: el importe para el influencer debe ser un número válido.',
+  'pricingError.manualFeeReasonRequired': '{support}: falta el motivo del reparto forzado.',
+  'pricingError.notMediaBuySupport': '{support}: este soporte no admite reparto de medios.',
+  'pricingError.unknownSupport': '{support}: soporte desconocido.',
+  'pricingError.duplicateSupportInOption': '{support}: este soporte ya está en la opción.',
+  'pricingError.noMarketSelected': 'Elige al menos un mercado para esta opción.',
+  'pricingError.noCoefficientForMarket': 'Falta el coeficiente de precio para {market}.',
+  'pricingError.manualDiscountReasonRequired': 'Falta el motivo del descuento manual.',
+  'pricingError.manualDiscountOutOfRange': 'El descuento manual ({rate} %) está fuera del rango permitido.',
+  'pricingError.generic': 'No se ha podido calcular esta opción: revisa los datos de sus líneas.',
 
   'discountBanner.nominal': 'Descuento nominal',
   'discountBanner.effective': 'Descuento efectivo',
@@ -542,18 +560,21 @@ const fr: Dict = {
     "Ceci n'envoie rien et ne consomme aucun quota Resend. Le lien et le numéro de devis sont déjà les vrais : c'est exactement ce que recevrait le client si l'envoi réussissait maintenant.",
   'proposalBuilder.previewEmailNeedsData':
     "Renseigne au moins la raison sociale et le nom du contact pour voir l'aperçu.",
+  'proposalBuilder.previewPdf': 'Aperçu du devis',
+  'proposalBuilder.previewPdfLoading': 'Génération…',
+  'proposalBuilder.previewPdfError': "Impossible de générer l'aperçu du PDF.",
 
   'checklist.allPass': "Tous les contrôles avant l'envoi passent.",
   'checklist.blocks': "Bloque l'envoi",
   'checklist.warning': 'Avertissement',
   'checklist.marginBelowFloor': 'Option {option} : marge de {rate} %, en dessous des {min} % exigés.',
+  'checklist.calculationError':
+    "Option {option} : impossible de calculer la marge — une donnée invalide dans une de ses lignes (voir l'avis sur l'option elle-même). Corrigez-la pour pouvoir évaluer cette option.",
   'checklist.campaignDatesInvalid':
     'Option {option} : la date de fin de campagne ne peut pas être antérieure à la date de début.',
   'checklist.leadTimeInsufficient':
     "{support} en {market} : il reste {available} jours ouvrés avant le début (hors jours fériés de {market}) et le support en exige {required}.",
   'checklist.leadTimeForced': '{support} en {market} : délai insuffisant, forcé — motif : {reason}',
-  'checklist.leadTimeNotVerifiable':
-    'Cette option utilise "durée seule" — impossible de vérifier le délai minimum d\'aucun support/marché tant qu\'une date de début n\'est pas fixée.',
   'checklist.supportNotSellable': "{support} n'est pas commercialisable en {market}.",
   'checklist.mediaBudgetMissing':
     '{support} : budget médias manquant (€). Obligatoire pour calculer le fee de gestion.',
@@ -567,6 +588,21 @@ const fr: Dict = {
   'checklist.forceLeadTimeReasonLabel': 'Motif (obligatoire)',
   'checklist.forceLeadTimeConfirm': 'Confirmer',
   'checklist.forceLeadTimeCancel': 'Annuler',
+
+  'pricingError.quantityNotPositive': '{support} : la quantité doit être supérieure à zéro.',
+  'pricingError.mediaBudgetMissing': '{support} : le budget média est manquant.',
+  'pricingError.mediaBudgetInvalid': '{support} : le budget média doit être un nombre valide.',
+  'pricingError.mediaMonthsInvalid': '{support} : les mois du fee minimum doivent être un nombre valide.',
+  'pricingError.manualFeeInvalid': "{support} : le montant pour l'influenceur doit être un nombre valide.",
+  'pricingError.manualFeeReasonRequired': '{support} : le motif de la répartition forcée est manquant.',
+  'pricingError.notMediaBuySupport': "{support} : ce support n'accepte pas de répartition média.",
+  'pricingError.unknownSupport': '{support} : support inconnu.',
+  'pricingError.duplicateSupportInOption': '{support} : ce support est déjà dans l\'option.',
+  'pricingError.noMarketSelected': 'Choisissez au moins un marché pour cette option.',
+  'pricingError.noCoefficientForMarket': 'Le coefficient de prix pour {market} est manquant.',
+  'pricingError.manualDiscountReasonRequired': 'Le motif de la remise manuelle est manquant.',
+  'pricingError.manualDiscountOutOfRange': 'La remise manuelle ({rate} %) est hors de la plage autorisée.',
+  'pricingError.generic': 'Impossible de calculer cette option : vérifiez les données de ses lignes.',
 
   'discountBanner.nominal': 'Remise nominale',
   'discountBanner.effective': 'Remise effective',
@@ -855,18 +891,21 @@ const en: Dict = {
     "This doesn't send anything and doesn't use any Resend quota. The link and proposal number are already the real ones: this is exactly what the client would receive if the send succeeded right now.",
   'proposalBuilder.previewEmailNeedsData':
     'Fill in at least the legal name and the contact name to see the preview.',
+  'proposalBuilder.previewPdf': 'Preview proposal',
+  'proposalBuilder.previewPdfLoading': 'Generating…',
+  'proposalBuilder.previewPdfError': 'The PDF preview could not be generated.',
 
   'checklist.allPass': 'All pre-send checks pass.',
   'checklist.blocks': 'Blocks sending',
   'checklist.warning': 'Warning',
   'checklist.marginBelowFloor': 'Option {option}: margin of {rate}%, below the required {min}%.',
+  'checklist.calculationError':
+    'Option {option}: the margin cannot be calculated — there is invalid data in one of its lines (see the notice on the option itself). Fix it to be able to evaluate this option.',
   'checklist.campaignDatesInvalid':
     'Option {option}: the campaign end date cannot be earlier than the start date.',
   'checklist.leadTimeInsufficient':
     '{support} in {market}: {available} business days left until the start (excluding {market} holidays) and the support requires {required}.',
   'checklist.leadTimeForced': '{support} in {market}: insufficient lead time, forced — reason: {reason}',
-  'checklist.leadTimeNotVerifiable':
-    'This option uses "duration only" — the minimum lead time cannot be checked for any support/market until a start date is set.',
   'checklist.supportNotSellable': '{support} is not sellable in {market}.',
   'checklist.mediaBudgetMissing':
     '{support}: missing media budget (€). Required to calculate the management fee.',
@@ -880,6 +919,21 @@ const en: Dict = {
   'checklist.forceLeadTimeReasonLabel': 'Reason (required)',
   'checklist.forceLeadTimeConfirm': 'Confirm',
   'checklist.forceLeadTimeCancel': 'Cancel',
+
+  'pricingError.quantityNotPositive': '{support}: quantity must be greater than zero.',
+  'pricingError.mediaBudgetMissing': '{support}: the media budget is missing.',
+  'pricingError.mediaBudgetInvalid': '{support}: the media budget must be a valid number.',
+  'pricingError.mediaMonthsInvalid': '{support}: the minimum-fee months must be a valid number.',
+  'pricingError.manualFeeInvalid': '{support}: the amount for the influencer must be a valid number.',
+  'pricingError.manualFeeReasonRequired': '{support}: the reason for the forced split is missing.',
+  'pricingError.notMediaBuySupport': '{support}: this support does not accept a media split.',
+  'pricingError.unknownSupport': '{support}: unknown support.',
+  'pricingError.duplicateSupportInOption': '{support}: this support is already in the option.',
+  'pricingError.noMarketSelected': 'Choose at least one market for this option.',
+  'pricingError.noCoefficientForMarket': 'The price coefficient for {market} is missing.',
+  'pricingError.manualDiscountReasonRequired': 'The reason for the manual discount is missing.',
+  'pricingError.manualDiscountOutOfRange': 'The manual discount ({rate}%) is out of the allowed range.',
+  'pricingError.generic': 'This option could not be calculated: check its line data.',
 
   'discountBanner.nominal': 'Nominal discount',
   'discountBanner.effective': 'Effective discount',

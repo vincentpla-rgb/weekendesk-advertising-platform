@@ -39,6 +39,7 @@ import {
 import { CONTENT_LANGUAGES, LANGUAGE_LABELS, type AccountRow, type ContentLanguage } from '@/lib/domain';
 import { COUNTRY_CODES, countryName } from '@/lib/countries';
 import { formatCents, formatPercent, supportLabel } from '@/lib/format';
+import { pricingErrorMessage } from '@/lib/pricing-error-messages';
 import { DiscountBanner } from '@/components/DiscountBanner';
 import { PreSendChecklist } from '@/components/PreSendChecklist';
 import { EmailPreviewModal } from '@/components/EmailPreviewModal';
@@ -130,6 +131,8 @@ export function ProposalBuilder({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<{ proposalId: string; publicToken: string } | null>(null);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
+  const [previewPdfLoading, setPreviewPdfLoading] = useState(false);
+  const [previewPdfError, setPreviewPdfError] = useState<string | null>(null);
 
   const selectedAccount = accounts.find((a) => a.id === accountId) ?? null;
 
@@ -279,7 +282,7 @@ export function ProposalBuilder({
           meetsMarginFloor: false,
           maxLeadTimeBusinessDays: 0,
           warnings: [],
-          error: err instanceof Error ? err.message : 'Línea inválida',
+          error: pricingErrorMessage(err, t),
         };
       }
     });
@@ -297,8 +300,11 @@ export function ProposalBuilder({
       draft.scheduleMode === 'DATES' && draft.campaignEnd
         ? new Date(`${draft.campaignEnd}T00:00:00Z`)
         : null,
-    durationOnly: draft.scheduleMode === 'DURATION_ONLY',
     leadTimeOverrides: draft.leadTimeOverrides,
+    // El margen no se pudo calcular (un dato inválido en una línea hizo que
+    // priceOption lanzara, ver más arriba) — distinto de "por debajo del
+    // suelo": aquí no hay ningún margen que comparar contra el 50 %, ronda 22.
+    calculationError: Boolean(priced[idx] && 'error' in priced[idx]! && priced[idx]!.error),
   }));
 
   const preSend = runPreSendChecks(preSendOptions, {
@@ -380,6 +386,86 @@ export function ProposalBuilder({
       setSubmitError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  /**
+   * Vista previa del PDF del presupuesto, sin enviar ni guardar nada
+   * (CLAUDE.md §10.3, ronda 22) — junto a "Vista previa del email", ninguno
+   * sustituye al otro. A diferencia del email, `@react-pdf/renderer` no
+   * puede ejecutarse en el navegador, así que hace falta un salto al
+   * servidor (`/api/proposals/preview-pdf`) — pero los NÚMEROS que manda son
+   * exactamente los que ya calculó `priceOption` aquí mismo, los mismos que
+   * alimentan la vista previa en vivo de cada pestaña: el servidor solo
+   * renderiza, nunca vuelve a calcular el precio con una segunda copia del
+   * motor.
+   */
+  async function handlePreviewPdf() {
+    setPreviewPdfError(null);
+    setPreviewPdfLoading(true);
+    // Se abre la pestaña ANTES del fetch asíncrono, como gesto directo del
+    // clic — si se abriera después de esperar la respuesta, los navegadores
+    // la tratan como un pop-up no solicitado y la bloquean. Se rellena con
+    // la URL del PDF en cuanto esté lista.
+    const previewTab = window.open('', '_blank');
+    try {
+      const res = await fetch('/api/proposals/preview-pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          advertiserName: previewAdvertiserName,
+          contactFullName: previewContactFullName || null,
+          brief: brief || null,
+          salesName,
+          language,
+          options: options.map((draft, idx) => {
+            const p = priced[idx]!;
+            return {
+              code: draft.code,
+              name: draft.name,
+              pitch: draft.pitch || null,
+              markets: draft.markets,
+              campaignStart: draft.scheduleMode === 'DATES' ? draft.campaignStart || null : null,
+              campaignEnd: draft.scheduleMode === 'DATES' ? draft.campaignEnd || null : null,
+              campaignDurationCount:
+                draft.scheduleMode === 'DURATION_ONLY' && draft.durationCount !== '' ? draft.durationCount : null,
+              campaignDurationUnit:
+                draft.scheduleMode === 'DURATION_ONLY' && draft.durationCount !== '' ? draft.durationUnit : null,
+              billedTotalCents: p.billedTotalCents,
+              costCents: p.costCents,
+              marginCents: p.marginCents,
+              marginRate: p.marginRate,
+              lines: p.lines.map((l) => ({
+                supportId: l.supportId,
+                supportName: l.supportName,
+                market: l.market,
+                quantity: l.quantity,
+                billedTotalCents: l.billedTotalCents,
+              })),
+            };
+          }),
+        }),
+      });
+
+      if (!res.ok) {
+        const errorBody = await res.json().catch(() => ({}));
+        throw new Error(errorBody.error ?? t('proposalBuilder.previewPdfError'));
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      if (previewTab) {
+        previewTab.location.href = url;
+      } else {
+        // El navegador bloqueó la pestaña abierta en el clic (poco
+        // frecuente): último recurso, abrir una nueva ahora.
+        window.open(url, '_blank');
+      }
+    } catch (err) {
+      previewTab?.close();
+      setPreviewPdfError(err instanceof Error ? err.message : t('proposalBuilder.previewPdfError'));
+    } finally {
+      setPreviewPdfLoading(false);
     }
   }
 
@@ -629,7 +715,18 @@ export function ProposalBuilder({
         >
           {t('proposalBuilder.previewEmail')}
         </button>
+        <button
+          type="button"
+          className="wk-btn wk-btn-secondary"
+          disabled={!canPreviewEmail || hasEngineErrors || previewPdfLoading}
+          title={canPreviewEmail ? undefined : t('proposalBuilder.previewEmailNeedsData')}
+          onClick={handlePreviewPdf}
+        >
+          {previewPdfLoading ? t('proposalBuilder.previewPdfLoading') : t('proposalBuilder.previewPdf')}
+        </button>
       </div>
+
+      {previewPdfError && <div className="wk-alert wk-alert-danger">{previewPdfError}</div>}
 
       {showEmailPreview && (
         <EmailPreviewModal
