@@ -1,0 +1,902 @@
+{
+  "labels": {
+    "es": {
+      "proposal": "Presupuesto",
+      "client": "Cliente",
+      "validUntil": "Válido hasta",
+      "option": "Opción",
+      "markets": "Mercados",
+      "amount": "Importe (sin IVA)",
+      "agreedAmount": "Importe acordado (sin IVA)",
+      "billedTo": "Facturación a",
+      "sentBy": "Enviado por",
+      "role": "Rol",
+      "invitedBy": "Invitado por",
+      "submittedBy": "Enviada por",
+      "sale": "Precio de venta",
+      "cost": "Coste total",
+      "margin": "Margen bruto",
+      "marginPct": "Margen bruto (%)",
+      "minMargin": "Mínimo exigido",
+      "original": "Original",
+      "counter": "Contrapropuesta",
+      "diff": "Diferencia",
+      "minPrice": "Precio mínimo para un 50 % de margen",
+      "internal": "Uso interno",
+      "attached": "Adjunto",
+      "statusOk": "Sobre el mínimo",
+      "statusKo": "Bajo el mínimo",
+      "pts": "pts",
+      "footerClient": "Recibes este correo por el presupuesto {{proposalNumber}}, gestionado por {{creatorName}}, de Weekendesk Advertising.",
+      "footerInternal": "Notificación automática de la plataforma Weekendesk Advertising.",
+      "legal": "Weekendesk SAS · 28 rue de Londres · 75009 París",
+      "fileClient": "Presupuesto-{{proposalNumber}}.pdf",
+      "fileInternal": "Presupuesto-{{proposalNumber}}-interno.pdf",
+      "support": "Soporte",
+      "dates": "Fechas",
+      "version": "Versión"
+    },
+    "fr": {
+      "proposal": "Proposition",
+      "client": "Client",
+      "validUntil": "Valable jusqu’au",
+      "option": "Option",
+      "markets": "Marchés",
+      "amount": "Montant (HT)",
+      "agreedAmount": "Montant convenu (HT)",
+      "billedTo": "Facturation à",
+      "sentBy": "Envoyée par",
+      "role": "Rôle",
+      "invitedBy": "Invité par",
+      "submittedBy": "Envoyée par",
+      "sale": "Prix de vente",
+      "cost": "Coût total",
+      "margin": "Marge brute",
+      "marginPct": "Marge brute (%)",
+      "minMargin": "Minimum requis",
+      "original": "Original",
+      "counter": "Contre-proposition",
+      "diff": "Écart",
+      "minPrice": "Prix minimum pour 50 % de marge",
+      "internal": "Usage interne",
+      "attached": "Pièce jointe",
+      "statusOk": "Au-dessus du minimum",
+      "statusKo": "Sous le minimum",
+      "pts": "pts",
+      "footerClient": "Vous recevez cet e-mail au sujet de la proposition {{proposalNumber}}, suivie par {{creatorName}}, de Weekendesk Advertising.",
+      "footerInternal": "Notification automatique de la plateforme Weekendesk Advertising.",
+      "legal": "Weekendesk SAS · 28 rue de Londres · 75009 Paris",
+      "fileClient": "Proposition-{{proposalNumber}}.pdf",
+      "fileInternal": "Proposition-{{proposalNumber}}-interne.pdf",
+      "support": "Support",
+      "dates": "Dates",
+      "version": "Version"
+    },
+    "en": {
+      "proposal": "Proposal",
+      "client": "Client",
+      "validUntil": "Valid until",
+      "option": "Option",
+      "markets": "Markets",
+      "amount": "Amount (excl. VAT)",
+      "agreedAmount": "Agreed amount (excl. VAT)",
+      "billedTo": "Billed to",
+      "sentBy": "Sent by",
+      "role": "Role",
+      "invitedBy": "Invited by",
+      "submittedBy": "Submitted by",
+      "sale": "Sale price",
+      "cost": "Total cost",
+      "margin": "Gross margin",
+      "marginPct": "Gross margin (%)",
+      "minMargin": "Required minimum",
+      "original": "Original",
+      "counter": "Counter-proposal",
+      "diff": "Difference",
+      "minPrice": "Minimum price for a 50% margin",
+      "internal": "Internal use",
+      "attached": "Attached",
+      "statusOk": "Above minimum",
+      "statusKo": "Below minimum",
+      "pts": "pts",
+      "footerClient": "You are receiving this email about proposal {{proposalNumber}}, managed by {{creatorName}} at Weekendesk Advertising.",
+      "footerInternal": "Automatic notification from the Weekendesk Advertising platform.",
+      "legal": "Weekendesk SAS · 28 rue de Londres · 75009 Paris",
+      "fileClient": "Proposal-{{proposalNumber}}.pdf",
+      "fileInternal": "Proposal-{{proposalNumber}}-internal.pdf",
+      "support": "Placement",
+      "dates": "Dates",
+      "version": "Version"
+    },
+    "it": {
+      "proposal": "Proposta",
+      "client": "Cliente",
+      "validUntil": "Valida fino al",
+      "option": "Opzione",
+      "markets": "Mercati",
+      "amount": "Importo (IVA esclusa)",
+      "agreedAmount": "Importo concordato (IVA esclusa)",
+      "billedTo": "Fatturazione a",
+      "sentBy": "Inviata da",
+      "role": "Ruolo",
+      "invitedBy": "Invitato da",
+      "submittedBy": "Inviata da",
+      "sale": "Prezzo di vendita",
+      "cost": "Costo totale",
+      "margin": "Margine lordo",
+      "marginPct": "Margine lordo (%)",
+      "minMargin": "Minimo richiesto",
+      "original": "Originale",
+      "counter": "Controproposta",
+      "diff": "Differenza",
+      "minPrice": "Prezzo minimo per un margine del 50 %",
+      "internal": "Uso interno",
+      "attached": "Allegato",
+      "statusOk": "Sopra il minimo",
+      "statusKo": "Sotto il minimo",
+      "pts": "pt.",
+      "footerClient": "Ricevi questa e-mail in merito alla proposta {{proposalNumber}}, seguita da {{creatorName}} di Weekendesk Advertising.",
+      "footerInternal": "Notifica automatica della piattaforma Weekendesk Advertising.",
+      "legal": "Weekendesk SAS · 28 rue de Londres · 75009 Parigi",
+      "fileClient": "Proposta-{{proposalNumber}}.pdf",
+      "fileInternal": "Proposta-{{proposalNumber}}-interno.pdf",
+      "support": "Supporto",
+      "dates": "Date",
+      "version": "Versione"
+    },
+    "nl": {
+      "proposal": "Voorstel",
+      "client": "Klant",
+      "validUntil": "Geldig tot",
+      "option": "Optie",
+      "markets": "Markten",
+      "amount": "Bedrag (excl. btw)",
+      "agreedAmount": "Overeengekomen bedrag (excl. btw)",
+      "billedTo": "Facturatie aan",
+      "sentBy": "Verzonden door",
+      "role": "Rol",
+      "invitedBy": "Uitgenodigd door",
+      "submittedBy": "Ingediend door",
+      "sale": "Verkoopprijs",
+      "cost": "Totale kosten",
+      "margin": "Brutomarge",
+      "marginPct": "Brutomarge (%)",
+      "minMargin": "Vereist minimum",
+      "original": "Oorspronkelijk",
+      "counter": "Tegenvoorstel",
+      "diff": "Verschil",
+      "minPrice": "Minimumprijs voor 50 % marge",
+      "internal": "Intern gebruik",
+      "attached": "Bijlage",
+      "statusOk": "Boven het minimum",
+      "statusKo": "Onder het minimum",
+      "pts": "pnt.",
+      "footerClient": "Je ontvangt deze e-mail over voorstel {{proposalNumber}}, opgevolgd door {{creatorName}} van Weekendesk Advertising.",
+      "footerInternal": "Automatische melding van het Weekendesk Advertising-platform.",
+      "legal": "Weekendesk SAS · 28 rue de Londres · 75009 Parijs",
+      "fileClient": "Voorstel-{{proposalNumber}}.pdf",
+      "fileInternal": "Voorstel-{{proposalNumber}}-intern.pdf",
+      "support": "Plaatsing",
+      "dates": "Data",
+      "version": "Versie"
+    }
+  },
+  "emails": {
+    "invite": {
+      "n": 1,
+      "audience": "internal",
+      "title": "Invitación de nuevo usuario",
+      "langs": {
+        "es": {
+          "subject": "{{inviterName}} te invita a la plataforma de Weekendesk Advertising",
+          "preheader": "Entra con tu cuenta @weekendesk y prepara tus primeros presupuestos.",
+          "title": "Te damos la bienvenida a Weekendesk Advertising",
+          "intro": "Hola {{firstName}}, {{inviterName}} te ha dado acceso como <strong>Advertising Manager</strong>. Desde la plataforma preparas presupuestos, los envías a tus clientes con un enlace único y sigues cada respuesta en un solo sitio.",
+          "points": [
+            "Crea presupuestos de 1 a 3 opciones, con precios calculados desde la rate card.",
+            "Envíalos por correo: el cliente los compara y responde desde su enlace.",
+            "Recibe aquí la aceptación o la contrapropuesta, con el margen a la vista."
+          ],
+          "cta": "entrar a la plataforma",
+          "note": "Accede con tu cuenta de Google @weekendesk. Si no esperabas esta invitación, ignora este correo."
+        },
+        "fr": {
+          "subject": "{{inviterName}} t’invite sur la plateforme Weekendesk Advertising",
+          "preheader": "Connecte-toi avec ton compte @weekendesk et prépare tes premières propositions.",
+          "title": "Bienvenue sur Weekendesk Advertising",
+          "intro": "Bonjour {{firstName}}, {{inviterName}} t’a donné accès en tant qu’<strong>Advertising Manager</strong>. Depuis la plateforme, tu prépares tes propositions, tu les envoies à tes clients via un lien unique et tu suis chaque réponse au même endroit.",
+          "points": [
+            "Crée des propositions de 1 à 3 options, avec des prix calculés depuis la rate card.",
+            "Envoie-les par e-mail : le client compare et répond depuis son lien.",
+            "Reçois ici l’acceptation ou la contre-proposition, marge à l’appui."
+          ],
+          "cta": "accéder à la plateforme",
+          "note": "Connecte-toi avec ton compte Google @weekendesk. Si tu n’attendais pas cette invitation, ignore cet e-mail."
+        },
+        "en": {
+          "subject": "{{inviterName}} has invited you to the Weekendesk Advertising platform",
+          "preheader": "Sign in with your @weekendesk account and prepare your first proposals.",
+          "title": "Welcome to Weekendesk Advertising",
+          "intro": "Hi {{firstName}}, {{inviterName}} has given you access as an <strong>Advertising Manager</strong>. From the platform you prepare proposals, send them to your clients through a unique link, and follow every response in one place.",
+          "points": [
+            "Create proposals with 1 to 3 options, priced from the rate card.",
+            "Send them by email: the client compares and responds from their link.",
+            "Get acceptances and counter-proposals here, with the margin in plain sight."
+          ],
+          "cta": "go to the platform",
+          "note": "Sign in with your @weekendesk Google account. If you weren’t expecting this invitation, ignore this email."
+        }
+      }
+    },
+    "proposal": {
+      "n": 2,
+      "audience": "client",
+      "title": "Presupuesto enviado al cliente",
+      "langs": {
+        "es": {
+          "subject": "Tu presupuesto de visibilidad en Weekendesk · {{proposalNumber}}",
+          "preheader": "Compara las opciones con calma. Disponible hasta el {{validUntil}}.",
+          "title": "Tu presupuesto está listo para revisar",
+          "intro": "Hola {{firstName}}, {{creatorName}} ha preparado un presupuesto para <strong>{{clientCompany}}</strong>. Verás las opciones lado a lado, con formatos, mercados y fechas, para que compares sin prisa.",
+          "cta": "ver el presupuesto",
+          "note": "El enlace es personal y el presupuesto está disponible hasta el {{validUntil}}. ¿Dudas? Responde a este correo: {{creatorName}} te contesta directamente."
+        },
+        "fr": {
+          "subject": "Votre proposition de visibilité sur Weekendesk · {{proposalNumber}}",
+          "preheader": "Comparez les options à votre rythme. Disponible jusqu’au {{validUntil}}.",
+          "title": "Votre proposition est prête à être consultée",
+          "intro": "Bonjour {{firstName}}, {{creatorName}} a préparé une proposition pour <strong>{{clientCompany}}</strong>. Vous y trouverez les options côte à côte, avec formats, marchés et dates, pour comparer sans précipitation.",
+          "cta": "consulter la proposition",
+          "note": "Ce lien est personnel et la proposition reste disponible jusqu’au {{validUntil}}. Une question ? Répondez à cet e-mail : {{creatorName}} vous répond directement."
+        },
+        "en": {
+          "subject": "Your Weekendesk visibility proposal · {{proposalNumber}}",
+          "preheader": "Compare the options at your own pace. Available until {{validUntil}}.",
+          "title": "Your proposal is ready to review",
+          "intro": "Hi {{firstName}}, {{creatorName}} has prepared a proposal for <strong>{{clientCompany}}</strong>. You’ll see the options side by side, with formats, markets and dates, so you can compare without rushing.",
+          "cta": "view the proposal",
+          "note": "This link is personal and the proposal stays available until {{validUntil}}. Questions? Reply to this email and {{creatorName}} will answer you directly."
+        },
+        "it": {
+          "subject": "La sua proposta di visibilità su Weekendesk · {{proposalNumber}}",
+          "preheader": "Confronti le opzioni con calma. Disponibile fino al {{validUntil}}.",
+          "title": "La proposta è pronta da consultare",
+          "intro": "Buongiorno {{firstName}}, {{creatorName}} ha preparato una proposta per <strong>{{clientCompany}}</strong>. Troverà le opzioni affiancate, con formati, mercati e date, per confrontarle senza fretta.",
+          "cta": "consulta la proposta",
+          "note": "Il link è personale e la proposta resta disponibile fino al {{validUntil}}. Ha dei dubbi? Risponda a questa e-mail: {{creatorName}} le risponde direttamente."
+        },
+        "nl": {
+          "subject": "Jouw zichtbaarheidsvoorstel bij Weekendesk · {{proposalNumber}}",
+          "preheader": "Vergelijk de opties in alle rust. Beschikbaar tot {{validUntil}}.",
+          "title": "Je voorstel staat klaar",
+          "intro": "Hallo {{firstName}}, {{creatorName}} heeft een voorstel voorbereid voor <strong>{{clientCompany}}</strong>. Je ziet de opties naast elkaar, met formaten, markten en data, zodat je zonder haast kunt vergelijken.",
+          "cta": "bekijk het voorstel",
+          "note": "Deze link is persoonlijk en het voorstel blijft beschikbaar tot {{validUntil}}. Vragen? Beantwoord deze e-mail en {{creatorName}} reageert direct."
+        }
+      }
+    },
+    "accepted_client": {
+      "n": 3,
+      "audience": "client",
+      "title": "Confirmación de aceptación al cliente",
+      "langs": {
+        "es": {
+          "subject": "Presupuesto {{proposalNumber}} confirmado: gracias, {{clientCompany}}",
+          "preheader": "Adjuntamos el presupuesto aceptado y los siguientes pasos.",
+          "title": "Presupuesto aceptado. Empezamos.",
+          "intro": "Hola {{firstName}}, hemos recibido tu aceptación del presupuesto <strong>{{proposalNumber}}</strong>. Gracias por confiar en Weekendesk: tu visibilidad queda reservada en las fechas acordadas.",
+          "nextTitle": "Qué pasa ahora",
+          "steps": [
+            "{{creatorName}} te escribirá muy pronto para coordinar materiales y calendario.",
+            "El PDF adjunto recoge lo que has aceptado. Guárdalo como referencia."
+          ],
+          "attachDesc": "Presupuesto aceptado",
+          "note": "¿Algo que corregir? Responde a este correo y lo vemos juntos."
+        },
+        "fr": {
+          "subject": "Proposition {{proposalNumber}} confirmée : merci, {{clientCompany}}",
+          "preheader": "La proposition acceptée est en pièce jointe, avec les prochaines étapes.",
+          "title": "Proposition acceptée. On démarre.",
+          "intro": "Bonjour {{firstName}}, nous avons bien reçu votre acceptation de la proposition <strong>{{proposalNumber}}</strong>. Merci de votre confiance : votre visibilité est réservée sur les dates convenues.",
+          "nextTitle": "La suite",
+          "steps": [
+            "{{creatorName}} vous écrira très prochainement pour coordonner les visuels et le calendrier.",
+            "Le PDF joint reprend ce que vous avez accepté. Conservez-le comme document de référence."
+          ],
+          "attachDesc": "Proposition acceptée",
+          "note": "Une correction à apporter ? Répondez à cet e-mail, nous regardons cela ensemble."
+        },
+        "en": {
+          "subject": "Proposal {{proposalNumber}} confirmed: thank you, {{clientCompany}}",
+          "preheader": "The accepted proposal is attached, with what happens next.",
+          "title": "Proposal accepted. We’re on.",
+          "intro": "Hi {{firstName}}, we’ve received your acceptance of proposal <strong>{{proposalNumber}}</strong>. Thank you for your trust: your visibility is now reserved for the agreed dates.",
+          "nextTitle": "What happens next",
+          "steps": [
+            "{{creatorName}} will write to you shortly to coordinate creative materials and the calendar.",
+            "The attached PDF sets out what you’ve accepted. Keep it as your reference."
+          ],
+          "attachDesc": "Accepted proposal",
+          "note": "Something to correct? Reply to this email and we’ll sort it out together."
+        },
+        "it": {
+          "subject": "Proposta {{proposalNumber}} confermata: grazie, {{clientCompany}}",
+          "preheader": "In allegato la proposta accettata e i prossimi passi.",
+          "title": "Proposta accettata. Si parte.",
+          "intro": "Buongiorno {{firstName}}, abbiamo ricevuto la sua accettazione della proposta <strong>{{proposalNumber}}</strong>. Grazie per la fiducia: la sua visibilità è riservata per le date concordate.",
+          "nextTitle": "Cosa succede ora",
+          "steps": [
+            "{{creatorName}} le scriverà a breve per coordinare materiali e calendario.",
+            "Il PDF allegato riepiloga ciò che ha accettato. Lo conservi come riferimento."
+          ],
+          "attachDesc": "Proposta accettata",
+          "note": "Qualcosa da correggere? Risponda a questa e-mail e lo verifichiamo insieme."
+        },
+        "nl": {
+          "subject": "Voorstel {{proposalNumber}} bevestigd: bedankt, {{clientCompany}}",
+          "preheader": "Het aanvaarde voorstel zit in de bijlage, samen met de volgende stappen.",
+          "title": "Voorstel aanvaard. We gaan van start.",
+          "intro": "Hallo {{firstName}}, we hebben je akkoord op voorstel <strong>{{proposalNumber}}</strong> ontvangen. Bedankt voor je vertrouwen: jouw zichtbaarheid ligt vast voor de afgesproken data.",
+          "nextTitle": "Wat er nu gebeurt",
+          "steps": [
+            "{{creatorName}} neemt binnenkort contact met je op om materiaal en planning af te stemmen.",
+            "De bijgevoegde pdf bevat wat je hebt aanvaard. Bewaar hem als referentie."
+          ],
+          "attachDesc": "Aanvaard voorstel",
+          "note": "Klopt er iets niet? Beantwoord deze e-mail en we bekijken het samen."
+        }
+      }
+    },
+    "accepted_am": {
+      "n": 4,
+      "audience": "internal",
+      "title": "Aviso al Advertising Manager: cliente ha aceptado",
+      "langs": {
+        "es": {
+          "subject": "{{clientCompany}} ha aceptado el presupuesto {{proposalNumber}}",
+          "preheader": "Margen bruto: {{marginPct}}. PDF interno con costes adjunto.",
+          "title": "Presupuesto aceptado",
+          "intro": "<strong>{{clientCompany}}</strong> ha aceptado la opción «{{optionName}}» del presupuesto {{proposalNumber}}. Los soportes quedan bloqueados para otros clientes en las fechas acordadas.",
+          "finTitle": "Rentabilidad de lo aceptado",
+          "attachDesc": "Presupuesto detallado con costes y precios de venta",
+          "cta": "abrir en la plataforma",
+          "note": "Este correo y su adjunto contienen costes y márgenes. No lo reenvíes al cliente."
+        },
+        "fr": {
+          "subject": "{{clientCompany}} a accepté la proposition {{proposalNumber}}",
+          "preheader": "Marge brute : {{marginPct}}. PDF interne avec les coûts en pièce jointe.",
+          "title": "Proposition acceptée",
+          "intro": "<strong>{{clientCompany}}</strong> a accepté l’option « {{optionName}} » de la proposition {{proposalNumber}}. Les supports sont désormais bloqués pour les autres clients sur les dates convenues.",
+          "finTitle": "Rentabilité de ce qui est accepté",
+          "attachDesc": "Proposition détaillée avec coûts et prix de vente",
+          "cta": "ouvrir dans la plateforme",
+          "note": "Cet e-mail et sa pièce jointe contiennent des coûts et des marges. Ne le transfère pas au client."
+        },
+        "en": {
+          "subject": "{{clientCompany}} has accepted proposal {{proposalNumber}}",
+          "preheader": "Gross margin: {{marginPct}}. Internal PDF with costs attached.",
+          "title": "Proposal accepted",
+          "intro": "<strong>{{clientCompany}}</strong> has accepted the “{{optionName}}” option of proposal {{proposalNumber}}. The placements are now blocked for other clients on the agreed dates.",
+          "finTitle": "Profitability of what was accepted",
+          "attachDesc": "Detailed proposal with costs and sale prices",
+          "cta": "open in the platform",
+          "note": "This email and its attachment contain costs and margins. Do not forward it to the client."
+        }
+      }
+    },
+    "counter_am": {
+      "n": 5,
+      "audience": "internal",
+      "title": "Aviso: contrapropuesta recibida (con rentabilidad)",
+      "langs": {
+        "es": {
+          "subject": "Contrapropuesta de {{clientCompany}} sobre {{proposalNumber}}: margen {{marginPct}}",
+          "preheader": "Propone {{counterTotal}} en lugar de {{total}}. Revisa la rentabilidad antes de decidir.",
+          "title": "{{clientCompany}} ha enviado una contrapropuesta",
+          "intro": "El cliente ha rechazado el presupuesto {{proposalNumber}} y propone otras condiciones. Aquí ves cuánto cambia la rentabilidad para decidir si es aceptable.",
+          "compTitle": "Original frente a contrapropuesta",
+          "commentLabel": "Comentario del cliente",
+          "verdictOk": "Por encima del mínimo. La contrapropuesta mantiene un margen bruto de {{marginPct}}, sobre el 50 % validado con Finanzas.",
+          "verdictKo": "Por debajo del mínimo. Con estos importes el margen bruto es de {{marginPct}}, frente al 50 % validado con Finanzas. Para alcanzarlo, el precio de venta tendría que ser de {{minPrice}} como mínimo.",
+          "attachDesc": "Contrapropuesta detallada con costes y márgenes",
+          "cta": "revisar la contrapropuesta",
+          "note": "Aceptarla o rechazarla (con motivo) se hace desde la plataforma. El cliente recibirá tu respuesta por correo."
+        },
+        "fr": {
+          "subject": "Contre-proposition de {{clientCompany}} sur {{proposalNumber}} : marge {{marginPct}}",
+          "preheader": "Elle propose {{counterTotal}} au lieu de {{total}}. Vérifie la rentabilité avant de décider.",
+          "title": "{{clientCompany}} a envoyé une contre-proposition",
+          "intro": "Le client a refusé la proposition {{proposalNumber}} et suggère d’autres conditions. Voici l’impact sur la rentabilité, pour décider si elle est acceptable.",
+          "compTitle": "Original face à la contre-proposition",
+          "commentLabel": "Commentaire du client",
+          "verdictOk": "Au-dessus du minimum. La contre-proposition conserve une marge brute de {{marginPct}}, au-delà des 50 % validés avec la Finance.",
+          "verdictKo": "Sous le minimum. Avec ces montants, la marge brute est de {{marginPct}}, contre 50 % validés avec la Finance. Pour l’atteindre, le prix de vente devrait être d’au moins {{minPrice}}.",
+          "attachDesc": "Contre-proposition détaillée avec coûts et marges",
+          "cta": "examiner la contre-proposition",
+          "note": "L’acceptation ou le refus (avec motif) se fait depuis la plateforme. Le client recevra ta réponse par e-mail."
+        },
+        "en": {
+          "subject": "{{clientCompany}} counter-proposal on {{proposalNumber}}: margin {{marginPct}}",
+          "preheader": "They propose {{counterTotal}} instead of {{total}}. Check profitability before deciding.",
+          "title": "{{clientCompany}} has sent a counter-proposal",
+          "intro": "The client has declined proposal {{proposalNumber}} and suggests different terms. Here is how profitability changes, so you can decide whether it’s acceptable.",
+          "compTitle": "Original vs counter-proposal",
+          "commentLabel": "Client comment",
+          "verdictOk": "Above the minimum. The counter-proposal keeps a gross margin of {{marginPct}}, above the 50% validated with Finance.",
+          "verdictKo": "Below the minimum. At these amounts the gross margin is {{marginPct}}, against the 50% validated with Finance. To reach it, the sale price would need to be at least {{minPrice}}.",
+          "attachDesc": "Detailed counter-proposal with costs and margins",
+          "cta": "review the counter-proposal",
+          "note": "Accepting or declining it (with a reason) is done in the platform. The client will receive your answer by email."
+        }
+      }
+    },
+    "counter_accepted": {
+      "n": 6,
+      "audience": "client",
+      "title": "Confirmación: aceptamos la contrapropuesta",
+      "langs": {
+        "es": {
+          "subject": "Hemos aceptado tu contrapropuesta · {{proposalNumber}}",
+          "preheader": "Adjuntamos el presupuesto con las condiciones acordadas.",
+          "title": "Contrapropuesta aceptada",
+          "intro": "Hola {{firstName}}, buenas noticias: hemos aceptado tu contrapropuesta para el presupuesto <strong>{{proposalNumber}}</strong>. Adjuntamos el documento con las condiciones acordadas.",
+          "nextTitle": "Qué pasa ahora",
+          "steps": [
+            "{{creatorName}} te escribirá muy pronto para coordinar materiales y calendario.",
+            "El PDF adjunto recoge las condiciones finales. Guárdalo como referencia."
+          ],
+          "attachDesc": "Presupuesto con las condiciones acordadas",
+          "note": "¿Algo que corregir? Responde a este correo y lo vemos juntos."
+        },
+        "fr": {
+          "subject": "Nous avons accepté votre contre-proposition · {{proposalNumber}}",
+          "preheader": "La proposition avec les conditions convenues est en pièce jointe.",
+          "title": "Contre-proposition acceptée",
+          "intro": "Bonjour {{firstName}}, bonne nouvelle : nous avons accepté votre contre-proposition pour la proposition <strong>{{proposalNumber}}</strong>. Vous trouverez en pièce jointe le document reprenant les conditions convenues.",
+          "nextTitle": "La suite",
+          "steps": [
+            "{{creatorName}} vous écrira très prochainement pour coordonner les visuels et le calendrier.",
+            "Le PDF joint reprend les conditions finales. Conservez-le comme document de référence."
+          ],
+          "attachDesc": "Proposition aux conditions convenues",
+          "note": "Une correction à apporter ? Répondez à cet e-mail, nous regardons cela ensemble."
+        },
+        "en": {
+          "subject": "We’ve accepted your counter-proposal · {{proposalNumber}}",
+          "preheader": "The proposal with the agreed terms is attached.",
+          "title": "Counter-proposal accepted",
+          "intro": "Hi {{firstName}}, good news: we’ve accepted your counter-proposal for proposal <strong>{{proposalNumber}}</strong>. The document with the agreed terms is attached.",
+          "nextTitle": "What happens next",
+          "steps": [
+            "{{creatorName}} will write to you shortly to coordinate creative materials and the calendar.",
+            "The attached PDF sets out the final terms. Keep it as your reference."
+          ],
+          "attachDesc": "Proposal with the agreed terms",
+          "note": "Something to correct? Reply to this email and we’ll sort it out together."
+        },
+        "it": {
+          "subject": "Abbiamo accettato la sua controproposta · {{proposalNumber}}",
+          "preheader": "In allegato la proposta con le condizioni concordate.",
+          "title": "Controproposta accettata",
+          "intro": "Buongiorno {{firstName}}, buone notizie: abbiamo accettato la sua controproposta per la proposta <strong>{{proposalNumber}}</strong>. In allegato il documento con le condizioni concordate.",
+          "nextTitle": "Cosa succede ora",
+          "steps": [
+            "{{creatorName}} le scriverà a breve per coordinare materiali e calendario.",
+            "Il PDF allegato riepiloga le condizioni finali. Lo conservi come riferimento."
+          ],
+          "attachDesc": "Proposta con le condizioni concordate",
+          "note": "Qualcosa da correggere? Risponda a questa e-mail e lo verifichiamo insieme."
+        },
+        "nl": {
+          "subject": "We hebben je tegenvoorstel aanvaard · {{proposalNumber}}",
+          "preheader": "Het voorstel met de afgesproken voorwaarden zit in de bijlage.",
+          "title": "Tegenvoorstel aanvaard",
+          "intro": "Hallo {{firstName}}, goed nieuws: we hebben je tegenvoorstel voor voorstel <strong>{{proposalNumber}}</strong> aanvaard. In de bijlage vind je het document met de afgesproken voorwaarden.",
+          "nextTitle": "Wat er nu gebeurt",
+          "steps": [
+            "{{creatorName}} neemt binnenkort contact met je op om materiaal en planning af te stemmen.",
+            "De bijgevoegde pdf bevat de definitieve voorwaarden. Bewaar hem als referentie."
+          ],
+          "attachDesc": "Voorstel met de afgesproken voorwaarden",
+          "note": "Klopt er iets niet? Beantwoord deze e-mail en we bekijken het samen."
+        }
+      }
+    },
+    "counter_rejected": {
+      "n": 7,
+      "audience": "client",
+      "title": "Rechazo de la contrapropuesta (con motivo)",
+      "langs": {
+        "es": {
+          "subject": "Sobre tu contrapropuesta · {{proposalNumber}}",
+          "preheader": "No podemos aceptarla tal como está. Te explicamos por qué y cómo seguir.",
+          "title": "No podemos aceptar la contrapropuesta",
+          "intro": "Hola {{firstName}}, gracias por proponer otras condiciones para el presupuesto <strong>{{proposalNumber}}</strong>. La hemos estudiado con atención y, tal como está, no podemos aceptarla.",
+          "reasonLabel": "El motivo",
+          "after": "Si quieres explorar otra combinación de formatos, mercados o fechas, responde a este correo: {{creatorName}} prepara contigo una nueva versión.",
+          "cta": "escribir a {{creatorName}}"
+        },
+        "fr": {
+          "subject": "À propos de votre contre-proposition · {{proposalNumber}}",
+          "preheader": "Nous ne pouvons pas l’accepter en l’état. Voici pourquoi, et comment continuer.",
+          "title": "Nous ne pouvons pas accepter la contre-proposition",
+          "intro": "Bonjour {{firstName}}, merci d’avoir proposé d’autres conditions pour la proposition <strong>{{proposalNumber}}</strong>. Nous l’avons étudiée avec attention et, en l’état, nous ne pouvons pas l’accepter.",
+          "reasonLabel": "Le motif",
+          "after": "Si vous souhaitez explorer une autre combinaison de formats, de marchés ou de dates, répondez à cet e-mail : {{creatorName}} prépare avec vous une nouvelle version.",
+          "cta": "écrire à {{creatorName}}"
+        },
+        "en": {
+          "subject": "About your counter-proposal · {{proposalNumber}}",
+          "preheader": "We can’t accept it as it stands. Here is why, and how we can continue.",
+          "title": "We can’t accept the counter-proposal",
+          "intro": "Hi {{firstName}}, thank you for suggesting different terms for proposal <strong>{{proposalNumber}}</strong>. We’ve looked at it carefully and, as it stands, we can’t accept it.",
+          "reasonLabel": "The reason",
+          "after": "If you’d like to explore another mix of formats, markets or dates, reply to this email: {{creatorName}} will prepare a new version with you.",
+          "cta": "write to {{creatorName}}"
+        },
+        "it": {
+          "subject": "Sulla sua controproposta · {{proposalNumber}}",
+          "preheader": "Così com’è non possiamo accettarla. Le spieghiamo perché e come proseguire.",
+          "title": "Non possiamo accettare la controproposta",
+          "intro": "Buongiorno {{firstName}}, grazie per aver proposto condizioni diverse per la proposta <strong>{{proposalNumber}}</strong>. L’abbiamo valutata con attenzione e, così com’è, non possiamo accettarla.",
+          "reasonLabel": "Il motivo",
+          "after": "Se desidera esplorare un’altra combinazione di formati, mercati o date, risponda a questa e-mail: {{creatorName}} prepara con lei una nuova versione.",
+          "cta": "scrivi a {{creatorName}}"
+        },
+        "nl": {
+          "subject": "Over je tegenvoorstel · {{proposalNumber}}",
+          "preheader": "Zoals het er nu ligt kunnen we het niet aanvaarden. Hier lees je waarom en hoe we verder kunnen.",
+          "title": "We kunnen het tegenvoorstel niet aanvaarden",
+          "intro": "Hallo {{firstName}}, bedankt voor je voorstel van andere voorwaarden voor voorstel <strong>{{proposalNumber}}</strong>. We hebben het aandachtig bekeken en kunnen het zoals het er nu ligt niet aanvaarden.",
+          "reasonLabel": "De reden",
+          "after": "Wil je een andere combinatie van formaten, markten of data bekijken? Beantwoord dan deze e-mail: {{creatorName}} werkt samen met je een nieuwe versie uit.",
+          "cta": "schrijf naar {{creatorName}}"
+        }
+      }
+    },
+    "rejected_am": {
+      "n": 8,
+      "audience": "internal",
+      "title": "Aviso: cliente rechaza el presupuesto (con motivo)",
+      "langs": {
+        "es": {
+          "subject": "{{clientCompany}} ha rechazado el presupuesto {{proposalNumber}}",
+          "preheader": "El cliente explica el motivo. No ha enviado contrapropuesta.",
+          "title": "Presupuesto rechazado",
+          "intro": "<strong>{{clientCompany}}</strong> ha rechazado el presupuesto {{proposalNumber}} y no ha enviado contrapropuesta. Este es el motivo que ha indicado.",
+          "reasonLabel": "Motivo del cliente",
+          "after": "Los soportes siguen disponibles para otros clientes. Si ves margen para retomarlo, escribe al cliente o prepara una nueva versión desde la plataforma.",
+          "cta": "abrir en la plataforma",
+          "note": "El cliente no recibe ningún aviso adicional: la conversación sigue en tus manos."
+        },
+        "fr": {
+          "subject": "{{clientCompany}} a refusé la proposition {{proposalNumber}}",
+          "preheader": "Le client explique son motif. Aucune contre-proposition n’a été envoyée.",
+          "title": "Proposition refusée",
+          "intro": "<strong>{{clientCompany}}</strong> a refusé la proposition {{proposalNumber}} sans envoyer de contre-proposition. Voici le motif indiqué.",
+          "reasonLabel": "Motif du client",
+          "after": "Les supports restent disponibles pour les autres clients. Si tu vois une marge de manœuvre, écris au client ou prépare une nouvelle version depuis la plateforme.",
+          "cta": "ouvrir dans la plateforme",
+          "note": "Le client ne reçoit aucun message supplémentaire : la suite est entre tes mains."
+        },
+        "en": {
+          "subject": "{{clientCompany}} has declined proposal {{proposalNumber}}",
+          "preheader": "The client explains why. No counter-proposal was sent.",
+          "title": "Proposal declined",
+          "intro": "<strong>{{clientCompany}}</strong> has declined proposal {{proposalNumber}} without sending a counter-proposal. Here is the reason they gave.",
+          "reasonLabel": "Client’s reason",
+          "after": "The placements remain available for other clients. If you see room to reopen the conversation, write to the client or prepare a new version from the platform.",
+          "cta": "open in the platform",
+          "note": "The client receives no further message: what happens next is in your hands."
+        }
+      }
+    },
+    "counter_received": {
+      "n": 9,
+      "audience": "client",
+      "title": "Acuse de recibo de la contrapropuesta al cliente",
+      "langs": {
+        "es": {
+          "subject": "Hemos recibido tu contrapropuesta · {{proposalNumber}}",
+          "preheader": "La estudiamos con el equipo y te respondemos por correo.",
+          "title": "Contrapropuesta recibida",
+          "intro": "Hola {{firstName}}, hemos recibido tu contrapropuesta para el presupuesto <strong>{{proposalNumber}}</strong>. {{creatorName}} la estudia con el equipo y te responde por correo.",
+          "note": "Mientras tanto no tienes que hacer nada. Si quieres añadir algo, responde a este correo."
+        },
+        "fr": {
+          "subject": "Nous avons bien reçu votre contre-proposition · {{proposalNumber}}",
+          "preheader": "Nous l’étudions avec l’équipe et vous répondons par e-mail.",
+          "title": "Contre-proposition reçue",
+          "intro": "Bonjour {{firstName}}, nous avons bien reçu votre contre-proposition pour la proposition <strong>{{proposalNumber}}</strong>. {{creatorName}} l’étudie avec l’équipe et vous répond par e-mail.",
+          "note": "Vous n’avez rien à faire pour le moment. Pour ajouter un élément, répondez à cet e-mail."
+        },
+        "en": {
+          "subject": "We’ve received your counter-proposal · {{proposalNumber}}",
+          "preheader": "We’re reviewing it with the team and will reply by email.",
+          "title": "Counter-proposal received",
+          "intro": "Hi {{firstName}}, we’ve received your counter-proposal for proposal <strong>{{proposalNumber}}</strong>. {{creatorName}} is reviewing it with the team and will reply by email.",
+          "note": "Nothing to do in the meantime. If you’d like to add anything, reply to this email."
+        },
+        "it": {
+          "subject": "Abbiamo ricevuto la sua controproposta · {{proposalNumber}}",
+          "preheader": "La valutiamo con il team e le rispondiamo via e-mail.",
+          "title": "Controproposta ricevuta",
+          "intro": "Buongiorno {{firstName}}, abbiamo ricevuto la sua controproposta per la proposta <strong>{{proposalNumber}}</strong>. {{creatorName}} la valuta con il team e le risponde via e-mail.",
+          "note": "Nel frattempo non deve fare nulla. Se desidera aggiungere qualcosa, risponda a questa e-mail."
+        },
+        "nl": {
+          "subject": "We hebben je tegenvoorstel ontvangen · {{proposalNumber}}",
+          "preheader": "We bekijken het met het team en antwoorden per e-mail.",
+          "title": "Tegenvoorstel ontvangen",
+          "intro": "Hallo {{firstName}}, we hebben je tegenvoorstel voor voorstel <strong>{{proposalNumber}}</strong> ontvangen. {{creatorName}} bekijkt het met het team en antwoordt per e-mail.",
+          "note": "Je hoeft ondertussen niets te doen. Wil je iets toevoegen, beantwoord dan deze e-mail."
+        }
+      }
+    },
+    "reminder": {
+      "n": 10,
+      "audience": "client",
+      "title": "Recordatorio de caducidad al cliente",
+      "langs": {
+        "es": {
+          "subject": "Tu presupuesto {{proposalNumber}} sigue disponible hasta el {{validUntil}}",
+          "preheader": "Tómate el tiempo que necesites hasta esa fecha.",
+          "title": "Tu presupuesto sigue a tu disposición",
+          "intro": "Hola {{firstName}}, te recordamos que el presupuesto <strong>{{proposalNumber}}</strong> para {{clientCompany}} está disponible hasta el <strong>{{validUntil}}</strong>. Pasada esa fecha habrá que prepararlo de nuevo, y precios y disponibilidad podrían cambiar.",
+          "cta": "ver el presupuesto",
+          "note": "¿Necesitas ajustar algo? Responde a este correo y {{creatorName}} lo revisa contigo."
+        },
+        "fr": {
+          "subject": "Votre proposition {{proposalNumber}} reste disponible jusqu’au {{validUntil}}",
+          "preheader": "Prenez le temps qu’il vous faut jusqu’à cette date.",
+          "title": "Votre proposition reste à votre disposition",
+          "intro": "Bonjour {{firstName}}, nous vous rappelons que la proposition <strong>{{proposalNumber}}</strong> pour {{clientCompany}} est disponible jusqu’au <strong>{{validUntil}}</strong>. Passé ce délai, elle devra être préparée à nouveau, et tarifs et disponibilités pourraient évoluer.",
+          "cta": "consulter la proposition",
+          "note": "Un ajustement à demander ? Répondez à cet e-mail, {{creatorName}} en discute avec vous."
+        },
+        "en": {
+          "subject": "Your proposal {{proposalNumber}} is available until {{validUntil}}",
+          "preheader": "Take the time you need until then.",
+          "title": "Your proposal is still waiting for you",
+          "intro": "Hi {{firstName}}, a reminder that proposal <strong>{{proposalNumber}}</strong> for {{clientCompany}} is available until <strong>{{validUntil}}</strong>. After that date it will need to be prepared again, and prices and availability may change.",
+          "cta": "view the proposal",
+          "note": "Need to adjust something? Reply to this email and {{creatorName}} will go through it with you."
+        },
+        "it": {
+          "subject": "La sua proposta {{proposalNumber}} è disponibile fino al {{validUntil}}",
+          "preheader": "Si prenda il tempo che le serve fino a quella data.",
+          "title": "La sua proposta è ancora a disposizione",
+          "intro": "Buongiorno {{firstName}}, le ricordiamo che la proposta <strong>{{proposalNumber}}</strong> per {{clientCompany}} è disponibile fino al <strong>{{validUntil}}</strong>. Dopo tale data andrà preparata di nuovo e prezzi e disponibilità potrebbero cambiare.",
+          "cta": "consulta la proposta",
+          "note": "Ha bisogno di modificare qualcosa? Risponda a questa e-mail e {{creatorName}} ne parla con lei."
+        },
+        "nl": {
+          "subject": "Je voorstel {{proposalNumber}} is beschikbaar tot {{validUntil}}",
+          "preheader": "Neem de tijd die je nodig hebt tot die datum.",
+          "title": "Je voorstel ligt nog voor je klaar",
+          "intro": "Hallo {{firstName}}, een herinnering: voorstel <strong>{{proposalNumber}}</strong> voor {{clientCompany}} is beschikbaar tot <strong>{{validUntil}}</strong>. Daarna moet het opnieuw worden opgesteld en kunnen prijzen en beschikbaarheid veranderen.",
+          "cta": "bekijk het voorstel",
+          "note": "Wil je iets aanpassen? Beantwoord deze e-mail en {{creatorName}} loopt het met je door."
+        }
+      }
+    },
+    "expired_am": {
+      "n": 11,
+      "audience": "internal",
+      "title": "Aviso al AM: presupuesto caducado",
+      "langs": {
+        "es": {
+          "subject": "El presupuesto {{proposalNumber}} de {{clientCompany}} ha caducado",
+          "preheader": "Sin respuesta del cliente. Puedes retomarlo con una nueva versión.",
+          "title": "Presupuesto caducado",
+          "intro": "El presupuesto {{proposalNumber}} enviado a <strong>{{clientCompany}}</strong> ha caducado sin respuesta el {{validUntil}}.",
+          "after": "Puedes escribir al cliente o crear una nueva versión desde la plataforma.",
+          "cta": "abrir en la plataforma",
+          "note": "El cliente ya no puede aceptar este presupuesto."
+        },
+        "fr": {
+          "subject": "La proposition {{proposalNumber}} de {{clientCompany}} a expiré",
+          "preheader": "Sans réponse du client. Tu peux la relancer avec une nouvelle version.",
+          "title": "Proposition expirée",
+          "intro": "La proposition {{proposalNumber}} envoyée à <strong>{{clientCompany}}</strong> a expiré le {{validUntil}} sans réponse.",
+          "after": "Tu peux écrire au client ou créer une nouvelle version depuis la plateforme.",
+          "cta": "ouvrir dans la plateforme",
+          "note": "Le client ne peut plus accepter cette proposition."
+        },
+        "en": {
+          "subject": "Proposal {{proposalNumber}} for {{clientCompany}} has expired",
+          "preheader": "No response from the client. You can pick it up again with a new version.",
+          "title": "Proposal expired",
+          "intro": "Proposal {{proposalNumber}} sent to <strong>{{clientCompany}}</strong> expired without a response on {{validUntil}}.",
+          "after": "You can write to the client or create a new version from the platform.",
+          "cta": "open in the platform",
+          "note": "The client can no longer accept this proposal."
+        }
+      }
+    },
+    "blocked_am": {
+      "n": 12,
+      "audience": "internal",
+      "title": "Aviso al AM: soporte ocupado por otro cliente",
+      "langs": {
+        "es": {
+          "subject": "{{supportName}} ya no está disponible para el presupuesto {{proposalNumber}}",
+          "preheader": "Otro cliente ha ocupado el soporte en fechas que se solapan.",
+          "title": "Soporte ocupado",
+          "intro": "Otro cliente ha aceptado una campaña en <strong>{{supportName}}</strong> en fechas que se solapan con el presupuesto {{proposalNumber}} de {{clientCompany}}. Ya no se puede aceptar tal como está.",
+          "after": "Propón otras fechas al cliente con una nueva versión, o busca un soporte alternativo.",
+          "cta": "crear una nueva versión",
+          "note": "No compartas con el cliente qué anunciante ha reservado el soporte."
+        },
+        "fr": {
+          "subject": "{{supportName}} n’est plus disponible pour la proposition {{proposalNumber}}",
+          "preheader": "Un autre client a réservé le support sur des dates qui se chevauchent.",
+          "title": "Support occupé",
+          "intro": "Un autre client a accepté une campagne sur <strong>{{supportName}}</strong> à des dates qui chevauchent la proposition {{proposalNumber}} de {{clientCompany}}. Elle ne peut plus être acceptée telle quelle.",
+          "after": "Propose d’autres dates au client avec une nouvelle version, ou cherche un support alternatif.",
+          "cta": "créer une nouvelle version",
+          "note": "Ne communique pas au client le nom de l’annonceur qui a réservé le support."
+        },
+        "en": {
+          "subject": "{{supportName}} is no longer available for proposal {{proposalNumber}}",
+          "preheader": "Another client has taken the placement on overlapping dates.",
+          "title": "Placement taken",
+          "intro": "Another client has accepted a campaign on <strong>{{supportName}}</strong> on dates that overlap proposal {{proposalNumber}} for {{clientCompany}}. It can no longer be accepted as it stands.",
+          "after": "Offer the client other dates with a new version, or look for an alternative placement.",
+          "cta": "create a new version",
+          "note": "Don’t tell the client which advertiser has booked the placement."
+        }
+      }
+    },
+    "new_version": {
+      "n": 13,
+      "audience": "client",
+      "title": "Nueva versión del presupuesto al cliente",
+      "langs": {
+        "es": {
+          "subject": "Hemos actualizado tu presupuesto · {{proposalNumber}}",
+          "preheader": "El enlace anterior ya no es válido. Usa este.",
+          "title": "Tienes una nueva versión del presupuesto",
+          "intro": "Hola {{firstName}}, {{creatorName}} ha actualizado el presupuesto para <strong>{{clientCompany}}</strong>. La versión anterior deja de estar disponible: a partir de ahora vale esta.",
+          "cta": "ver la nueva versión",
+          "note": "Tienes hasta el {{validUntil}} para revisarla. ¿Dudas? Responde a este correo."
+        },
+        "fr": {
+          "subject": "Nous avons mis à jour votre proposition · {{proposalNumber}}",
+          "preheader": "L’ancien lien n’est plus valable. Utilisez celui-ci.",
+          "title": "Une nouvelle version de votre proposition est disponible",
+          "intro": "Bonjour {{firstName}}, {{creatorName}} a mis à jour la proposition pour <strong>{{clientCompany}}</strong>. La version précédente n’est plus disponible : c’est désormais celle-ci qui fait foi.",
+          "cta": "consulter la nouvelle version",
+          "note": "Vous avez jusqu’au {{validUntil}} pour l’examiner. Une question ? Répondez à cet e-mail."
+        },
+        "en": {
+          "subject": "We’ve updated your proposal · {{proposalNumber}}",
+          "preheader": "The previous link is no longer valid. Use this one.",
+          "title": "There’s a new version of your proposal",
+          "intro": "Hi {{firstName}}, {{creatorName}} has updated the proposal for <strong>{{clientCompany}}</strong>. The previous version is no longer available: this is the one that counts from now on.",
+          "cta": "view the new version",
+          "note": "You have until {{validUntil}} to review it. Questions? Reply to this email."
+        },
+        "it": {
+          "subject": "Abbiamo aggiornato la sua proposta · {{proposalNumber}}",
+          "preheader": "Il link precedente non è più valido. Usi questo.",
+          "title": "È disponibile una nuova versione della proposta",
+          "intro": "Buongiorno {{firstName}}, {{creatorName}} ha aggiornato la proposta per <strong>{{clientCompany}}</strong>. La versione precedente non è più disponibile: da ora vale questa.",
+          "cta": "consulta la nuova versione",
+          "note": "Ha tempo fino al {{validUntil}} per esaminarla. Dubbi? Risponda a questa e-mail."
+        },
+        "nl": {
+          "subject": "We hebben je voorstel bijgewerkt · {{proposalNumber}}",
+          "preheader": "De vorige link is niet meer geldig. Gebruik deze.",
+          "title": "Er staat een nieuwe versie van je voorstel klaar",
+          "intro": "Hallo {{firstName}}, {{creatorName}} heeft het voorstel voor <strong>{{clientCompany}}</strong> bijgewerkt. De vorige versie is niet meer beschikbaar: vanaf nu geldt deze.",
+          "cta": "bekijk de nieuwe versie",
+          "note": "Je hebt tot {{validUntil}} om het te bekijken. Vragen? Beantwoord deze e-mail."
+        }
+      }
+    },
+    "opened_am": {
+      "n": 14,
+      "audience": "internal",
+      "title": "Aviso al AM: cliente abre el presupuesto (1ª vez)",
+      "langs": {
+        "es": {
+          "subject": "{{clientCompany}} ha abierto el presupuesto {{proposalNumber}}",
+          "preheader": "Primera apertura. Buen momento para un seguimiento.",
+          "title": "Presupuesto abierto",
+          "intro": "<strong>{{clientCompany}}</strong> acaba de abrir por primera vez el presupuesto {{proposalNumber}}.",
+          "after": "Solo te avisamos esta primera vez. Es buen momento para escribirle y resolver dudas.",
+          "cta": "abrir en la plataforma",
+          "note": "El aviso se genera al abrir el enlace del presupuesto, no al abrir el correo."
+        },
+        "fr": {
+          "subject": "{{clientCompany}} a ouvert la proposition {{proposalNumber}}",
+          "preheader": "Première ouverture. Bon moment pour une relance.",
+          "title": "Proposition consultée",
+          "intro": "<strong>{{clientCompany}}</strong> vient d’ouvrir pour la première fois la proposition {{proposalNumber}}.",
+          "after": "Nous te prévenons uniquement cette première fois. C’est le bon moment pour lui écrire et répondre à ses questions.",
+          "cta": "ouvrir dans la plateforme",
+          "note": "L’alerte se déclenche à l’ouverture du lien de la proposition, pas à l’ouverture de l’e-mail."
+        },
+        "en": {
+          "subject": "{{clientCompany}} has opened proposal {{proposalNumber}}",
+          "preheader": "First open. A good moment to follow up.",
+          "title": "Proposal opened",
+          "intro": "<strong>{{clientCompany}}</strong> has just opened proposal {{proposalNumber}} for the first time.",
+          "after": "We only notify you this first time. It’s a good moment to write and answer any questions.",
+          "cta": "open in the platform",
+          "note": "This alert is triggered when the proposal link is opened, not when the email is opened."
+        }
+      }
+    }
+  },
+  "reasons": {
+    "clientReject": {
+      "budget": {
+        "es": "El importe supera nuestro presupuesto",
+        "fr": "Le montant dépasse notre budget",
+        "en": "The amount exceeds our budget",
+        "it": "L’importo supera il nostro budget",
+        "nl": "Het bedrag overschrijdt ons budget"
+      },
+      "timing": {
+        "es": "El calendario no nos encaja",
+        "fr": "Le calendrier ne nous convient pas",
+        "en": "The timing doesn’t work for us",
+        "it": "Il calendario non ci è adatto",
+        "nl": "De timing past niet"
+      },
+      "priority": {
+        "es": "Hemos cambiado de prioridades",
+        "fr": "Nos priorités ont changé",
+        "en": "Our priorities have changed",
+        "it": "Le nostre priorità sono cambiate",
+        "nl": "Onze prioriteiten zijn veranderd"
+      },
+      "format": {
+        "es": "Buscamos otros formatos o mercados",
+        "fr": "Nous cherchons d’autres formats ou marchés",
+        "en": "We’re looking for other formats or markets",
+        "it": "Cerchiamo altri formati o mercati",
+        "nl": "We zoeken andere formaten of markten"
+      },
+      "other": {
+        "es": "Otro motivo",
+        "fr": "Autre motif",
+        "en": "Other reason",
+        "it": "Altro motivo",
+        "nl": "Andere reden"
+      }
+    },
+    "counterReject": {
+      "cost": {
+        "es": "El importe propuesto no cubre los costes de producción de este formato.",
+        "fr": "Le montant proposé ne couvre pas les coûts de production de ce format.",
+        "en": "The proposed amount doesn’t cover the production costs of this format.",
+        "it": "L’importo proposto non copre i costi di produzione di questo formato.",
+        "nl": "Het voorgestelde bedrag dekt de productiekosten van dit formaat niet."
+      },
+      "scope": {
+        "es": "Con ese importe podemos ofrecer un alcance menor, por ejemplo menos mercados o menos formatos.",
+        "fr": "Avec ce montant, nous pouvons proposer une portée réduite, par exemple moins de marchés ou de formats.",
+        "en": "At that amount we can offer a smaller scope, for example fewer markets or formats.",
+        "it": "Con questo importo possiamo offrire una portata ridotta, ad esempio meno mercati o formati.",
+        "nl": "Met dat bedrag kunnen we een kleiner bereik aanbieden, bijvoorbeeld minder markten of formaten."
+      },
+      "availability": {
+        "es": "Las fechas o el soporte que propones no están disponibles.",
+        "fr": "Les dates ou le support que vous proposez ne sont pas disponibles.",
+        "en": "The dates or placement you suggest are not available.",
+        "it": "Le date o il supporto che propone non sono disponibili.",
+        "nl": "De data of de plaatsing die je voorstelt zijn niet beschikbaar."
+      },
+      "other": {
+        "es": "Otro motivo",
+        "fr": "Autre motif",
+        "en": "Other reason",
+        "it": "Altro motivo",
+        "nl": "Andere reden"
+      }
+    }
+  }
+}
