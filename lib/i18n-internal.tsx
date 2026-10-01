@@ -44,7 +44,6 @@ const es = {
   'login.adminLink': 'Gestionar usuarios del equipo',
 
   'nav.newProposal': 'Nuevo presupuesto',
-  'nav.proposalsList': 'Presupuestos',
   'nav.accountsList': 'Cuentas',
   'nav.admin': 'Usuarios',
   'nav.dashboard': 'Panel',
@@ -75,10 +74,13 @@ const es = {
   'dashboard.kpiExpiringSoon': 'A punto de caducar',
   'dashboard.byMarket': 'Por mercado',
   'dashboard.byAm': 'Por advertising manager',
+  'dashboard.breakdownToggle': 'Ver desglose por mercado y AM',
   'dashboard.filterMarket': 'Mercado',
   'dashboard.filterSupport': 'Soporte',
   'dashboard.filterAccount': 'Cliente',
   'dashboard.filterAccountPlaceholder': 'Buscar por razón social…',
+  'dashboard.filterProposalNumber': 'N.º de presupuesto',
+  'dashboard.filterProposalNumberPlaceholder': 'Ej. 2026-014',
   'dashboard.filterDateFrom': 'Desde',
   'dashboard.filterDateTo': 'Hasta',
   'dashboard.filterAmountMin': 'Importe mín. (€)',
@@ -273,7 +275,7 @@ const es = {
   'proposalsList.empty': 'No hay presupuestos con estos filtros.',
 
   'proposalDetail.title': 'Presupuesto',
-  'proposalDetail.back': '← Volver a presupuestos',
+  'proposalDetail.back': '← Volver al dashboard',
   'proposalDetail.draftNotice':
     'Este presupuesto se calculó y quedó guardado, pero el email nunca llegó a salir. El cliente no lo ha visto.',
   'proposalDetail.retryButton': 'Reintentar envío',
@@ -356,7 +358,6 @@ const fr: Dict = {
   'login.adminLink': "Gérer les utilisateurs de l'équipe",
 
   'nav.newProposal': 'Nouveau devis',
-  'nav.proposalsList': 'Devis',
   'nav.accountsList': 'Comptes',
   'nav.admin': 'Utilisateurs',
   'nav.dashboard': 'Tableau de bord',
@@ -387,10 +388,13 @@ const fr: Dict = {
   'dashboard.kpiExpiringSoon': 'Expire bientôt',
   'dashboard.byMarket': 'Par marché',
   'dashboard.byAm': 'Par advertising manager',
+  'dashboard.breakdownToggle': 'Voir la répartition par marché et AM',
   'dashboard.filterMarket': 'Marché',
   'dashboard.filterSupport': 'Support',
   'dashboard.filterAccount': 'Client',
   'dashboard.filterAccountPlaceholder': 'Rechercher par raison sociale…',
+  'dashboard.filterProposalNumber': 'N° de devis',
+  'dashboard.filterProposalNumberPlaceholder': 'Ex. 2026-014',
   'dashboard.filterDateFrom': 'Depuis',
   'dashboard.filterDateTo': "Jusqu'à",
   'dashboard.filterAmountMin': 'Montant min. (€)',
@@ -585,7 +589,7 @@ const fr: Dict = {
   'proposalsList.empty': 'Aucun devis avec ces filtres.',
 
   'proposalDetail.title': 'Devis',
-  'proposalDetail.back': '← Retour aux devis',
+  'proposalDetail.back': '← Retour au tableau de bord',
   'proposalDetail.draftNotice':
     "Ce devis a été calculé et enregistré, mais l'email n'est jamais parti. Le client ne l'a pas vu.",
   'proposalDetail.retryButton': "Réessayer l'envoi",
@@ -664,7 +668,6 @@ const en: Dict = {
   'login.adminLink': 'Manage team users',
 
   'nav.newProposal': 'New proposal',
-  'nav.proposalsList': 'Proposals',
   'nav.accountsList': 'Accounts',
   'nav.admin': 'Users',
   'nav.dashboard': 'Dashboard',
@@ -695,10 +698,13 @@ const en: Dict = {
   'dashboard.kpiExpiringSoon': 'Expiring soon',
   'dashboard.byMarket': 'By market',
   'dashboard.byAm': 'By advertising manager',
+  'dashboard.breakdownToggle': 'View breakdown by market and AM',
   'dashboard.filterMarket': 'Market',
   'dashboard.filterSupport': 'Placement',
   'dashboard.filterAccount': 'Client',
   'dashboard.filterAccountPlaceholder': 'Search by legal name…',
+  'dashboard.filterProposalNumber': 'Proposal number',
+  'dashboard.filterProposalNumberPlaceholder': 'E.g. 2026-014',
   'dashboard.filterDateFrom': 'From',
   'dashboard.filterDateTo': 'To',
   'dashboard.filterAmountMin': 'Min amount (€)',
@@ -893,7 +899,7 @@ const en: Dict = {
   'proposalsList.empty': 'No proposals match these filters.',
 
   'proposalDetail.title': 'Proposal',
-  'proposalDetail.back': '← Back to proposals',
+  'proposalDetail.back': '← Back to dashboard',
   'proposalDetail.draftNotice':
     'This proposal was calculated and saved, but the email never went out. The client has not seen it.',
   'proposalDetail.retryButton': 'Retry send',

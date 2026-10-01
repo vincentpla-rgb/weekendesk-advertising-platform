@@ -34,6 +34,7 @@ export interface DashboardOptionInput {
 
 export interface DashboardProposalInput {
   readonly id: string;
+  readonly proposalNumber: string | null;
   readonly status: DashboardProposalStatus;
   readonly ownerId: string;
   readonly accountLegalName: string;
@@ -48,6 +49,8 @@ export interface DashboardFilters {
   readonly ownerId: string | null;
   readonly status: DashboardProposalStatus | null;
   readonly accountQuery: string | null;
+  /** Búsqueda por número de presupuesto (p. ej. "2026-014"), subcadena, sin distinguir mayúsculas (ronda 20). */
+  readonly proposalNumberQuery: string | null;
   readonly amountMinCents: number | null;
   readonly amountMaxCents: number | null;
   readonly supportId: string | null;
@@ -60,6 +63,7 @@ export const EMPTY_DASHBOARD_FILTERS: DashboardFilters = {
   ownerId: null,
   status: null,
   accountQuery: null,
+  proposalNumberQuery: null,
   amountMinCents: null,
   amountMaxCents: null,
   supportId: null,
@@ -95,6 +99,10 @@ export function filterDashboardProposals(
     if (filters.accountQuery) {
       const needle = filters.accountQuery.trim().toLowerCase();
       if (needle && !p.accountLegalName.toLowerCase().includes(needle)) return false;
+    }
+    if (filters.proposalNumberQuery) {
+      const needle = filters.proposalNumberQuery.trim().toLowerCase();
+      if (needle && !(p.proposalNumber ?? '').toLowerCase().includes(needle)) return false;
     }
     if (filters.supportId && !p.options.some((o) => o.supportIds.includes(filters.supportId!))) return false;
     if (filters.amountMinCents !== null || filters.amountMaxCents !== null) {
