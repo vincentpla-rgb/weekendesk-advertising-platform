@@ -139,27 +139,35 @@ export function DashboardClient({ data }: { data: DashboardData }) {
           <KpiTile label={t('dashboard.kpiExpiringSoon')} value={String(data.kpis.expiringSoonCount)} />
         </div>
 
+        {/* Colapsado por defecto (ronda 20): con varios AMs/mercados este
+            bloque puede alargarse bastante, y el listado de abajo debe verse
+            sin desplazarse en exceso — un detalle, no el primer vistazo. */}
         {(data.kpis.byMarket.length > 0 || data.kpis.byAm.length > 0) && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 18 }}>
-            <div>
-              <p className="wk-label">{t('dashboard.byMarket')}</p>
-              {data.kpis.byMarket.map((row) => (
-                <div key={row.market} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '3px 0' }}>
-                  <span>{MARKET_LABELS[row.market] ?? row.market}</span>
-                  <span>{formatCents(row.cents)}</span>
-                </div>
-              ))}
+          <details style={{ marginTop: 18 }}>
+            <summary className="wk-label" style={{ cursor: 'pointer' }}>
+              {t('dashboard.breakdownToggle')}
+            </summary>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 10 }}>
+              <div>
+                <p className="wk-label">{t('dashboard.byMarket')}</p>
+                {data.kpis.byMarket.map((row) => (
+                  <div key={row.market} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '3px 0' }}>
+                    <span>{MARKET_LABELS[row.market] ?? row.market}</span>
+                    <span>{formatCents(row.cents)}</span>
+                  </div>
+                ))}
+              </div>
+              <div>
+                <p className="wk-label">{t('dashboard.byAm')}</p>
+                {data.kpis.byAm.map((row) => (
+                  <div key={row.profileId} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '3px 0' }}>
+                    <span>{row.fullName}</span>
+                    <span>{formatCents(row.cents)}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <div>
-              <p className="wk-label">{t('dashboard.byAm')}</p>
-              {data.kpis.byAm.map((row) => (
-                <div key={row.profileId} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, padding: '3px 0' }}>
-                  <span>{row.fullName}</span>
-                  <span>{formatCents(row.cents)}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          </details>
         )}
       </section>
 
@@ -213,6 +221,15 @@ export function DashboardClient({ data }: { data: DashboardData }) {
               defaultValue={searchParams.get('q') ?? ''}
               onBlur={(e) => setParam('q', e.target.value)}
               placeholder={t('dashboard.filterAccountPlaceholder')}
+            />
+          </Field>
+          <Field label={t('dashboard.filterProposalNumber')}>
+            <input
+              className="wk-input"
+              style={{ width: 130 }}
+              defaultValue={searchParams.get('number') ?? ''}
+              onBlur={(e) => setParam('number', e.target.value)}
+              placeholder={t('dashboard.filterProposalNumberPlaceholder')}
             />
           </Field>
           <Field label={t('dashboard.filterDateFrom')}>
@@ -278,44 +295,52 @@ export function DashboardClient({ data }: { data: DashboardData }) {
         {data.proposals.length === 0 ? (
           <p style={{ color: 'var(--wk-text-muted)' }}>{t('proposalsList.empty')}</p>
         ) : (
-          <table className="wk-table">
-            <thead>
-              <tr>
-                <th>{t('proposalsList.colAccount')}</th>
-                <th>{t('proposalsList.colStatus')}</th>
-                <th>{t('dashboard.colAmount')}</th>
-                <th>{t('dashboard.colMarkets')}</th>
-                <th>{t('proposalsList.colOwner')}</th>
-                <th>{t('proposalsList.colUpdated')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.proposals.map((p) => {
-                const amount = headlineAmount(p);
-                const markets = Array.from(new Set(p.options.flatMap((o) => o.markets)));
-                const owner = data.profiles.find((pr) => pr.id === p.ownerId);
-                return (
-                  <tr key={p.id}>
-                    <td>
-                      <a href={`/proposals/${p.id}`}>{p.accountLegalName || '—'}</a>
-                    </td>
-                    <td>
-                      <span className={`wk-badge ${STATUS_BADGE_CLASS[p.status]}`}>{t(STATUS_I18N_KEY[p.status])}</span>
-                      {p.hasPendingCounterProposal && (
-                        <span className="wk-badge wk-badge-warning" style={{ marginLeft: 6 }}>
-                          {t('counterProposal.statusPending')}
-                        </span>
-                      )}
-                    </td>
-                    <td>{amount !== null ? formatCents(amount) : '—'}</td>
-                    <td>{markets.map((m) => MARKET_LABELS[m] ?? m).join(', ') || '—'}</td>
-                    <td>{owner?.fullName ?? '—'}</td>
-                    <td>{formatDate(p.createdAt)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          // Altura acotada con scroll interno (ronda 20): con hasta 300 filas
+          // (CLAUDE.md §10.1.1), la tabla no debe forzar un scroll de página
+          // excesivo por debajo de los KPIs — se queda visible de un vistazo
+          // y, si hace falta ver más filas, se desplaza ella misma.
+          <div style={{ maxHeight: '55vh', overflowY: 'auto' }}>
+            <table className="wk-table">
+              <thead>
+                <tr>
+                  <th>{t('proposalsList.colNumber')}</th>
+                  <th>{t('proposalsList.colAccount')}</th>
+                  <th>{t('proposalsList.colStatus')}</th>
+                  <th>{t('dashboard.colAmount')}</th>
+                  <th>{t('dashboard.colMarkets')}</th>
+                  <th>{t('proposalsList.colOwner')}</th>
+                  <th>{t('proposalsList.colUpdated')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.proposals.map((p) => {
+                  const amount = headlineAmount(p);
+                  const markets = Array.from(new Set(p.options.flatMap((o) => o.markets)));
+                  const owner = data.profiles.find((pr) => pr.id === p.ownerId);
+                  return (
+                    <tr key={p.id}>
+                      <td>{p.proposalNumber ?? '—'}</td>
+                      <td>
+                        <a href={`/proposals/${p.id}`}>{p.accountLegalName || '—'}</a>
+                      </td>
+                      <td>
+                        <span className={`wk-badge ${STATUS_BADGE_CLASS[p.status]}`}>{t(STATUS_I18N_KEY[p.status])}</span>
+                        {p.hasPendingCounterProposal && (
+                          <span className="wk-badge wk-badge-warning" style={{ marginLeft: 6 }}>
+                            {t('counterProposal.statusPending')}
+                          </span>
+                        )}
+                      </td>
+                      <td>{amount !== null ? formatCents(amount) : '—'}</td>
+                      <td>{markets.map((m) => MARKET_LABELS[m] ?? m).join(', ') || '—'}</td>
+                      <td>{owner?.fullName ?? '—'}</td>
+                      <td>{formatDate(p.createdAt)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
     </div>

@@ -60,6 +60,7 @@ export default async function DashboardPage({
     dateFrom?: string;
     dateTo?: string;
     q?: string;
+    number?: string;
     amountMin?: string;
     amountMax?: string;
     supportId?: string;
@@ -126,6 +127,7 @@ export default async function DashboardPage({
 
   const allProposals: DashboardProposalInput[] = (proposalsRaw ?? []).map((p) => ({
     id: p.id,
+    proposalNumber: p.proposal_number,
     status: p.status,
     ownerId: p.owner_id,
     accountLegalName: p.accounts?.legal_name ?? '',
@@ -144,6 +146,7 @@ export default async function DashboardPage({
     ownerId: params.owner || null,
     status: params.status && isStatus(params.status) ? params.status : null,
     accountQuery: params.q || null,
+    proposalNumberQuery: params.number || null,
     amountMinCents: params.amountMin ? Math.round(Number(params.amountMin) * 100) : null,
     amountMaxCents: params.amountMax ? Math.round(Number(params.amountMax) * 100) : null,
     supportId: params.supportId || null,

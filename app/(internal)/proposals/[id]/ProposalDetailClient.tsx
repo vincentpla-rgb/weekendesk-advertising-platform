@@ -122,7 +122,7 @@ export function ProposalDetailClient({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <a href="/proposals" style={{ fontSize: 13 }}>
+      <a href="/dashboard" style={{ fontSize: 13 }}>
         {t('proposalDetail.back')}
       </a>
 

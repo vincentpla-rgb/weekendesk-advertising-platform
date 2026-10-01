@@ -10,6 +10,7 @@ import {
 function proposal(overrides: Partial<DashboardProposalInput> = {}): DashboardProposalInput {
   return {
     id: 'p1',
+    proposalNumber: '2026-001',
     status: 'SENT',
     ownerId: 'owner-1',
     accountLegalName: 'Office de tourisme de Amiens',
@@ -59,6 +60,21 @@ describe('filterDashboardProposals', () => {
     const list = [proposal({ id: 'a', accountLegalName: 'Office de tourisme de Amiens' }), proposal({ id: 'b', accountLegalName: 'Comité Régional' })];
     const result = filterDashboardProposals(list, { ...EMPTY_DASHBOARD_FILTERS, accountQuery: 'amiens' });
     expect(result.map((p) => p.id)).toEqual(['a']);
+  });
+
+  it('busca por número de presupuesto, subcadena sin distinguir mayúsculas (ronda 20)', () => {
+    const list = [
+      proposal({ id: 'a', proposalNumber: '2026-014' }),
+      proposal({ id: 'b', proposalNumber: '2026-099' }),
+    ];
+    const result = filterDashboardProposals(list, { ...EMPTY_DASHBOARD_FILTERS, proposalNumberQuery: '2026-01' });
+    expect(result.map((p) => p.id)).toEqual(['a']);
+  });
+
+  it('búsqueda por número de presupuesto no revienta si el presupuesto no tiene número todavía', () => {
+    const list = [proposal({ id: 'sin-numero', proposalNumber: null })];
+    const result = filterDashboardProposals(list, { ...EMPTY_DASHBOARD_FILTERS, proposalNumberQuery: '2026' });
+    expect(result).toHaveLength(0);
   });
 
   it('filtra por soporte, en cualquier opción', () => {

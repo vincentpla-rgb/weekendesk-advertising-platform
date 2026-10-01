@@ -18,18 +18,20 @@ export function InternalHeader({
   return (
     <header className="wk-header">
       <div style={{ display: 'flex', alignItems: 'center', gap: 22 }}>
-        <a href="/proposals" style={{ display: 'flex', alignItems: 'center' }}>
+        <a href="/dashboard" style={{ display: 'flex', alignItems: 'center' }}>
           <img src="/LOGO_Weekendesk_white.png" alt={t('app.title')} style={{ height: 22, width: 'auto' }} />
         </a>
         {/* Navegación estructural (CLAUDE.md §10.1.1, ronda 7): antes solo
             existía la pantalla de crear presupuesto — sin forma de volver a
-            ver lo ya enviado ni de navegar a las cuentas. */}
+            ver lo ya enviado ni de navegar a las cuentas.
+            Pestaña "Devis" quitada en la ronda 20: el listado filtrable del
+            dashboard (ronda 18) ya cubre lo mismo que `/proposals` — esa
+            ruta sigue existiendo (enlaces desde `/accounts/[id]`, "Duplicar",
+            etc.), solo deja de estar en el menú. "Nuevo presupuesto" vive
+            aparte, no depende de esta pestaña. */}
         <nav style={{ display: 'flex', gap: 16 }}>
           <a href="/dashboard" style={{ fontSize: 13, fontWeight: 500 }}>
             {t('nav.dashboard')}
-          </a>
-          <a href="/proposals" style={{ fontSize: 13, fontWeight: 500 }}>
-            {t('nav.proposalsList')}
           </a>
           <a href="/accounts" style={{ fontSize: 13, fontWeight: 500 }}>
             {t('nav.accountsList')}
