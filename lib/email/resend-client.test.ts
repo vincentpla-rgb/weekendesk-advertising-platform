@@ -1,10 +1,11 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { sendEmail } from './resend-client.js';
+import { isEmailDryRun, sendEmail } from './resend-client.js';
 
 describe('sendEmail', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
+    delete process.env.EMAIL_DRY_RUN;
   });
 
   it('manda la petición a Resend con el remitente, destinatarios y cuerpo', async () => {
@@ -44,6 +45,38 @@ describe('sendEmail', () => {
     });
   });
 
+  it('manda los adjuntos (filename + content en base64) cuando se pasan (CLAUDE.md §1/§9, PDF del presupuesto)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 'email_1' }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await sendEmail(
+      {
+        from: 'a@b.com',
+        to: ['c@d.com'],
+        subject: 's',
+        html: 'h',
+        text: 't',
+        attachments: [{ filename: 'weekendesk-2026-014.pdf', content: 'base64content==' }],
+      },
+      'key',
+    );
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.attachments).toEqual([{ filename: 'weekendesk-2026-014.pdf', content: 'base64content==' }]);
+  });
+
+  it('sin adjuntos, el campo no se manda relleno de nada raro (undefined, no un array vacío que Resend podría rechazar)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 'email_1' }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await sendEmail({ from: 'a@b.com', to: ['c@d.com'], subject: 's', html: 'h', text: 't' }, 'key');
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.attachments).toBeUndefined();
+  });
+
   it('devuelve el error de Resend si la respuesta no es ok, sin lanzar', async () => {
     vi.stubGlobal(
       'fetch',
@@ -75,5 +108,59 @@ describe('sendEmail', () => {
     );
 
     expect(result).toEqual({ ok: false, error: 'network down' });
+  });
+});
+
+describe('isEmailDryRun', () => {
+  beforeEach(() => {
+    delete process.env.EMAIL_DRY_RUN;
+  });
+  afterEach(() => {
+    delete process.env.EMAIL_DRY_RUN;
+  });
+
+  it('es false sin la variable, o con un valor que no sea true/1', () => {
+    expect(isEmailDryRun()).toBe(false);
+    process.env.EMAIL_DRY_RUN = 'false';
+    expect(isEmailDryRun()).toBe(false);
+    process.env.EMAIL_DRY_RUN = 'yes';
+    expect(isEmailDryRun()).toBe(false);
+  });
+
+  it('es true con "true" o "1", sin distinguir mayúsculas', () => {
+    process.env.EMAIL_DRY_RUN = 'true';
+    expect(isEmailDryRun()).toBe(true);
+    process.env.EMAIL_DRY_RUN = 'TRUE';
+    expect(isEmailDryRun()).toBe(true);
+    process.env.EMAIL_DRY_RUN = '1';
+    expect(isEmailDryRun()).toBe(true);
+  });
+});
+
+describe('sendEmail con EMAIL_DRY_RUN', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    delete process.env.EMAIL_DRY_RUN;
+  });
+
+  it('no llama a fetch y devuelve un id dry-run reconocible', async () => {
+    process.env.EMAIL_DRY_RUN = 'true';
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    const logSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    const result = await sendEmail(
+      { from: 'a@b.com', to: ['c@d.com'], subject: 'Asunto de prueba', html: '<p>h</p>', text: 'cuerpo de prueba' },
+      'key',
+    );
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.id).toMatch(/^dry-run-/);
+    }
+    expect(logSpy).toHaveBeenCalledTimes(1);
+    expect(logSpy.mock.calls[0]?.[0]).toContain('Asunto de prueba');
+    logSpy.mockRestore();
   });
 });

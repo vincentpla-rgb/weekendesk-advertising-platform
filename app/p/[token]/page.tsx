@@ -1,6 +1,10 @@
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
 
 import { createPublicClient } from '@/lib/supabase/server';
+import type { ContentLanguage } from '@/lib/domain';
+import { buildTransactionalEmailContent } from '@/lib/email/transactional-email';
+import { sendEmail } from '@/lib/email/resend-client';
 import { PublicProposalClient } from './PublicProposalClient';
 
 export const dynamic = 'force-dynamic';
@@ -20,6 +24,8 @@ export interface PublicLine {
   unit: string;
   market: string;
   quantity: number;
+  /** Precio de la línea (ronda 16): necesario para el formulario editable de "Proponer cambios". */
+  billed_total_cents: number;
   reach: PublicReach | null;
 }
 
@@ -81,8 +87,54 @@ export default async function PublicProposalPage({
   // Marca la primera apertura (SENT -> VIEWED). El seguimiento de apertura lo
   // captura la página, no el email (CLAUDE.md §2).
   if (proposal.status === 'SENT') {
-    await supabase.rpc('mark_public_proposal_viewed', { token });
+    const { data: viewedData } = await supabase.rpc('mark_public_proposal_viewed', { token });
+    // Email 14, "opened_am" (CLAUDE.md §9/§10.3, ronda 18, bloque 2): solo
+    // se dispara la primera vez — `viewedData` es `null` en cualquier
+    // apertura posterior (la función ya no encuentra la fila en SENT). Un
+    // fallo al mandar este aviso nunca bloquea que el cliente vea la
+    // página: se registra y ya.
+    if (viewedData) {
+      await sendOpenedAmEmail(viewedData as unknown as OpenedAmNotification);
+    }
   }
 
   return <PublicProposalClient token={token} proposal={proposal} />;
+}
+
+interface OpenedAmNotification {
+  readonly proposal_id: string;
+  readonly proposal_number: string;
+  readonly advertiser_name: string | null;
+  readonly owner_email: string | null;
+  readonly owner_full_name: string | null;
+  readonly owner_language: string | null;
+  readonly expires_at: string | null;
+}
+
+async function sendOpenedAmEmail(notification: OpenedAmNotification): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromAddress = process.env.RESEND_FROM_EMAIL;
+  if (!apiKey || !fromAddress || !notification.owner_email || !notification.owner_full_name || !notification.advertiser_name) {
+    return;
+  }
+
+  const h = await headers();
+  const proto = h.get('x-forwarded-proto') ?? 'https';
+  const origin = `${proto}://${h.get('host')}`;
+  const amFirstName = notification.owner_full_name.trim().split(/\s+/)[0] ?? notification.owner_full_name;
+
+  const { subject, html, text } = buildTransactionalEmailContent({
+    key: 'opened_am',
+    language: (notification.owner_language as ContentLanguage) ?? 'ES',
+    amFirstName,
+    clientCompany: notification.advertiser_name,
+    proposalNumber: notification.proposal_number,
+    validUntilIso: notification.expires_at,
+    ctaUrl: `${origin}/proposals/${notification.proposal_id}`,
+  });
+
+  const result = await sendEmail({ from: fromAddress, to: [notification.owner_email], subject, html, text }, apiKey);
+  if (!result.ok) {
+    console.error(`[opened_am] no se pudo mandar el aviso: ${result.error}`);
+  }
 }

@@ -47,6 +47,48 @@ const es = {
   'nav.proposalsList': 'Presupuestos',
   'nav.accountsList': 'Cuentas',
   'nav.admin': 'Usuarios',
+  'nav.dashboard': 'Panel',
+  'nav.targets': 'Objetivos',
+
+  'targets.title': 'Objetivos por advertising manager',
+  'targets.fiscalYear': 'Año fiscal {year}',
+  'targets.am': 'Advertising manager',
+  'targets.q1': 'Q1 (may-jul)',
+  'targets.q2': 'Q2 (ago-oct)',
+  'targets.q3': 'Q3 (nov-ene)',
+  'targets.q4': 'Q4 (feb-abr)',
+  'targets.save': 'Guardar',
+  'targets.saving': 'Guardando…',
+  'targets.saved': 'Guardado',
+  'targets.note': 'Objetivo medido sobre el importe neto de medios (fees de gestión), nunca sobre el total facturado — el presupuesto de medios que pasa por Weekendesk sin margen no cuenta para el objetivo (CLAUDE.md §4.4).',
+
+  'dashboard.title': 'Panel de seguimiento',
+  'dashboard.objective': 'Objetivo del periodo',
+  'dashboard.wholeYear': 'Año completo',
+  'dashboard.allAms': 'Todos los AM',
+  'dashboard.kpiBilled': 'Facturado (neto de medios)',
+  'dashboard.kpiTarget': 'Objetivo',
+  'dashboard.kpiProgress': 'Progreso',
+  'dashboard.kpiAvgMargin': 'Margen medio',
+  'dashboard.optionsWithoutMarginNote': '{count} aceptación(es) por contrapropuesta sin margen calculable, excluidas',
+  'dashboard.kpiPendingCounter': 'Contrapropuestas pendientes',
+  'dashboard.kpiExpiringSoon': 'A punto de caducar',
+  'dashboard.byMarket': 'Por mercado',
+  'dashboard.byAm': 'Por advertising manager',
+  'dashboard.filterMarket': 'Mercado',
+  'dashboard.filterSupport': 'Soporte',
+  'dashboard.filterAccount': 'Cliente',
+  'dashboard.filterAccountPlaceholder': 'Buscar por razón social…',
+  'dashboard.filterDateFrom': 'Desde',
+  'dashboard.filterDateTo': 'Hasta',
+  'dashboard.filterAmountMin': 'Importe mín. (€)',
+  'dashboard.filterAmountMax': 'Importe máx. (€)',
+  'dashboard.togglePendingCounter': 'Solo contrapropuesta pendiente',
+  'dashboard.toggleExpiringSoon': 'Solo a punto de caducar',
+  'dashboard.all': 'Todos',
+  'dashboard.resultsCount': 'Mostrando {shown} de {total} presupuestos',
+  'dashboard.colAmount': 'Importe',
+  'dashboard.colMarkets': 'Mercados',
 
   'admin.title': 'Usuarios del equipo',
   'admin.fullName': 'Nombre completo',
@@ -54,6 +96,7 @@ const es = {
   'admin.password': 'Contraseña inicial',
   'admin.generatePassword': 'Generar',
   'admin.passwordNote': 'De un solo uso: la persona deberá cambiarla la primera vez que entre.',
+  'admin.inviteLanguage': 'Idioma de invitación',
   'admin.note': 'Nota (opcional)',
   'admin.create': 'Crear acceso',
   'admin.creating': 'Creando…',
@@ -214,6 +257,7 @@ const es = {
   'status.ACCEPTED': 'Aceptado',
   'status.REJECTED': 'Rechazado',
   'status.EXPIRED': 'Caducado',
+  'status.COUNTERED': 'Contrapropuesta recibida',
 
   'proposalsList.title': 'Presupuestos',
   'proposalsList.filterStatus': 'Estado',
@@ -246,6 +290,7 @@ const es = {
   'proposalDetail.notFound': 'Presupuesto no encontrado.',
   'proposalDetail.leadTimeForced': 'Antelación forzada',
   'proposalDetail.leadTimeForcedReason': 'Motivo: {reason}',
+  'proposalDetail.downloadPdf': 'Descargar PDF',
 
   'accountsList.title': 'Cuentas',
   'accountsList.colLegalName': 'Razón social',
@@ -259,6 +304,40 @@ const es = {
   'accountDetail.contacts': 'Contactos',
   'accountDetail.proposals': 'Historial de presupuestos',
   'accountDetail.noProposals': 'Esta cuenta no tiene presupuestos todavía.',
+
+  // Contrapropuesta editable del cliente + revisión interna (CLAUDE.md, ronda 16).
+  'counterProposal.title': 'Contrapropuesta del cliente',
+  'counterProposal.submittedAt': 'Recibida el',
+  'counterProposal.statusPending': 'Pendiente de revisión',
+  'counterProposal.statusAccepted': 'Aceptada',
+  'counterProposal.statusRejected': 'Rechazada',
+  'counterProposal.colSupport': 'Soporte',
+  'counterProposal.colOriginal': 'Original',
+  'counterProposal.colProposed': 'Propuesto por el cliente',
+  'counterProposal.colMargin': 'Margen',
+  'counterProposal.lineDeleted': 'Eliminada por el cliente',
+  'counterProposal.marginBelowFloor': 'Por debajo del suelo del 50 %',
+  'counterProposal.mediaBuyNoMargin': 'Sin margen aplicable (media buy)',
+  'counterProposal.forceMargin': 'Forzar por debajo del suelo',
+  'counterProposal.forceMarginReasonLabel': 'Motivo (obligatorio)',
+  'counterProposal.forceMarginConfirm': 'Confirmar',
+  'counterProposal.forceMarginCancel': 'Cancelar',
+  'counterProposal.forceMarginClear': 'Deshacer forzado',
+  'counterProposal.campaignPeriod': 'Periodo propuesto',
+  'counterProposal.fiscalData': 'Datos fiscales del cliente',
+  'counterProposal.acceptButton': 'Aceptar contrapropuesta',
+  'counterProposal.accepting': 'Aceptando…',
+  'counterProposal.acceptSuccess': 'Contrapropuesta aceptada. Nuevo presupuesto: {number}.',
+  'counterProposal.rejectButton': 'Rechazar contrapropuesta',
+  'counterProposal.rejecting': 'Rechazando…',
+  'counterProposal.rejectSuccess': 'Contrapropuesta rechazada. Email enviado al cliente.',
+  'counterProposal.rejectReasonLabel': 'Motivo del rechazo (obligatorio, distinto del motivo del cliente)',
+  'counterProposal.rejectReasonRequired': 'El motivo de rechazo es obligatorio.',
+  'counterProposal.permissionDenied':
+    'Solo el creador de este presupuesto o un administrador pueden decidir sobre esta contrapropuesta.',
+  'counterProposal.previewEmailButton': 'Vista previa del email de rechazo',
+  'counterProposal.previewEmailNotice':
+    'No se ha enviado nada todavía: así se vería el email de rechazo con el motivo tecleado.',
 } as const;
 
 export type I18nKey = keyof typeof es;
@@ -280,6 +359,48 @@ const fr: Dict = {
   'nav.proposalsList': 'Devis',
   'nav.accountsList': 'Comptes',
   'nav.admin': 'Utilisateurs',
+  'nav.dashboard': 'Tableau de bord',
+  'nav.targets': 'Objectifs',
+
+  'targets.title': 'Objectifs par advertising manager',
+  'targets.fiscalYear': 'Année fiscale {year}',
+  'targets.am': 'Advertising manager',
+  'targets.q1': 'Q1 (mai-juil)',
+  'targets.q2': 'Q2 (août-oct)',
+  'targets.q3': 'Q3 (nov-jan)',
+  'targets.q4': 'Q4 (fév-avr)',
+  'targets.save': 'Enregistrer',
+  'targets.saving': 'Enregistrement…',
+  'targets.saved': 'Enregistré',
+  'targets.note': "Objectif mesuré sur l'importe net des médias (les fees de gestion), jamais sur le total facturé — le budget médias qui transite par Weekendesk sans marge ne compte pas dans l'objectif (CLAUDE.md §4.4).",
+
+  'dashboard.title': 'Tableau de bord',
+  'dashboard.objective': 'Objectif de la période',
+  'dashboard.wholeYear': 'Année complète',
+  'dashboard.allAms': 'Tous les AM',
+  'dashboard.kpiBilled': 'Facturé (net des médias)',
+  'dashboard.kpiTarget': 'Objectif',
+  'dashboard.kpiProgress': 'Progression',
+  'dashboard.kpiAvgMargin': 'Marge moyenne',
+  'dashboard.optionsWithoutMarginNote': '{count} acceptation(s) par contre-proposition sans marge calculable, exclue(s)',
+  'dashboard.kpiPendingCounter': 'Contre-propositions en attente',
+  'dashboard.kpiExpiringSoon': 'Expire bientôt',
+  'dashboard.byMarket': 'Par marché',
+  'dashboard.byAm': 'Par advertising manager',
+  'dashboard.filterMarket': 'Marché',
+  'dashboard.filterSupport': 'Support',
+  'dashboard.filterAccount': 'Client',
+  'dashboard.filterAccountPlaceholder': 'Rechercher par raison sociale…',
+  'dashboard.filterDateFrom': 'Depuis',
+  'dashboard.filterDateTo': "Jusqu'à",
+  'dashboard.filterAmountMin': 'Montant min. (€)',
+  'dashboard.filterAmountMax': 'Montant max. (€)',
+  'dashboard.togglePendingCounter': 'Contre-proposition en attente uniquement',
+  'dashboard.toggleExpiringSoon': 'Expire bientôt uniquement',
+  'dashboard.all': 'Tous',
+  'dashboard.resultsCount': '{shown} devis affichés sur {total}',
+  'dashboard.colAmount': 'Montant',
+  'dashboard.colMarkets': 'Marchés',
 
   'admin.title': "Utilisateurs de l'équipe",
   'admin.fullName': 'Nom complet',
@@ -287,6 +408,7 @@ const fr: Dict = {
   'admin.password': 'Mot de passe initial',
   'admin.generatePassword': 'Générer',
   'admin.passwordNote': "À usage unique : la personne devra le changer dès sa première connexion.",
+  'admin.inviteLanguage': "Langue d'invitation",
   'admin.note': 'Note (optionnelle)',
   'admin.create': "Créer l'accès",
   'admin.creating': 'Création…',
@@ -447,6 +569,7 @@ const fr: Dict = {
   'status.ACCEPTED': 'Accepté',
   'status.REJECTED': 'Refusé',
   'status.EXPIRED': 'Expiré',
+  'status.COUNTERED': 'Contre-proposition reçue',
 
   'proposalsList.title': 'Devis',
   'proposalsList.filterStatus': 'Statut',
@@ -478,6 +601,7 @@ const fr: Dict = {
   'proposalDetail.lineMarket': 'Marché',
   'proposalDetail.notFound': 'Devis introuvable.',
   'proposalDetail.leadTimeForced': 'Délai forcé',
+  'proposalDetail.downloadPdf': 'Télécharger le PDF',
   'proposalDetail.leadTimeForcedReason': 'Motif : {reason}',
 
   'accountsList.title': 'Comptes',
@@ -492,6 +616,39 @@ const fr: Dict = {
   'accountDetail.contacts': 'Contacts',
   'accountDetail.proposals': 'Historique des devis',
   'accountDetail.noProposals': "Ce compte n'a pas encore de devis.",
+
+  'counterProposal.title': 'Contre-proposition du client',
+  'counterProposal.submittedAt': 'Reçue le',
+  'counterProposal.statusPending': 'En attente de révision',
+  'counterProposal.statusAccepted': 'Acceptée',
+  'counterProposal.statusRejected': 'Refusée',
+  'counterProposal.colSupport': 'Support',
+  'counterProposal.colOriginal': 'Original',
+  'counterProposal.colProposed': 'Proposé par le client',
+  'counterProposal.colMargin': 'Marge',
+  'counterProposal.lineDeleted': 'Supprimée par le client',
+  'counterProposal.marginBelowFloor': 'Sous le plancher de 50 %',
+  'counterProposal.mediaBuyNoMargin': 'Marge non applicable (média payant)',
+  'counterProposal.forceMargin': 'Forcer sous le plancher',
+  'counterProposal.forceMarginReasonLabel': 'Motif (obligatoire)',
+  'counterProposal.forceMarginConfirm': 'Confirmer',
+  'counterProposal.forceMarginCancel': 'Annuler',
+  'counterProposal.forceMarginClear': 'Annuler le forçage',
+  'counterProposal.campaignPeriod': 'Période proposée',
+  'counterProposal.fiscalData': 'Données fiscales du client',
+  'counterProposal.acceptButton': 'Accepter la contre-proposition',
+  'counterProposal.accepting': 'Acceptation…',
+  'counterProposal.acceptSuccess': 'Contre-proposition acceptée. Nouveau devis : {number}.',
+  'counterProposal.rejectButton': 'Refuser la contre-proposition',
+  'counterProposal.rejecting': 'Refus…',
+  'counterProposal.rejectSuccess': 'Contre-proposition refusée. Email envoyé au client.',
+  'counterProposal.rejectReasonLabel': 'Motif du refus (obligatoire, distinct du motif du client)',
+  'counterProposal.rejectReasonRequired': 'Le motif de refus est obligatoire.',
+  'counterProposal.permissionDenied':
+    'Seul le créateur de ce devis ou un administrateur peut décider de cette contre-proposition.',
+  'counterProposal.previewEmailButton': "Aperçu de l'email de refus",
+  'counterProposal.previewEmailNotice':
+    "Rien n'a encore été envoyé : voici à quoi ressemblerait l'email de refus avec le motif saisi.",
 };
 
 const en: Dict = {
@@ -510,6 +667,48 @@ const en: Dict = {
   'nav.proposalsList': 'Proposals',
   'nav.accountsList': 'Accounts',
   'nav.admin': 'Users',
+  'nav.dashboard': 'Dashboard',
+  'nav.targets': 'Targets',
+
+  'targets.title': 'Targets by advertising manager',
+  'targets.fiscalYear': 'Fiscal year {year}',
+  'targets.am': 'Advertising manager',
+  'targets.q1': 'Q1 (May-Jul)',
+  'targets.q2': 'Q2 (Aug-Oct)',
+  'targets.q3': 'Q3 (Nov-Jan)',
+  'targets.q4': 'Q4 (Feb-Apr)',
+  'targets.save': 'Save',
+  'targets.saving': 'Saving…',
+  'targets.saved': 'Saved',
+  'targets.note': 'The target is measured on net-of-media revenue (management fees), never on the total billed amount — the media budget that passes through Weekendesk without margin does not count toward the target (CLAUDE.md §4.4).',
+
+  'dashboard.title': 'Dashboard',
+  'dashboard.objective': 'Period target',
+  'dashboard.wholeYear': 'Whole year',
+  'dashboard.allAms': 'All AMs',
+  'dashboard.kpiBilled': 'Billed (net of media)',
+  'dashboard.kpiTarget': 'Target',
+  'dashboard.kpiProgress': 'Progress',
+  'dashboard.kpiAvgMargin': 'Average margin',
+  'dashboard.optionsWithoutMarginNote': '{count} counter-offer acceptance(s) with no calculable margin, excluded',
+  'dashboard.kpiPendingCounter': 'Pending counter-offers',
+  'dashboard.kpiExpiringSoon': 'Expiring soon',
+  'dashboard.byMarket': 'By market',
+  'dashboard.byAm': 'By advertising manager',
+  'dashboard.filterMarket': 'Market',
+  'dashboard.filterSupport': 'Placement',
+  'dashboard.filterAccount': 'Client',
+  'dashboard.filterAccountPlaceholder': 'Search by legal name…',
+  'dashboard.filterDateFrom': 'From',
+  'dashboard.filterDateTo': 'To',
+  'dashboard.filterAmountMin': 'Min amount (€)',
+  'dashboard.filterAmountMax': 'Max amount (€)',
+  'dashboard.togglePendingCounter': 'Pending counter-offer only',
+  'dashboard.toggleExpiringSoon': 'Expiring soon only',
+  'dashboard.all': 'All',
+  'dashboard.resultsCount': 'Showing {shown} of {total} proposals',
+  'dashboard.colAmount': 'Amount',
+  'dashboard.colMarkets': 'Markets',
 
   'admin.title': 'Team users',
   'admin.fullName': 'Full name',
@@ -517,6 +716,7 @@ const en: Dict = {
   'admin.password': 'Initial password',
   'admin.generatePassword': 'Generate',
   'admin.passwordNote': 'One-time use: the person will have to change it the first time they sign in.',
+  'admin.inviteLanguage': 'Invitation language',
   'admin.note': 'Note (optional)',
   'admin.create': 'Create access',
   'admin.creating': 'Creating…',
@@ -677,6 +877,7 @@ const en: Dict = {
   'status.ACCEPTED': 'Accepted',
   'status.REJECTED': 'Rejected',
   'status.EXPIRED': 'Expired',
+  'status.COUNTERED': 'Counter-offer received',
 
   'proposalsList.title': 'Proposals',
   'proposalsList.filterStatus': 'Status',
@@ -708,6 +909,7 @@ const en: Dict = {
   'proposalDetail.lineMarket': 'Market',
   'proposalDetail.leadTimeForced': 'Lead time forced',
   'proposalDetail.leadTimeForcedReason': 'Reason: {reason}',
+  'proposalDetail.downloadPdf': 'Download PDF',
   'proposalDetail.notFound': 'Proposal not found.',
 
   'accountsList.title': 'Accounts',
@@ -722,6 +924,38 @@ const en: Dict = {
   'accountDetail.contacts': 'Contacts',
   'accountDetail.proposals': 'Proposal history',
   'accountDetail.noProposals': 'This account has no proposals yet.',
+
+  'counterProposal.title': "Client's counter-offer",
+  'counterProposal.submittedAt': 'Received on',
+  'counterProposal.statusPending': 'Pending review',
+  'counterProposal.statusAccepted': 'Accepted',
+  'counterProposal.statusRejected': 'Rejected',
+  'counterProposal.colSupport': 'Support',
+  'counterProposal.colOriginal': 'Original',
+  'counterProposal.colProposed': "Proposed by the client",
+  'counterProposal.colMargin': 'Margin',
+  'counterProposal.lineDeleted': 'Removed by the client',
+  'counterProposal.marginBelowFloor': 'Below the 50% floor',
+  'counterProposal.mediaBuyNoMargin': 'No margin applicable (media buy)',
+  'counterProposal.forceMargin': 'Force below the floor',
+  'counterProposal.forceMarginReasonLabel': 'Reason (required)',
+  'counterProposal.forceMarginConfirm': 'Confirm',
+  'counterProposal.forceMarginCancel': 'Cancel',
+  'counterProposal.forceMarginClear': 'Undo force',
+  'counterProposal.campaignPeriod': 'Proposed period',
+  'counterProposal.fiscalData': "Client's fiscal data",
+  'counterProposal.acceptButton': 'Accept counter-offer',
+  'counterProposal.accepting': 'Accepting…',
+  'counterProposal.acceptSuccess': 'Counter-offer accepted. New proposal: {number}.',
+  'counterProposal.rejectButton': 'Reject counter-offer',
+  'counterProposal.rejecting': 'Rejecting…',
+  'counterProposal.rejectSuccess': 'Counter-offer rejected. Email sent to the client.',
+  'counterProposal.rejectReasonLabel': "Rejection reason (required, distinct from the client's reason)",
+  'counterProposal.rejectReasonRequired': 'A rejection reason is required.',
+  'counterProposal.permissionDenied':
+    'Only this proposal\'s creator or an administrator can decide on this counter-offer.',
+  'counterProposal.previewEmailButton': 'Preview rejection email',
+  'counterProposal.previewEmailNotice': "Nothing has been sent yet: this is what the rejection email would look like with the reason typed so far.",
 };
 
 const DICTS: Record<InternalLanguage, Dict> = { ES: es, FR: fr, EN: en };
@@ -739,6 +973,24 @@ function readStoredLanguage(): InternalLanguage {
     // usa el valor por defecto sin romper el render.
   }
   return 'ES';
+}
+
+/**
+ * ¿Ya eligió esta persona un idioma de interfaz EN ESTE NAVEGADOR? Distinto
+ * de `readStoredLanguage()`, que siempre devuelve un valor usable (cae a
+ * 'ES') — aquí hace falta distinguir "nunca eligió nada" de "eligió ES
+ * explícitamente", para que `profiles.preferred_language` (CLAUDE.md, ronda
+ * 17, bloque 3) solo actúe como semilla la primera vez, sin pisar nunca una
+ * preferencia ya guardada.
+ */
+export function hasExplicitStoredLanguage(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    return stored === 'ES' || stored === 'FR' || stored === 'EN';
+  } catch {
+    return false;
+  }
 }
 
 interface I18nContextValue {

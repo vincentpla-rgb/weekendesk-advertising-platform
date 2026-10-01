@@ -31,10 +31,15 @@
  * y una comprobación aquí; no está pedido en esta pasada.
  */
 
+import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 
+import { createClient } from '@/lib/supabase/server';
 import { createServiceClient } from '@/lib/supabase/service';
 import { defaultFullName } from '@/lib/supabase/team-access';
+import type { InternalLanguage } from '@/lib/i18n-internal';
+import { sendEmail } from '@/lib/email/resend-client';
+import { buildTransactionalEmailContent } from '@/lib/email/transactional-email';
 
 export type CreateTeamUserResult =
   | { readonly ok: true; readonly alreadyExisted: boolean }
@@ -45,6 +50,16 @@ export async function createTeamUser(input: {
   fullName: string;
   password: string;
   note: string;
+  /**
+   * Idioma elegido al invitar (CLAUDE.md, ronda 17, bloque 3): decide el
+   * idioma del email de invitación (pendiente de plantilla, bloque 2 —
+   * `allowed_emails.invite_language` se guarda igual, listo para cuando
+   * exista) y queda preprogramado como idioma de interfaz por defecto para
+   * esta persona en sus siguientes logins (`profiles.preferred_language`,
+   * copiado en `resolveTeamAccess`/`lib/supabase/team-access.ts` en el
+   * momento de su primer login).
+   */
+  inviteLanguage: InternalLanguage;
 }): Promise<CreateTeamUserResult> {
   const email = input.email.trim().toLowerCase();
   const fullName = input.fullName.trim() || defaultFullName(email);
@@ -79,14 +94,68 @@ export async function createTeamUser(input: {
 
   const { error: upsertError } = await service
     .from('allowed_emails')
-    .upsert({ email, full_name: fullName, note: input.note.trim() || null }, { onConflict: 'email' });
+    .upsert(
+      { email, full_name: fullName, note: input.note.trim() || null, invite_language: input.inviteLanguage },
+      { onConflict: 'email' },
+    );
 
   if (upsertError) {
     return { ok: false, error: `Usuario creado, pero falló la lista blanca: ${upsertError.message}` };
   }
 
+  await sendInviteEmail({ email, fullName, inviteLanguage: input.inviteLanguage });
+
   revalidatePath('/admin/users');
   return { ok: true, alreadyExisted };
+}
+
+/**
+ * Email 1, "Invitación de nuevo usuario" (CLAUDE.md §9, ronda 18, bloque 2):
+ * se manda en el mismo paso que el alta, en `invite_language` — nunca
+ * bloquea el alta si falla (acceso ya creado de verdad; el admin puede
+ * comunicar la contraseña a mano si el correo no llega, igual que ya podía
+ * hacerlo antes de que este email existiera). Mismo criterio de
+ * degradación que el resto de emails de esta ronda: sin
+ * `RESEND_API_KEY`/`RESEND_FROM_EMAIL` configuradas, se omite sin más.
+ */
+async function sendInviteEmail(input: {
+  readonly email: string;
+  readonly fullName: string;
+  readonly inviteLanguage: InternalLanguage;
+}): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromAddress = process.env.RESEND_FROM_EMAIL;
+  if (!apiKey || !fromAddress) {
+    console.info('[invite] RESEND_API_KEY/RESEND_FROM_EMAIL no configuradas — no se manda la invitación.');
+    return;
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  let inviterName = 'Weekendesk Advertising';
+  if (user) {
+    const { data: inviterProfile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+    if (inviterProfile?.full_name) inviterName = inviterProfile.full_name;
+  }
+
+  const h = await headers();
+  const proto = h.get('x-forwarded-proto') ?? 'https';
+  const ctaUrl = `${proto}://${h.get('host')}/login`;
+
+  const { subject, html, text } = buildTransactionalEmailContent({
+    key: 'invite',
+    language: input.inviteLanguage,
+    inviteeFirstName: input.fullName.trim().split(/\s+/)[0] || input.fullName,
+    inviterName,
+    ctaUrl,
+  });
+
+  const result = await sendEmail({ from: fromAddress, to: [input.email], subject, html, text }, apiKey);
+  if (!result.ok) {
+    console.error(`[invite] no se pudo mandar la invitación a ${input.email}: ${result.error}`);
+  }
 }
 
 export type RemoveTeamUserResult = { readonly ok: true } | { readonly ok: false; readonly error: string };

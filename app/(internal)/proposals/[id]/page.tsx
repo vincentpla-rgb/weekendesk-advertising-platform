@@ -1,7 +1,10 @@
 import { notFound } from 'next/navigation';
 
+import { loadPricingContext } from '@/lib/pricing-context';
 import { createClient } from '@/lib/supabase/server';
+import { reviewCounterProposalLines, type CounterProposalLineInput, type Market } from '@/src/pricing/index.js';
 import { ProposalDetailClient } from './ProposalDetailClient';
+import type { CounterProposalReviewData } from './CounterProposalReview';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,7 +33,7 @@ export default async function ProposalDetailPage({
   const { data: proposal, error } = await supabase
     .from('proposals')
     .select(
-      'id, proposal_number, status, language, brief, sent_at, decided_at, expires_at, public_token, parameter_set_id, created_at, updated_at, accounts(legal_name), contacts(full_name, email), profiles(full_name), proposal_options(id, code, name, pitch, markets, campaign_start, campaign_end, campaign_duration_count, campaign_duration_unit, billed_total_cents, net_revenue_cents, media_budget_cents, cost_cents, margin_cents, margin_rate, sort_order, proposal_option_lines(support_id, market, quantity, net_price_cents, billed_total_cents, lead_time_forced, lead_time_force_reason, sort_order))',
+      'id, proposal_number, status, language, brief, sent_at, decided_at, expires_at, public_token, parameter_set_id, owner_id, created_at, updated_at, accounts(legal_name), contacts(full_name, email), profiles(full_name), proposal_options(id, code, name, pitch, markets, campaign_start, campaign_end, campaign_duration_count, campaign_duration_unit, billed_total_cents, net_revenue_cents, media_budget_cents, cost_cents, margin_cents, margin_rate, sort_order, proposal_option_lines(support_id, market, quantity, net_price_cents, billed_total_cents, is_lead_market, lead_time_forced, lead_time_force_reason, sort_order))',
     )
     .eq('id', id)
     .maybeSingle();
@@ -66,6 +69,95 @@ export default async function ProposalDetailPage({
     if (paramSet) offerValidityDays = paramSet.offer_validity_days;
   }
 
+  // Contrapropuesta del cliente (CLAUDE.md, ronda 16): a lo sumo una por
+  // presupuesto (`counter_proposals.proposal_id` es UNIQUE). Se busca
+  // siempre, no solo en status COUNTERED — tras decidirla, el presupuesto
+  // original pasa a REJECTED (si se rechaza) y ya no está en COUNTERED,
+  // pero la contrapropuesta sigue siendo un registro histórico que vale la
+  // pena mostrar en el detalle.
+  const { data: counterProposalRow } = await supabase
+    .from('counter_proposals')
+    .select(
+      'id, status, option_code, option_name, lines, submitted_at, reviewed_at, rejection_reason, resulting_proposal_id',
+    )
+    .eq('proposal_id', id)
+    .maybeSingle();
+
+  let counterProposal: CounterProposalReviewData | null = null;
+  let canDecideCounterProposal = false;
+  let currentUserName: string | null = null;
+
+  if (counterProposalRow) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin, full_name')
+        .eq('id', user.id)
+        .maybeSingle();
+      canDecideCounterProposal = Boolean(profile?.is_admin) || user.id === proposal.owner_id;
+      currentUserName = profile?.full_name ?? user.email ?? null;
+    }
+
+    const matchingOption = options.find((o) => o.code === counterProposalRow.option_code);
+    const leadMarketBySupport = new Map<string, boolean>(
+      (matchingOption?.proposal_option_lines ?? []).map((l) => [l.support_id, Boolean(l.is_lead_market)]),
+    );
+
+    const rawLines = (counterProposalRow.lines ?? []) as unknown as ReadonlyArray<{
+      support_id: string;
+      market: string;
+      deleted: boolean;
+      original_price_cents: number;
+      original_quantity: number;
+      client_price_cents: number;
+      client_quantity: number;
+    }>;
+
+    let ctx;
+    try {
+      ctx = await loadPricingContext(supabase);
+    } catch {
+      ctx = null;
+    }
+
+    const lineInputs: CounterProposalLineInput[] = rawLines.map((l) => ({
+      supportId: l.support_id,
+      market: l.market as Market,
+      deleted: l.deleted,
+      clientPriceCents: l.client_price_cents,
+      clientQuantity: l.client_quantity,
+      isLeadMarket: leadMarketBySupport.get(l.support_id) ?? false,
+    }));
+
+    const reviewed = ctx ? reviewCounterProposalLines(lineInputs, ctx.catalog, ctx.parameters) : null;
+
+    counterProposal = {
+      id: counterProposalRow.id,
+      status: counterProposalRow.status,
+      optionCode: counterProposalRow.option_code,
+      optionName: counterProposalRow.option_name,
+      submittedAt: counterProposalRow.submitted_at,
+      reviewedAt: counterProposalRow.reviewed_at,
+      rejectionReason: counterProposalRow.rejection_reason,
+      resultingProposalId: counterProposalRow.resulting_proposal_id,
+      lines: rawLines.map((l, idx) => ({
+        supportId: l.support_id,
+        supportName: supportNames[l.support_id] ?? l.support_id,
+        market: l.market,
+        deleted: l.deleted,
+        originalPriceCents: l.original_price_cents,
+        originalQuantity: l.original_quantity,
+        clientPriceCents: l.client_price_cents,
+        clientQuantity: l.client_quantity,
+        margin: reviewed ? reviewed[idx]!.margin : null,
+      })),
+    };
+  }
+
   return (
     <div className="wk-shell">
       <ProposalDetailClient
@@ -73,6 +165,9 @@ export default async function ProposalDetailPage({
         options={options}
         supportNames={supportNames}
         offerValidityDays={offerValidityDays}
+        counterProposal={counterProposal}
+        canDecideCounterProposal={canDecideCounterProposal}
+        currentUserName={currentUserName}
       />
     </div>
   );

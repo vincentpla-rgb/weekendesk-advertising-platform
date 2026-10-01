@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from './database.types.js';
+import type { InternalLanguage } from '../i18n-internal';
 
 /**
  * Puente hacia `allowed_emails` / `profiles`, independiente de
@@ -16,11 +17,12 @@ import type { Database } from './database.types.js';
  */
 export interface TeamAccessGateway {
   getProfile(userId: string): Promise<{ isActive: boolean } | null>;
-  getAllowedEmail(email: string): Promise<{ fullName: string | null } | null>;
+  getAllowedEmail(email: string): Promise<{ fullName: string | null; inviteLanguage: InternalLanguage | null } | null>;
   createProfile(input: {
     id: string;
     email: string;
     fullName: string;
+    preferredLanguage: InternalLanguage | null;
   }): Promise<{ ok: true } | { ok: false; error: string }>;
 }
 
@@ -79,7 +81,7 @@ export async function resolveTeamAccess(
   }
 
   const fullName = allowed.fullName?.trim() || defaultFullName(email);
-  const result = await gateway.createProfile({ id: user.id, email, fullName });
+  const result = await gateway.createProfile({ id: user.id, email, fullName, preferredLanguage: allowed.inviteLanguage });
 
   if (!result.ok) {
     log(
@@ -127,7 +129,7 @@ export function createSupabaseTeamAccessGateway(
     async getAllowedEmail(email) {
       const { data, error } = await serviceClient
         .from('allowed_emails')
-        .select('full_name')
+        .select('full_name, invite_language')
         .eq('email', email)
         .maybeSingle();
 
@@ -136,13 +138,23 @@ export function createSupabaseTeamAccessGateway(
         return null;
       }
 
-      return data ? { fullName: data.full_name } : null;
+      return data ? { fullName: data.full_name, inviteLanguage: data.invite_language } : null;
     },
 
-    async createProfile({ id, email, fullName }) {
-      const { error } = await serviceClient
-        .from('profiles')
-        .insert({ id, email, full_name: fullName, is_active: true });
+    async createProfile({ id, email, fullName, preferredLanguage }) {
+      const { error } = await serviceClient.from('profiles').insert({
+        id,
+        email,
+        full_name: fullName,
+        is_active: true,
+        // 'ES' por defecto si no se eligió idioma al invitar (ronda 17,
+        // bloque 3) — accesos de antes de esta ronda no tienen
+        // `invite_language`, así que caen al valor por defecto de la
+        // columna en vez de mandar `undefined` (que dejaría el default de
+        // la tabla actuar igual, pero ser explícito aquí documenta la
+        // decisión en el propio código, no solo en la migración).
+        ...(preferredLanguage ? { preferred_language: preferredLanguage } : {}),
+      });
 
       return error ? { ok: false, error: error.message } : { ok: true };
     },

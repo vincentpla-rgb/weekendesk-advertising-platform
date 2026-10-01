@@ -14,14 +14,15 @@ import { defaultFullName, resolveTeamAccess, type TeamAccessGateway } from './te
  */
 function fakeGateway(state: {
   profiles: Map<string, { isActive: boolean }>;
-  allowedEmails: Map<string, { fullName: string | null }>;
+  allowedEmails: Map<string, { fullName: string | null; inviteLanguage?: 'ES' | 'FR' | 'EN' | null }>;
 }): TeamAccessGateway {
   return {
     async getProfile(userId) {
       return state.profiles.get(userId) ?? null;
     },
     async getAllowedEmail(email) {
-      return state.allowedEmails.get(email) ?? null;
+      const found = state.allowedEmails.get(email);
+      return found ? { fullName: found.fullName, inviteLanguage: found.inviteLanguage ?? null } : null;
     },
     async createProfile({ id, fullName }) {
       if (!fullName) {
@@ -75,7 +76,7 @@ describe('resolveTeamAccess', () => {
         return null;
       },
       async getAllowedEmail() {
-        return { fullName: 'Vincent Pla' };
+        return { fullName: 'Vincent Pla', inviteLanguage: null };
       },
       async createProfile({ fullName }) {
         created.push({ fullName });
@@ -94,7 +95,7 @@ describe('resolveTeamAccess', () => {
         return null;
       },
       async getAllowedEmail() {
-        return { fullName: 'Vincent Pla' };
+        return { fullName: 'Vincent Pla', inviteLanguage: null };
       },
       async createProfile() {
         return { ok: false, error: 'la conexión con la base de datos ha caducado' };
@@ -164,6 +165,49 @@ describe('resolveTeamAccess', () => {
     });
 
     expect(authorized).toBe(true);
+  });
+
+  // CLAUDE.md, ronda 17, bloque 3: el idioma elegido al invitar
+  // (allowed_emails.invite_language) se copia a profiles.preferred_language
+  // en el momento exacto de aprovisionar el perfil que falta.
+  it('copia allowed_emails.inviteLanguage a preferredLanguage al crear el profiles que falta', async () => {
+    const created: { preferredLanguage: 'ES' | 'FR' | 'EN' | null }[] = [];
+    const gateway: TeamAccessGateway = {
+      async getProfile() {
+        return null;
+      },
+      async getAllowedEmail() {
+        return { fullName: 'Rémi Challal', inviteLanguage: 'FR' };
+      },
+      async createProfile({ preferredLanguage }) {
+        created.push({ preferredLanguage });
+        return { ok: true };
+      },
+    };
+
+    await resolveTeamAccess(gateway, { id: 'user-5', email: 'remi.challal@weekendesk.fr' });
+
+    expect(created).toEqual([{ preferredLanguage: 'FR' }]);
+  });
+
+  it('un acceso sin idioma elegido (de antes de la ronda 17) no manda ningún preferredLanguage', async () => {
+    const created: { preferredLanguage: 'ES' | 'FR' | 'EN' | null }[] = [];
+    const gateway: TeamAccessGateway = {
+      async getProfile() {
+        return null;
+      },
+      async getAllowedEmail() {
+        return { fullName: 'Vincent Pla', inviteLanguage: null };
+      },
+      async createProfile({ preferredLanguage }) {
+        created.push({ preferredLanguage });
+        return { ok: true };
+      },
+    };
+
+    await resolveTeamAccess(gateway, { id: 'user-6', email: 'vincent.pla@weekendesk.fr' });
+
+    expect(created).toEqual([{ preferredLanguage: null }]);
   });
 });
 
