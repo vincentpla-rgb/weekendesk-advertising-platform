@@ -136,6 +136,11 @@ export function ProposalDetailClient({
           </div>
           <span className={`wk-badge ${STATUS_BADGE_CLASS[proposal.status]}`}>{t(STATUS_KEY[proposal.status])}</span>
         </div>
+        <div style={{ marginTop: 10 }}>
+          <a className="wk-btn wk-btn-secondary" href={`/api/proposals/${proposal.id}/pdf`}>
+            {t('proposalDetail.downloadPdf')}
+          </a>
+        </div>
         <table className="wk-table" style={{ marginTop: 12 }}>
           <tbody>
             <tr>

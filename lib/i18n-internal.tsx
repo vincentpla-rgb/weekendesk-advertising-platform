@@ -290,6 +290,7 @@ const es = {
   'proposalDetail.notFound': 'Presupuesto no encontrado.',
   'proposalDetail.leadTimeForced': 'Antelación forzada',
   'proposalDetail.leadTimeForcedReason': 'Motivo: {reason}',
+  'proposalDetail.downloadPdf': 'Descargar PDF',
 
   'accountsList.title': 'Cuentas',
   'accountsList.colLegalName': 'Razón social',
@@ -600,6 +601,7 @@ const fr: Dict = {
   'proposalDetail.lineMarket': 'Marché',
   'proposalDetail.notFound': 'Devis introuvable.',
   'proposalDetail.leadTimeForced': 'Délai forcé',
+  'proposalDetail.downloadPdf': 'Télécharger le PDF',
   'proposalDetail.leadTimeForcedReason': 'Motif : {reason}',
 
   'accountsList.title': 'Comptes',
@@ -907,6 +909,7 @@ const en: Dict = {
   'proposalDetail.lineMarket': 'Market',
   'proposalDetail.leadTimeForced': 'Lead time forced',
   'proposalDetail.leadTimeForcedReason': 'Reason: {reason}',
+  'proposalDetail.downloadPdf': 'Download PDF',
   'proposalDetail.notFound': 'Proposal not found.',
 
   'accountsList.title': 'Accounts',

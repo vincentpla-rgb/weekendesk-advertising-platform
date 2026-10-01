@@ -16,6 +16,12 @@
 
 const RESEND_ENDPOINT = 'https://api.resend.com/emails';
 
+export interface SendEmailAttachment {
+  readonly filename: string;
+  /** Contenido en base64 (CLAUDE.md §1/§9 — el PDF del presupuesto, p. ej.). */
+  readonly content: string;
+}
+
 export interface SendEmailInput {
   readonly from: string;
   readonly to: readonly string[];
@@ -25,6 +31,7 @@ export interface SendEmailInput {
   readonly subject: string;
   readonly html: string;
   readonly text: string;
+  readonly attachments?: readonly SendEmailAttachment[];
 }
 
 export type SendEmailResult = { readonly ok: true; readonly id: string } | { readonly ok: false; readonly error: string };
@@ -41,6 +48,7 @@ export async function sendEmail(input: SendEmailInput, apiKey: string): Promise<
       `[EMAIL_DRY_RUN] ${id} · to=${input.to.join(',')}` +
         (input.cc?.length ? ` cc=${input.cc.join(',')}` : '') +
         (input.replyTo ? ` replyTo=${input.replyTo}` : '') +
+        (input.attachments?.length ? ` adjuntos=${input.attachments.map((a) => a.filename).join(',')}` : '') +
         ` · subject="${input.subject}"\n${input.text.slice(0, 300)}`,
     );
     return { ok: true, id };
@@ -62,6 +70,7 @@ export async function sendEmail(input: SendEmailInput, apiKey: string): Promise<
         subject: input.subject,
         html: input.html,
         text: input.text,
+        attachments: input.attachments?.map((a) => ({ filename: a.filename, content: a.content })),
       }),
     });
 

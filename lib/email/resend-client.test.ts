@@ -45,6 +45,38 @@ describe('sendEmail', () => {
     });
   });
 
+  it('manda los adjuntos (filename + content en base64) cuando se pasan (CLAUDE.md §1/§9, PDF del presupuesto)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 'email_1' }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await sendEmail(
+      {
+        from: 'a@b.com',
+        to: ['c@d.com'],
+        subject: 's',
+        html: 'h',
+        text: 't',
+        attachments: [{ filename: 'weekendesk-2026-014.pdf', content: 'base64content==' }],
+      },
+      'key',
+    );
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.attachments).toEqual([{ filename: 'weekendesk-2026-014.pdf', content: 'base64content==' }]);
+  });
+
+  it('sin adjuntos, el campo no se manda relleno de nada raro (undefined, no un array vacío que Resend podría rechazar)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ id: 'email_1' }) });
+    vi.stubGlobal('fetch', fetchMock);
+
+    await sendEmail({ from: 'a@b.com', to: ['c@d.com'], subject: 's', html: 'h', text: 't' }, 'key');
+
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(init.body as string);
+    expect(body.attachments).toBeUndefined();
+  });
+
   it('devuelve el error de Resend si la respuesta no es ok, sin lanzar', async () => {
     vi.stubGlobal(
       'fetch',

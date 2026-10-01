@@ -2,10 +2,38 @@ import { NextResponse } from 'next/server';
 
 import { checkVies } from '@/lib/vies';
 import { createPublicClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import type { Json } from '@/lib/supabase/database.types.js';
 import type { ContentLanguage } from '@/lib/domain';
 import { buildTransactionalEmailContent } from '@/lib/email/transactional-email';
-import { sendEmail } from '@/lib/email/resend-client';
+import { sendEmail, type SendEmailAttachment } from '@/lib/email/resend-client';
+import { loadProposalPdfData } from '@/lib/pdf/proposal-pdf-loader';
+import { renderProposalPdf, proposalPdfFileName } from '@/lib/pdf/render-proposal-pdf';
+import type { PdfAudience } from '@/lib/pdf/proposal-pdf-data';
+
+/**
+ * PDF del presupuesto aceptado (CLAUDE.md §1/§9, propuesta confirmada por
+ * Vincent) — adjunto a los dos emails de aceptación. Igual criterio que el
+ * resto de este endpoint: la aceptación ya se persistió por el RPC de
+ * arriba, así que un fallo aquí (datos, render) nunca debe impedir que los
+ * emails salgan — se manda sin adjunto y se registra, nunca se bloquea.
+ * El propio `createServiceClient()` hace falta porque esta ruta corre sin
+ * sesión de equipo (acepta un cliente externo, vía token público) — RLS
+ * (`team_all`) no dejaría leer `proposals`/`proposal_option_lines` con el
+ * cliente público/anon que ya usa el resto de esta ruta.
+ */
+async function loadPdfAttachment(proposalId: string, audience: PdfAudience): Promise<SendEmailAttachment | null> {
+  try {
+    const service = createServiceClient();
+    const pdfData = await loadProposalPdfData(service, proposalId);
+    if (!pdfData) return null;
+    const buffer = await renderProposalPdf(pdfData, audience);
+    return { filename: proposalPdfFileName(pdfData), content: buffer.toString('base64') };
+  } catch (err) {
+    console.error(`[accept] no se pudo generar el PDF (${audience}): ${err instanceof Error ? err.message : err}`);
+    return null;
+  }
+}
 
 interface AcceptBody {
   optionCode: string;
@@ -125,8 +153,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
         billedTo: body.legalName,
         creatorName: accepted.owner_full_name ?? 'Weekendesk Advertising',
       });
+      const clientAttachment = await loadPdfAttachment(accepted.proposal_id, 'client');
       const clientResult = await sendEmail(
-        { from: fromAddress, to: [accepted.contact_email], subject: clientEmail.subject, html: clientEmail.html, text: clientEmail.text },
+        {
+          from: fromAddress,
+          to: [accepted.contact_email],
+          subject: clientEmail.subject,
+          html: clientEmail.html,
+          text: clientEmail.text,
+          attachments: clientAttachment ? [clientAttachment] : undefined,
+        },
         apiKey,
       );
       if (!clientResult.ok) {
@@ -159,8 +195,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ tok
         marginRate: accepted.margin_rate,
         ctaUrl: `${origin}/proposals/${accepted.proposal_id}`,
       });
+      const amAttachment = await loadPdfAttachment(accepted.proposal_id, 'internal');
       const amResult = await sendEmail(
-        { from: fromAddress, to: [accepted.owner_email], subject: amEmail.subject, html: amEmail.html, text: amEmail.text },
+        {
+          from: fromAddress,
+          to: [accepted.owner_email],
+          subject: amEmail.subject,
+          html: amEmail.html,
+          text: amEmail.text,
+          attachments: amAttachment ? [amAttachment] : undefined,
+        },
         apiKey,
       );
       if (!amResult.ok) {

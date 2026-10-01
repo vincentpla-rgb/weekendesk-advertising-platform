@@ -10,12 +10,20 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const rpc = vi.fn();
 const checkVies = vi.fn();
 const sendEmail = vi.fn();
+const loadProposalPdfData = vi.fn();
+const renderProposalPdf = vi.fn();
 
 vi.mock('@/lib/vies', () => ({ checkVies }));
 vi.mock('@/lib/supabase/server', () => ({
   createPublicClient: vi.fn(() => ({ rpc })),
 }));
+vi.mock('@/lib/supabase/service', () => ({ createServiceClient: vi.fn(() => ({})) }));
 vi.mock('@/lib/email/resend-client', () => ({ sendEmail }));
+vi.mock('@/lib/pdf/proposal-pdf-loader', () => ({ loadProposalPdfData }));
+vi.mock('@/lib/pdf/render-proposal-pdf', () => ({
+  renderProposalPdf,
+  proposalPdfFileName: vi.fn(() => 'weekendesk-2026-014.pdf'),
+}));
 
 const { POST } = await import('./route.js');
 
@@ -63,7 +71,13 @@ describe('POST /api/public/proposals/[token]/accept', () => {
     rpc.mockReset();
     checkVies.mockReset();
     sendEmail.mockReset();
+    loadProposalPdfData.mockReset();
+    renderProposalPdf.mockReset();
     checkVies.mockResolvedValue({ result: 'UNAVAILABLE', raw: {} });
+    // Por defecto, sin datos para el PDF (CLAUDE.md §1/§9): un fallo al
+    // generarlo nunca debe impedir que los emails salgan, solo sin adjunto
+    // — mismo criterio por defecto en el resto de este archivo.
+    loadProposalPdfData.mockResolvedValue(null);
     delete process.env.RESEND_API_KEY;
     delete process.env.RESEND_FROM_EMAIL;
   });
@@ -124,5 +138,45 @@ describe('POST /api/public/proposals/[token]/accept', () => {
 
     expect(response.status).toBe(400);
     expect(sendEmail).not.toHaveBeenCalled();
+  });
+
+  it('con datos de PDF disponibles, adjunta el PDF a los dos emails (CLAUDE.md §1/§9)', async () => {
+    process.env.RESEND_API_KEY = 'test-key';
+    process.env.RESEND_FROM_EMAIL = 'Weekendesk Advertising <onboarding@resend.dev>';
+    rpc.mockResolvedValue({ data: RPC_DATA, error: null });
+    sendEmail.mockResolvedValue({ ok: true, id: 'resend-x' });
+    loadProposalPdfData.mockResolvedValue({ proposalId: 'p1', proposalNumber: '2026-014' });
+    renderProposalPdf.mockResolvedValue(Buffer.from('%PDF-fake'));
+
+    await POST(makeRequest(VALID_BODY), { params: Promise.resolve({ token: 'tok123' }) });
+
+    expect(sendEmail).toHaveBeenCalledTimes(2);
+    const [clientCall, amCall] = sendEmail.mock.calls.map((c) => c[0]);
+    expect(clientCall.attachments).toEqual([
+      { filename: 'weekendesk-2026-014.pdf', content: Buffer.from('%PDF-fake').toString('base64') },
+    ]);
+    expect(amCall.attachments).toEqual([
+      { filename: 'weekendesk-2026-014.pdf', content: Buffer.from('%PDF-fake').toString('base64') },
+    ]);
+    // Las dos audiencias se renderizan por separado (CLAUDE.md §4.4/§6: el
+    // PDF del cliente nunca lleva coste/margen, el interno sí).
+    expect(renderProposalPdf).toHaveBeenCalledWith(expect.anything(), 'client');
+    expect(renderProposalPdf).toHaveBeenCalledWith(expect.anything(), 'internal');
+  });
+
+  it('un fallo al generar el PDF no impide mandar los emails, solo sin adjunto', async () => {
+    process.env.RESEND_API_KEY = 'test-key';
+    process.env.RESEND_FROM_EMAIL = 'Weekendesk Advertising <onboarding@resend.dev>';
+    rpc.mockResolvedValue({ data: RPC_DATA, error: null });
+    sendEmail.mockResolvedValue({ ok: true, id: 'resend-x' });
+    loadProposalPdfData.mockRejectedValue(new Error('Supabase caído'));
+
+    const response = await POST(makeRequest(VALID_BODY), { params: Promise.resolve({ token: 'tok123' }) });
+
+    expect(response.status).toBe(200);
+    expect(sendEmail).toHaveBeenCalledTimes(2);
+    for (const call of sendEmail.mock.calls) {
+      expect((call[0] as { attachments?: unknown }).attachments).toBeUndefined();
+    }
   });
 });
