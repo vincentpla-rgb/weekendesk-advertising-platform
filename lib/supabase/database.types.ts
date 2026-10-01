@@ -323,6 +323,88 @@ export interface Database {
           },
         ];
       };
+      // Ronda 18, bloque 4: fuente del dashboard para el importe facturado
+      // (fee de gestión, "importe_neto_de_medios") por AM y quarter fiscal —
+      // fiscal_year/fiscal_quarter se fijan por trigger a la fecha de FIRMA
+      // (CLAUDE.md §0), nunca recalculados en la aplicación.
+      acceptances: {
+        Row: {
+          id: string;
+          proposal_id: string;
+          option_id: string;
+          legal_name: string;
+          billing_address: string;
+          vat_number: string | null;
+          billing_contact_name: string;
+          billing_contact_email: string;
+          signer_name: string;
+          signer_role: string;
+          purchase_order_reference: string | null;
+          vies_check_id: string | null;
+          vat_regime_applied: VatRegimeEnum;
+          accepted_at: string;
+          fiscal_year: number;
+          fiscal_quarter: 1 | 2 | 3 | 4;
+        };
+        Insert: Partial<Database['public']['Tables']['acceptances']['Row']> & {
+          proposal_id: string;
+          option_id: string;
+          legal_name: string;
+          billing_address: string;
+          billing_contact_name: string;
+          billing_contact_email: string;
+          signer_name: string;
+          signer_role: string;
+          vat_regime_applied: VatRegimeEnum;
+        };
+        Update: Partial<Database['public']['Tables']['acceptances']['Row']>;
+        Relationships: [
+          {
+            foreignKeyName: 'acceptances_proposal_id_fkey';
+            columns: ['proposal_id'];
+            isOneToOne: true;
+            referencedRelation: 'proposals';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'acceptances_option_id_fkey';
+            columns: ['option_id'];
+            isOneToOne: true;
+            referencedRelation: 'proposal_options';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      // Objetivo por advertising manager y por quarter fiscal (CLAUDE.md §0).
+      // En el esquema desde la primera migración; ronda 18, bloque 4 es su
+      // primer uso real (confirmado por Vincent: la tabla sirve tal cual).
+      quarterly_targets: {
+        Row: {
+          id: string;
+          profile_id: string;
+          fiscal_year: number;
+          fiscal_quarter: 1 | 2 | 3 | 4;
+          target_cents: number;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: Partial<Database['public']['Tables']['quarterly_targets']['Row']> & {
+          profile_id: string;
+          fiscal_year: number;
+          fiscal_quarter: 1 | 2 | 3 | 4;
+          target_cents: number;
+        };
+        Update: Partial<Database['public']['Tables']['quarterly_targets']['Row']>;
+        Relationships: [
+          {
+            foreignKeyName: 'quarterly_targets_profile_id_fkey';
+            columns: ['profile_id'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       pricing_parameter_sets: {
         Row: {
           id: string;

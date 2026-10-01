@@ -25,11 +25,17 @@ export function InternalHeader({
             existía la pantalla de crear presupuesto — sin forma de volver a
             ver lo ya enviado ni de navegar a las cuentas. */}
         <nav style={{ display: 'flex', gap: 16 }}>
+          <a href="/dashboard" style={{ fontSize: 13, fontWeight: 500 }}>
+            {t('nav.dashboard')}
+          </a>
           <a href="/proposals" style={{ fontSize: 13, fontWeight: 500 }}>
             {t('nav.proposalsList')}
           </a>
           <a href="/accounts" style={{ fontSize: 13, fontWeight: 500 }}>
             {t('nav.accountsList')}
+          </a>
+          <a href="/admin/targets" style={{ fontSize: 13, fontWeight: 500 }}>
+            {t('nav.targets')}
           </a>
           <a href="/admin/users" style={{ fontSize: 13, fontWeight: 500 }}>
             {t('nav.admin')}
