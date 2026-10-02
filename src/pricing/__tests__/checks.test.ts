@@ -34,12 +34,17 @@ function withStart(
   campaignEnd: Date | null = null,
   leadTimeOverrides: readonly LeadTimeOverride[] = [],
 ): PreSendOptionContext {
-  return { option, campaignStart, campaignEnd, durationOnly: false, leadTimeOverrides };
+  return { option, campaignStart, campaignEnd, leadTimeOverrides };
 }
 
 /** Opción cotizada solo por duración, sin fecha de inicio concreta (§5.3 bis). */
 function withDurationOnly(option: PricedOption): PreSendOptionContext {
-  return { option, campaignStart: null, campaignEnd: null, durationOnly: true };
+  return { option, campaignStart: null, campaignEnd: null };
+}
+
+/** Opción cuyo cálculo falló en el motor (ronda 22): nada real que comprobar. */
+function withCalculationError(option: PricedOption): PreSendOptionContext {
+  return { option, campaignStart: null, campaignEnd: null, calculationError: true };
 }
 
 describe('businessDaysBetween', () => {
@@ -152,7 +157,13 @@ describe('controles previos al envío', () => {
     expect(leadTimeBlocker?.forcible).toBe(true);
   });
 
-  it('sin fecha de inicio concreta (solo duración) avisa en vez de bloquear (§5.3 bis)', () => {
+  it('sin fecha de inicio concreta (solo duración) no bloquea por antelación, y no avisa aquí (§5.3 bis, ronda 22)', () => {
+    // El control de antelación simplemente no se evalúa sin fecha de inicio
+    // — ni bloqueo ni aviso en este checklist. El aviso de que la antelación
+    // no se pudo comprobar vive en la propia interfaz, junto al selector de
+    // periodo (`ProposalBuilder.tsx`, `proposalBuilder.durationOnlyWarning`),
+    // no aquí: antes de la ronda 22 el mismo aviso se duplicaba también en
+    // este checklist, una vez por opción en modo duración (CLAUDE.md §10.3).
     const option = priceOption(
       {
         id: 'A',
@@ -173,36 +184,52 @@ describe('controles previos al envío', () => {
 
     expect(informe.canSend).toBe(true);
     expect(informe.blockers.map((b) => b.code)).not.toContain('LEAD_TIME_INSUFFICIENT');
-    expect(informe.warnings.map((w) => w.code)).toContain('LEAD_TIME_NOT_VERIFIABLE');
+    expect(informe.warnings).toHaveLength(0);
   });
 
-  it('solo duración: UN único aviso por opción, no uno por combinación soporte×mercado (ronda 21)', () => {
-    // 2 soportes × 2 mercados = 4 líneas en la opción calculada. Antes de la
-    // ronda 21 esto generaba 4 avisos LEAD_TIME_NOT_VERIFIABLE idénticos —
-    // decenas en la práctica con opciones más grandes. Ahora debe ser uno
-    // solo, por opción.
-    const option = priceOption(
-      {
-        id: 'A',
-        markets: ['FR', 'ES'],
-        lines: [{ supportId: 'ON-01' }, { supportId: 'CRM-01' }],
-      },
-      ctx,
+  /** Opción cuyo cálculo falló en el motor (ronda 22, p. ej. un `manualFeeCents` negativo en INF-01): sin margen real que evaluar. */
+  const UNCALCULATED_OPTION: PricedOption = {
+    id: 'A',
+    name: null,
+    lines: [],
+    markets: [],
+    grossNetOfMediaCents: 0,
+    discounts: [],
+    nominalDiscountRate: 0,
+    nominalDiscountCents: 0,
+    effectiveDiscountCents: 0,
+    effectiveDiscountRate: 0,
+    netRevenueCents: 0,
+    mediaBudgetCents: 0,
+    billedTotalCents: 0,
+    costCents: 0,
+    marginCents: 0,
+    marginRate: null,
+    meetsMarginFloor: false,
+    maxLeadTimeBusinessDays: 0,
+    warnings: [],
+  };
+
+  it('opción sin calcular: bloquea con CALCULATION_ERROR, nunca con el falso MARGIN_BELOW_FLOOR (ronda 22)', () => {
+    // Antes de esta ronda, una opción sin calcular ( margin_rate null,
+    // meets_margin_floor false) disparaba MARGIN_BELOW_FLOOR con el texto
+    // "margen del — %, por debajo del 50 % exigido" — contradictorio: decía
+    // "por debajo" mostrando a la vez que no hay dato. CLAUDE.md §10.3.
+    const informe = runPreSendChecks([withCalculationError(UNCALCULATED_OPTION)], baseContext());
+
+    expect(informe.canSend).toBe(false);
+    expect(informe.blockers.map((b) => b.code)).toEqual(['CALCULATION_ERROR']);
+    expect(informe.blockers.map((b) => b.code)).not.toContain('MARGIN_BELOW_FLOOR');
+  });
+
+  it('opción sin calcular: se salta el resto de controles de esa opción (nada más que comprobar)', () => {
+    const informe = runPreSendChecks(
+      [withCalculationError(UNCALCULATED_OPTION), withStart(priceOption({ id: 'B', markets: ['FR'], lines: [{ supportId: 'ON-01' }] }, ctx))],
+      baseContext(),
     );
-    expect(option.lines.length).toBe(4);
-    const informe = runPreSendChecks([withDurationOnly(option)], baseContext());
-
-    const leadTimeWarnings = informe.warnings.filter((w) => w.code === 'LEAD_TIME_NOT_VERIFIABLE');
-    expect(leadTimeWarnings).toHaveLength(1);
-    expect(leadTimeWarnings[0]?.optionId).toBe('A');
-    expect(leadTimeWarnings[0]?.supportId).toBeUndefined();
-    expect(leadTimeWarnings[0]?.market).toBeUndefined();
-  });
-
-  it('solo duración sin ninguna línea: ningún aviso de antelación (nada que avisar)', () => {
-    const option = priceOption({ id: 'A', markets: ['FR'], lines: [] }, ctx);
-    const informe = runPreSendChecks([withDurationOnly(option)], baseContext());
-    expect(informe.warnings.map((w) => w.code)).not.toContain('LEAD_TIME_NOT_VERIFIABLE');
+    // La opción B, calculada con normalidad, no se ve afectada por el error de A.
+    expect(informe.blockers.filter((b) => b.optionId === 'A')).toHaveLength(1);
+    expect(informe.blockers.filter((b) => b.optionId === 'B')).toHaveLength(0);
   });
 
   it('el caso de Navidad: sin festivos pasa, con festivos bloquea', () => {

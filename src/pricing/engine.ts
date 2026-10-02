@@ -30,10 +30,39 @@ import type {
   SupportDefinition,
 } from './types.js';
 
+/**
+ * Código de error, estable, para que la capa de interfaz traduzca el error al
+ * idioma activo sin tener que interpretar el texto libre de `message` (ronda
+ * 22) — ese texto sigue existiendo para logs/depuración, pero nunca debe
+ * llegar tal cual a una pantalla: es técnico y solo está en español. Mismo
+ * principio que ya separa `CheckResult.messageKey` de la prosa en
+ * `checks.ts` (ronda 11) — el motor sigue sin saber nada de idiomas, solo
+ * expone un código y las variables para interpolar.
+ */
+export type PricingErrorCode =
+  | 'QUANTITY_NOT_POSITIVE'
+  | 'MEDIA_BUDGET_MISSING'
+  | 'MEDIA_BUDGET_INVALID'
+  | 'MEDIA_MONTHS_INVALID'
+  | 'MANUAL_FEE_INVALID'
+  | 'MANUAL_FEE_REASON_REQUIRED'
+  | 'NOT_MEDIA_BUY_SUPPORT'
+  | 'UNKNOWN_SUPPORT'
+  | 'DUPLICATE_SUPPORT_IN_OPTION'
+  | 'NO_MARKET_SELECTED'
+  | 'NO_COEFFICIENT_FOR_MARKET'
+  | 'MANUAL_DISCOUNT_REASON_REQUIRED'
+  | 'MANUAL_DISCOUNT_OUT_OF_RANGE';
+
 export class PricingError extends Error {
-  constructor(message: string) {
+  readonly code: PricingErrorCode | null;
+  readonly vars: Readonly<Record<string, string>>;
+
+  constructor(message: string, code: PricingErrorCode | null = null, vars: Record<string, string> = {}) {
     super(message);
     this.name = 'PricingError';
+    this.code = code;
+    this.vars = vars;
   }
 }
 
@@ -49,7 +78,9 @@ export interface PricingContext {
 function coefficientFor(parameters: PricingParameters, market: Market): number {
   const coefficient = parameters.marketCoefficients[market];
   if (coefficient === undefined) {
-    throw new PricingError(`Sin coeficiente para el mercado ${market}`);
+    throw new PricingError(`Sin coeficiente para el mercado ${market}`, 'NO_COEFFICIENT_FOR_MARKET', {
+      market,
+    });
   }
   return coefficient;
 }
@@ -109,34 +140,46 @@ function resolveLeadMarket(markets: readonly Market[], parameters: PricingParame
 function validate(line: OptionLineInput, support: SupportDefinition): void {
   const quantity = line.quantity ?? 1;
   if (!(quantity > 0)) {
-    throw new PricingError(`${line.supportId}: la cantidad debe ser mayor que cero`);
+    throw new PricingError(`${line.supportId}: la cantidad debe ser mayor que cero`, 'QUANTITY_NOT_POSITIVE', {
+      support: line.supportId,
+    });
   }
   if (support.isMediaBuy) {
     if (line.mediaBudgetCents === undefined) {
       throw new PricingError(
         `${line.supportId} es un soporte de media buy: falta mediaBudgetCents`,
+        'MEDIA_BUDGET_MISSING',
+        { support: line.supportId },
       );
     }
     if (line.mediaBudgetCents < 0 || !Number.isInteger(line.mediaBudgetCents)) {
       throw new PricingError(
         `${line.supportId}: mediaBudgetCents debe ser un entero de céntimos no negativo`,
+        'MEDIA_BUDGET_INVALID',
+        { support: line.supportId },
       );
     }
     const months = line.mediaMonths ?? 0;
     if (!Number.isInteger(months) || months < 1) {
       throw new PricingError(
         `${line.supportId}: mediaMonths debe ser un entero de al menos 1 mes`,
+        'MEDIA_MONTHS_INVALID',
+        { support: line.supportId },
       );
     }
     if (line.manualFeeCents !== undefined) {
       if (line.manualFeeCents < 0 || !Number.isInteger(line.manualFeeCents)) {
         throw new PricingError(
           `${line.supportId}: manualFeeCents debe ser un entero de céntimos no negativo`,
+          'MANUAL_FEE_INVALID',
+          { support: line.supportId },
         );
       }
       if (!line.manualFeeReason || line.manualFeeReason.trim() === '') {
         throw new PricingError(
           `${line.supportId}: forzar el fee de gestión a mano exige un motivo registrado (CLAUDE.md §4.4, §8)`,
+          'MANUAL_FEE_REASON_REQUIRED',
+          { support: line.supportId },
         );
       }
     }
@@ -147,6 +190,8 @@ function validate(line: OptionLineInput, support: SupportDefinition): void {
   ) {
     throw new PricingError(
       `${line.supportId} no es un soporte de media buy: no admite presupuesto de medios`,
+      'NOT_MEDIA_BUY_SUPPORT',
+      { support: line.supportId },
     );
   }
 }
@@ -176,7 +221,11 @@ function priceLineBeforeDiscount(
 ): PreDiscountLine {
   const { parameters, catalog } = ctx;
   const support = catalog.get(line.supportId);
-  if (!support) throw new PricingError(`Soporte desconocido: ${line.supportId}`);
+  if (!support) {
+    throw new PricingError(`Soporte desconocido: ${line.supportId}`, 'UNKNOWN_SUPPORT', {
+      support: line.supportId,
+    });
+  }
   validate(line, support);
 
   const quantity = line.quantity ?? 1;
@@ -312,7 +361,7 @@ export function priceOption(input: OptionInput, ctx: PricingContext): PricedOpti
 
   const markets = [...new Set(input.markets)];
   if (markets.length === 0) {
-    throw new PricingError('La opción no tiene ningún mercado seleccionado');
+    throw new PricingError('La opción no tiene ningún mercado seleccionado', 'NO_MARKET_SELECTED');
   }
   for (const market of markets) coefficientFor(parameters, market); // valida que exista coeficiente
 
@@ -322,6 +371,8 @@ export function priceOption(input: OptionInput, ctx: PricingContext): PricedOpti
       throw new PricingError(
         `${line.supportId} aparece dos veces en la misma opción. ` +
           `Usa la cantidad: duplicar la línea recontaría el diseño.`,
+        'DUPLICATE_SUPPORT_IN_OPTION',
+        { support: line.supportId },
       );
     }
     seen.add(line.supportId);
@@ -350,10 +401,15 @@ export function priceOption(input: OptionInput, ctx: PricingContext): PricedOpti
   }
   for (const manual of input.manualDiscounts ?? []) {
     if (!manual.reason || manual.reason.trim() === '') {
-      throw new PricingError('Todo descuento manual exige un motivo registrado (CLAUDE.md §4.5)');
+      throw new PricingError(
+        'Todo descuento manual exige un motivo registrado (CLAUDE.md §4.5)',
+        'MANUAL_DISCOUNT_REASON_REQUIRED',
+      );
     }
     if (manual.rate <= 0 || manual.rate >= 1) {
-      throw new PricingError(`Descuento manual fuera de rango: ${manual.rate}`);
+      throw new PricingError(`Descuento manual fuera de rango: ${manual.rate}`, 'MANUAL_DISCOUNT_OUT_OF_RANGE', {
+        rate: (manual.rate * 100).toFixed(1),
+      });
     }
     discounts.push({
       kind: 'MANUAL',

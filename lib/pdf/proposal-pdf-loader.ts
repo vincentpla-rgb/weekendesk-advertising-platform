@@ -29,8 +29,7 @@ export async function loadProposalPdfData(
   if (error) throw new Error(`No se pudo cargar el presupuesto para el PDF: ${error.message}`);
   if (!proposal) return null;
 
-  const { data: supportRows } = await supabase.from('supports').select('id, name');
-  const supportNames: Record<string, string> = Object.fromEntries((supportRows ?? []).map((s) => [s.id, s.name]));
+  const supportNames = await loadSupportNames(supabase);
 
   const supportMarketPairs = new Set<string>();
   for (const option of proposal.proposal_options) {
@@ -39,28 +38,7 @@ export async function loadProposalPdfData(
     }
   }
 
-  const reachBySupportMarket = new Map<string, PdfReach>();
-  if (supportMarketPairs.size > 0) {
-    const { data: reachRows } = await supabase
-      .from('reach_measurements')
-      .select('support_id, market, value, metric, period_unit, source, measured_at')
-      .not('value', 'is', null);
-    for (const row of reachRows ?? []) {
-      const key = `${row.support_id}::${row.market}`;
-      // Regla absoluta de CLAUDE.md §3: sin dato medido, nunca aparece —
-      // `not('value', 'is', null)` ya lo garantiza, esto solo filtra a los
-      // pares soporte+mercado que de verdad están en este presupuesto.
-      if (supportMarketPairs.has(key) && row.value !== null && row.metric && row.period_unit && row.source) {
-        reachBySupportMarket.set(key, {
-          value: Number(row.value),
-          metric: row.metric,
-          periodUnit: row.period_unit,
-          source: row.source,
-          measuredAt: row.measured_at,
-        });
-      }
-    }
-  }
+  const reachBySupportMarket = await loadReachForSupportMarketPairs(supabase, supportMarketPairs);
 
   const options: PdfOption[] = [...proposal.proposal_options]
     .sort((a, b) => a.sort_order - b.sort_order)
@@ -127,4 +105,48 @@ export async function loadProposalPdfData(
           }
         : null,
   };
+}
+
+/**
+ * Carga de reach compartida (CLAUDE.md §3, ronda 22 — extraída de
+ * `loadProposalPdfData` para que la vista previa del PDF sin guardar
+ * `lib/pdf/proposal-pdf-draft-preview.ts` use exactamente la misma consulta,
+ * no una reimplementación aparte). `pairs` son claves `"supportId::market"` —
+ * el reach no depende de ningún presupuesto concreto, solo del soporte y el
+ * mercado, así que puede consultarse igual para un borrador sin persistir.
+ *
+ * Regla absoluta de CLAUDE.md §3: sin dato medido con fuente, la fila no
+ * aparece — `not('value', 'is', null)` ya lo garantiza en la consulta, y el
+ * filtro de abajo además exige métrica/unidad/fuente, nunca un cero inventado.
+ */
+export async function loadReachForSupportMarketPairs(
+  supabase: TypedSupabaseClient,
+  pairs: ReadonlySet<string>,
+): Promise<Map<string, PdfReach>> {
+  const reachBySupportMarket = new Map<string, PdfReach>();
+  if (pairs.size === 0) return reachBySupportMarket;
+
+  const { data: reachRows } = await supabase
+    .from('reach_measurements')
+    .select('support_id, market, value, metric, period_unit, source, measured_at')
+    .not('value', 'is', null);
+  for (const row of reachRows ?? []) {
+    const key = `${row.support_id}::${row.market}`;
+    if (pairs.has(key) && row.value !== null && row.metric && row.period_unit && row.source) {
+      reachBySupportMarket.set(key, {
+        value: Number(row.value),
+        metric: row.metric,
+        periodUnit: row.period_unit,
+        source: row.source,
+        measuredAt: row.measured_at,
+      });
+    }
+  }
+  return reachBySupportMarket;
+}
+
+/** Carga de nombres de soporte compartida (ronda 22), mismo motivo que la función de arriba. */
+export async function loadSupportNames(supabase: TypedSupabaseClient): Promise<Record<string, string>> {
+  const { data: supportRows } = await supabase.from('supports').select('id, name');
+  return Object.fromEntries((supportRows ?? []).map((s) => [s.id, s.name]));
 }
