@@ -22,8 +22,8 @@ vi.mock('@/lib/pdf/render-proposal-pdf', () => ({
 
 const { GET } = await import('./route.js');
 
-function makeRequest() {
-  return new Request('https://weekendesk-advertising.vercel.app/api/proposals/p1/pdf');
+function makeRequest(query = '') {
+  return new Request(`https://weekendesk-advertising.vercel.app/api/proposals/p1/pdf${query}`);
 }
 
 describe('GET /api/proposals/[id]/pdf', () => {
@@ -69,5 +69,33 @@ describe('GET /api/proposals/[id]/pdf', () => {
     expect(renderProposalPdf).toHaveBeenCalledWith(pdfData, 'internal');
     const buffer = Buffer.from(await response.arrayBuffer());
     expect(buffer.toString()).toBe('%PDF-fake-content');
+  });
+
+  it('?disposition=inline (ronda 23): mismo PDF, Content-Disposition inline en vez de attachment', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const pdfData = { proposalId: 'p1', proposalNumber: '2026-014' };
+    loadProposalPdfData.mockResolvedValue(pdfData);
+    renderProposalPdf.mockResolvedValue(Buffer.from('%PDF-fake-content'));
+
+    const response = await GET(makeRequest('?disposition=inline'), { params: Promise.resolve({ id: 'p1' }) });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Disposition')).toBe(
+      'inline; filename="weekendesk-2026-014-Destination-Exemple.pdf"',
+    );
+    expect(renderProposalPdf).toHaveBeenCalledWith(pdfData, 'internal');
+  });
+
+  it('un valor de ?disposition= distinto de "inline" cae a attachment, como por defecto', async () => {
+    getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const pdfData = { proposalId: 'p1', proposalNumber: '2026-014' };
+    loadProposalPdfData.mockResolvedValue(pdfData);
+    renderProposalPdf.mockResolvedValue(Buffer.from('%PDF-fake-content'));
+
+    const response = await GET(makeRequest('?disposition=download'), { params: Promise.resolve({ id: 'p1' }) });
+
+    expect(response.headers.get('Content-Disposition')).toBe(
+      'attachment; filename="weekendesk-2026-014-Destination-Exemple.pdf"',
+    );
   });
 });

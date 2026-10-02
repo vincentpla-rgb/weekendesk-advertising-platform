@@ -30,7 +30,7 @@ export function RetrySendButton({ proposalId }: { proposalId: string }) {
         disabled={isPending || result?.ok === true}
         onClick={handleClick}
       >
-        {isPending ? t('proposalDetail.retrying') : t('proposalDetail.retryButton')}
+        {isPending ? t('proposalDetail.sending') : t('proposalDetail.sendButton')}
       </button>
       {result && (
         <div className={`wk-alert ${result.ok ? 'wk-alert-info' : 'wk-alert-danger'}`}>{result.message}</div>

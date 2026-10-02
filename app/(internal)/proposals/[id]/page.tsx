@@ -13,7 +13,9 @@ export const dynamic = 'force-dynamic';
  * el estado:
  *   - DRAFT: el cálculo ya está congelado (frozen_snapshot, opciones y
  *     líneas persistidas por create_and_send_proposal) pero el email nunca
- *     salió — vista de solo lectura + botón "Reintentar envío"
+ *     salió — vista de solo lectura + botón "Enviar" (ronda 23, antes
+ *     "Reintentar envío": el mismo paso, tanto si es el primer intento tras
+ *     un "Guardar" explícito como si es un reintento tras un fallo de email)
  *     (`RetrySendButton`, `actions.ts`). No es un editor de campos: eso
  *     reabriría el riesgo de recalcular con parámetros que hayan cambiado
  *     desde la creación, justo lo que la inmutabilidad de §5.4 prohíbe.
@@ -33,7 +35,7 @@ export default async function ProposalDetailPage({
   const { data: proposal, error } = await supabase
     .from('proposals')
     .select(
-      'id, proposal_number, status, language, brief, sent_at, decided_at, expires_at, public_token, parameter_set_id, owner_id, created_at, updated_at, accounts(legal_name), contacts(full_name, email), profiles(full_name), proposal_options(id, code, name, pitch, markets, campaign_start, campaign_end, campaign_duration_count, campaign_duration_unit, billed_total_cents, net_revenue_cents, media_budget_cents, cost_cents, margin_cents, margin_rate, sort_order, proposal_option_lines(support_id, market, quantity, net_price_cents, billed_total_cents, is_lead_market, lead_time_forced, lead_time_force_reason, sort_order))',
+      'id, proposal_number, status, language, brief, sent_at, decided_at, expires_at, public_token, owner_id, created_at, updated_at, accounts(legal_name), contacts(full_name, email), profiles(full_name), proposal_options(id, code, name, pitch, markets, campaign_start, campaign_end, campaign_duration_count, campaign_duration_unit, billed_total_cents, net_revenue_cents, media_budget_cents, cost_cents, margin_cents, margin_rate, sort_order, proposal_option_lines(support_id, market, quantity, net_price_cents, billed_total_cents, is_lead_market, lead_time_forced, lead_time_force_reason, sort_order))',
     )
     .eq('id', id)
     .maybeSingle();
@@ -53,21 +55,6 @@ export default async function ProposalDetailPage({
   const supportNames: Record<string, string> = Object.fromEntries(
     (supportRows ?? []).map((s) => [s.id, s.name]),
   );
-
-  // offer_validity_days del juego de parámetros que estaba activo cuando se
-  // creó ESTE presupuesto (proposals.parameter_set_id) — la misma lectura
-  // que ya hace `retryProposalSend` (CLAUDE.md §10.3 septies) — para poder
-  // calcular la fecha de caducidad de la vista previa del email en DRAFT
-  // (ronda 13), como si se mandara ahora mismo.
-  let offerValidityDays = 14;
-  if (proposal.status === 'DRAFT') {
-    const { data: paramSet } = await supabase
-      .from('pricing_parameter_sets')
-      .select('offer_validity_days')
-      .eq('id', proposal.parameter_set_id)
-      .maybeSingle();
-    if (paramSet) offerValidityDays = paramSet.offer_validity_days;
-  }
 
   // Contrapropuesta del cliente (CLAUDE.md, ronda 16): a lo sumo una por
   // presupuesto (`counter_proposals.proposal_id` es UNIQUE). Se busca
@@ -164,7 +151,6 @@ export default async function ProposalDetailPage({
         proposal={proposal}
         options={options}
         supportNames={supportNames}
-        offerValidityDays={offerValidityDays}
         counterProposal={counterProposal}
         canDecideCounterProposal={canDecideCounterProposal}
         currentUserName={currentUserName}

@@ -30,7 +30,7 @@ export default async function NewProposalPage({
   const { editFrom } = await searchParams;
   const supabase = await createClient();
 
-  const [{ parameters, catalog, holidays, offerValidityDays }, accountsRes, userRes] =
+  const [{ parameters, catalog, holidays }, accountsRes, userRes] =
     await Promise.all([
       loadPricingContext(supabase),
       supabase
@@ -128,7 +128,6 @@ export default async function NewProposalPage({
         supports={supports}
         holidays={holidays}
         accounts={accounts}
-        offerValidityDays={offerValidityDays}
         salesName={salesName}
         initialData={initialData}
         editingProposalId={editingProposalId}

@@ -1,13 +1,22 @@
 'use server';
 
 /**
- * Reintentar el envío de un presupuesto que se quedó en DRAFT porque el
- * email falló (CLAUDE.md §10.1.2, §10.3): hasta la ronda 7 esto era una
- * limitación conocida y documentada — "no hay ninguna pantalla que liste
- * esos borradores ni un botón de 'reintentar envío'". Las funciones SQL que
- * lo necesitan (`mark_proposal_sent`, `log_proposal_send_failure`) ya
- * existían desde la primera implementación del envío real; solo faltaba
- * esta ruta.
+ * Mandar por email un presupuesto que está en DRAFT (CLAUDE.md §10.1.2,
+ * §10.3): hasta la ronda 7 esto era una limitación conocida y documentada —
+ * "no hay ninguna pantalla que liste esos borradores ni un botón de
+ * 'reintentar envío'". Las funciones SQL que lo necesitan
+ * (`mark_proposal_sent`, `log_proposal_send_failure`) ya existían desde la
+ * primera implementación del envío real; solo faltaba esta ruta.
+ *
+ * Dos caminos llegan al mismo DRAFT, y esta función no distingue entre ellos
+ * (CLAUDE.md §10.3, ronda 23): un email que falló tras pulsar "Enviar" en
+ * `ProposalBuilder.tsx` (se queda en DRAFT, `log_proposal_send_failure` ya
+ * registró el intento), o un presupuesto que se guardó explícitamente sin
+ * intentar mandarlo (botón "Guardar", `sendEmail: false` en
+ * `app/api/proposals/route.ts` — nunca se llamó a `log_proposal_send_failure`
+ * porque no hubo ningún intento que registrar como fallo). En ambos casos el
+ * botón "Enviar" de esta pantalla hace exactamente lo mismo: intentar mandar
+ * el email con los datos ya persistidos.
  *
  * No se recalcula el precio: el presupuesto ya se congeló en
  * `create_and_send_proposal` (frozen_snapshot, opciones y líneas ya

@@ -234,6 +234,89 @@ describe('POST /api/proposals — persiste aunque falte la configuración de Res
 });
 
 // =============================================================================
+// Botón "Guardar" vs. "Enviar" (CLAUDE.md §10.3, ronda 23): `sendEmail:
+// false` persiste el presupuesto (mismo create_and_send_proposal, mismos
+// controles) sin intentar mandar ningún email — nunca llama a
+// log_proposal_send_failure (no hubo ningún intento de envío que haya
+// fallado, así que registrar uno mentiría en el historial).
+// =============================================================================
+
+describe('POST /api/proposals — sendEmail: false (botón "Guardar", ronda 23)', () => {
+  beforeEach(() => {
+    getUser.mockReset();
+    rpc.mockReset();
+    singleProfile.mockReset();
+    sendEmail.mockReset();
+    deleteMock.mockClear();
+    deleteEqId.mockClear();
+    deleteEqStatus.mockClear();
+    getUser.mockResolvedValue({ data: { user: { id: 'u1', email: 'vincent.pla@weekendesk.fr' } } });
+    singleProfile.mockResolvedValue({ data: { full_name: 'Vincent Pla' }, error: null });
+    // Con Resend SÍ configurado a propósito: hay que comprobar que, aun
+    // pudiendo mandar el email, "Guardar" no lo intenta — no es que se salte
+    // por falta de configuración.
+    process.env.RESEND_API_KEY = 'test-key';
+    process.env.RESEND_FROM_EMAIL = 'Weekendesk Advertising <onboarding@resend.dev>';
+  });
+
+  it('persiste con create_and_send_proposal pero nunca llama a sendEmail, mark_proposal_sent ni log_proposal_send_failure', async () => {
+    rpc.mockImplementation(async (fn: string) => {
+      if (fn === 'create_and_send_proposal') {
+        return {
+          data: {
+            proposal_id: 'p1',
+            proposal_number: '2026-001',
+            public_token: 'tok123',
+            contact_email: 'jean@example.com',
+            contact_full_name: 'Jean Dupont',
+            account_legal_name: 'Office de tourisme Test',
+          },
+          error: null,
+        };
+      }
+      throw new Error(`rpc inesperado: ${fn}`);
+    });
+
+    const res = await POST(request({ ...validBody(), sendEmail: false }));
+
+    expect(rpc).toHaveBeenCalledWith('create_and_send_proposal', expect.anything());
+    expect(rpc).not.toHaveBeenCalledWith('mark_proposal_sent', expect.anything());
+    expect(rpc).not.toHaveBeenCalledWith('log_proposal_send_failure', expect.anything());
+    expect(sendEmail).not.toHaveBeenCalled();
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body).toEqual({ proposalId: 'p1', proposalNumber: '2026-001', publicToken: 'tok123' });
+  });
+
+  it('sin sendEmail (undefined), se comporta como true: manda el email con normalidad', async () => {
+    rpc.mockImplementation(async (fn: string) => {
+      if (fn === 'create_and_send_proposal') {
+        return {
+          data: {
+            proposal_id: 'p1',
+            proposal_number: '2026-001',
+            public_token: 'tok123',
+            contact_email: 'jean@example.com',
+            contact_full_name: 'Jean Dupont',
+            account_legal_name: 'Office de tourisme Test',
+          },
+          error: null,
+        };
+      }
+      if (fn === 'mark_proposal_sent') return { data: {}, error: null };
+      throw new Error(`rpc inesperado: ${fn}`);
+    });
+    sendEmail.mockResolvedValue({ ok: true, id: 'resend-1' });
+
+    const res = await POST(request(validBody()));
+
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+    expect(rpc).toHaveBeenCalledWith('mark_proposal_sent', expect.anything());
+    expect(res.status).toBe(200);
+  });
+});
+
+// =============================================================================
 // CLAUDE.md §5.1, ronda 13: 1 a 3 opciones (antes 2-3 — exigir un mínimo de
 // 2 era una validación de más, no una limitación real del modelo).
 // =============================================================================

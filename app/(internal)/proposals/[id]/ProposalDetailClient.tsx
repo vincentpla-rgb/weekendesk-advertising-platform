@@ -1,12 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-
 import type { ContentLanguage, ProposalStatus } from '@/lib/domain';
 import { formatCents, formatDate, formatPercent, supportLabel } from '@/lib/format';
 import { useI18n, type I18nKey } from '@/lib/i18n-internal';
-import { buildProposalEmailContent } from '@/lib/email/proposal-email';
-import { EmailPreviewModal } from '@/components/EmailPreviewModal';
 import { DuplicateButton } from './DuplicateButton';
 import { RetrySendButton } from './RetrySendButton';
 import { CounterProposalReview, type CounterProposalReviewData } from './CounterProposalReview';
@@ -77,7 +73,6 @@ export function ProposalDetailClient({
   proposal,
   options,
   supportNames,
-  offerValidityDays,
   counterProposal,
   canDecideCounterProposal,
   currentUserName,
@@ -86,8 +81,6 @@ export function ProposalDetailClient({
   options: readonly DetailOption[];
   /** Código → nombre completo del soporte (CLAUDE.md §10.3 ter decies, ronda 13). */
   supportNames: Record<string, string>;
-  /** CLAUDE.md §7 — para la vista previa del email en DRAFT (ronda 13), como si se mandara ahora mismo. */
-  offerValidityDays: number;
   /** Contrapropuesta del cliente (CLAUDE.md, ronda 16) — a lo sumo una por presupuesto. */
   counterProposal: CounterProposalReviewData | null;
   /** Solo el propietario del presupuesto o un administrador pueden decidir (calculado en el servidor). */
@@ -95,30 +88,7 @@ export function ProposalDetailClient({
   currentUserName: string | null;
 }) {
   const { t } = useI18n();
-  const [showEmailPreview, setShowEmailPreview] = useState(false);
   const publicUrl = typeof window !== 'undefined' ? `${window.location.origin}/p/${proposal.public_token}` : `/p/${proposal.public_token}`;
-
-  // Vista previa del email en DRAFT (CLAUDE.md §10.3 ter decies, ronda 13):
-  // a diferencia del creador (ronda 12), aquí el presupuesto YA está
-  // persistido — enlace público y número son reales, no marcadores de
-  // posición — así que se llama directamente a `buildProposalEmailContent`
-  // (la misma función pura del envío real), nunca a la variante de borrador
-  // sin guardar.
-  const canPreviewEmail = proposal.status === 'DRAFT' && proposal.accounts && proposal.contacts && proposal.profiles;
-  const emailPreviewContent =
-    canPreviewEmail && proposal.accounts && proposal.contacts && proposal.profiles
-      ? buildProposalEmailContent({
-          advertiserName: proposal.accounts.legal_name,
-          contactFullName: proposal.contacts.full_name,
-          brief: proposal.brief,
-          numberOfOptions: options.length,
-          publicUrl,
-          expiresAtIso: new Date(Date.now() + offerValidityDays * 86_400_000).toISOString(),
-          salesName: proposal.profiles.full_name,
-          proposalNumber: proposal.proposal_number,
-          language: proposal.language as ContentLanguage,
-        })
-      : null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -136,7 +106,18 @@ export function ProposalDetailClient({
           </div>
           <span className={`wk-badge ${STATUS_BADGE_CLASS[proposal.status]}`}>{t(STATUS_KEY[proposal.status])}</span>
         </div>
-        <div style={{ marginTop: 10 }}>
+        <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {/* Vista previa, sin forzar la descarga (ronda 23, CLAUDE.md §10.3):
+              mismo PDF, mismos datos — ?disposition=inline hace que el
+              navegador lo abra en una pestaña en vez de ofrecer guardarlo. */}
+          <a
+            className="wk-btn wk-btn-secondary"
+            href={`/api/proposals/${proposal.id}/pdf?disposition=inline`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {t('proposalBuilder.previewPdf')}
+          </a>
           <a className="wk-btn wk-btn-secondary" href={`/api/proposals/${proposal.id}/pdf`}>
             {t('proposalDetail.downloadPdf')}
           </a>
@@ -187,27 +168,11 @@ export function ProposalDetailClient({
             <div className="wk-alert wk-alert-warning">{t('proposalDetail.draftNotice')}</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start' }}>
               <RetrySendButton proposalId={proposal.id} />
-              <button
-                type="button"
-                className="wk-btn wk-btn-secondary"
-                disabled={!emailPreviewContent}
-                onClick={() => setShowEmailPreview(true)}
-              >
-                {t('proposalBuilder.previewEmail')}
-              </button>
               <a className="wk-btn wk-btn-secondary" href={`/proposals/new?editFrom=${proposal.id}`}>
                 {t('proposalDetail.editButton')}
               </a>
             </div>
           </div>
-        )}
-
-        {showEmailPreview && emailPreviewContent && (
-          <EmailPreviewModal
-            content={emailPreviewContent}
-            noticeKey="proposalBuilder.previewEmailRealDataNotice"
-            onClose={() => setShowEmailPreview(false)}
-          />
         )}
 
         {proposal.status !== 'DRAFT' && (

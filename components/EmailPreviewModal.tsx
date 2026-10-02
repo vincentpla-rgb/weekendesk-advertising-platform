@@ -6,25 +6,27 @@ import { useI18n, type I18nKey } from '@/lib/i18n-internal';
 import type { EmailContent } from '@/lib/email/proposal-email';
 
 /**
- * Vista previa del email de envío, sin enviarlo (CLAUDE.md §10.3 duodecies,
- * ronda 12): un modal que renderiza un `EmailContent` ya construido por
- * `buildProposalEmailContent` (mismo motor que el envío real, con datos de
- * borrador sin guardar o de un DRAFT ya persistido según el llamante) —
- * este componente solo pinta, no calcula nada.
+ * Vista previa de un email, sin enviarlo: un modal que renderiza un
+ * `EmailContent` ya construido (mismo motor que el envío real) — este
+ * componente solo pinta, no calcula nada.
  *
- * `noticeKey` es lo único que cambia según el contexto (CLAUDE.md §10.3 ter
- * decies, ronda 13): en el creador (`/proposals/new`), el enlace y el
- * número son marcadores de posición (aviso por defecto); en el detalle de
- * un DRAFT ya persistido (`/proposals/[id]`), ya son los reales.
+ * Único uso hoy: la vista previa del email de rechazo de una contrapropuesta
+ * (`CounterProposalReview.tsx`, CLAUDE.md §10.3 sedecies, ronda 16) — el
+ * botón equivalente en el creador de presupuesto y en el detalle de un
+ * `DRAFT` se retiró en la ronda 23 (CLAUDE.md §10.3): con "Guardar"/"Enviar"
+ * ya separados, la vista previa del PDF cubre esa necesidad de "ver antes de
+ * mandar" sin duplicar la plantilla de email. `noticeKey` sigue siendo
+ * obligatorio (no un valor por defecto): cada contexto tiene su propio
+ * aviso, y con un solo llamante no hace falta un valor genérico de reserva.
  */
 export function EmailPreviewModal({
   content,
   onClose,
-  noticeKey = 'proposalBuilder.previewEmailPlaceholderNotice',
+  noticeKey,
 }: {
   content: EmailContent;
   onClose: () => void;
-  noticeKey?: I18nKey;
+  noticeKey: I18nKey;
 }) {
   const { t } = useI18n();
   const [tab, setTab] = useState<'text' | 'html'>('html');

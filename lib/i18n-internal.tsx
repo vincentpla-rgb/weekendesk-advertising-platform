@@ -192,7 +192,6 @@ const es = {
   'proposalBuilder.editTitle': 'Editar presupuesto {number}',
   'proposalBuilder.editUnavailable':
     'El presupuesto que querías editar ya no está disponible (no existe, o ya se envió con éxito). Puedes crear uno nuevo desde aquí.',
-  'proposalBuilder.saveAndSend': 'Guardar cambios y enviar',
   'proposalBuilder.draftReplacedNotice': 'El borrador anterior se ha sustituido por este envío.',
   'proposalBuilder.preSendChecks': 'Controles previos al envío',
   'proposalBuilder.internalCost': 'Coste interno',
@@ -201,6 +200,8 @@ const es = {
   'proposalBuilder.mediaBudget': 'Presupuesto de medios',
   'proposalBuilder.billedTotal': 'Importe facturado',
   'proposalBuilder.margin': 'Margen',
+  'proposalBuilder.save': 'Guardar',
+  'proposalBuilder.saving': 'Guardando…',
   'proposalBuilder.send': 'Enviar al cliente',
   'proposalBuilder.sending': 'Enviando…',
   'proposalBuilder.sentTitle': 'Envío enviado',
@@ -213,17 +214,12 @@ const es = {
   'proposalBuilder.quantityHelpSoc': 'Número de publicaciones/historias durante el periodo.',
   'proposalBuilder.viewProposal': 'Ver presupuesto enviado',
   'proposalBuilder.createAnother': 'Crear otro presupuesto',
-  'proposalBuilder.previewEmail': 'Vista previa del email',
   'proposalBuilder.previewEmailModalTitle': 'Vista previa del email',
   'proposalBuilder.previewEmailSubject': 'Asunto',
   'proposalBuilder.previewEmailTabHtml': 'HTML',
   'proposalBuilder.previewEmailTabText': 'Texto plano',
   'proposalBuilder.previewEmailClose': 'Cerrar',
-  'proposalBuilder.previewEmailPlaceholderNotice':
-    'Esto no envía nada ni consume cuota de Resend. El enlace público y el número de presupuesto son marcadores de posición: solo existen de verdad tras enviar.',
-  'proposalBuilder.previewEmailRealDataNotice':
-    'Esto no envía nada ni consume cuota de Resend. El enlace y el número de presupuesto ya son los reales: es exactamente lo que recibiría el cliente si el envío tuviera éxito ahora mismo.',
-  'proposalBuilder.previewEmailNeedsData':
+  'proposalBuilder.previewNeedsData':
     'Rellena al menos la razón social y el nombre del contacto para ver la vista previa.',
   'proposalBuilder.previewPdf': 'Vista previa del presupuesto',
   'proposalBuilder.previewPdfLoading': 'Generando…',
@@ -299,9 +295,10 @@ const es = {
   'proposalDetail.back': '← Volver al dashboard',
   'proposalDetail.draftNotice':
     'Este presupuesto se calculó y quedó guardado, pero el email nunca llegó a salir. El cliente no lo ha visto.',
-  'proposalDetail.retryButton': 'Reintentar envío',
-  'proposalDetail.retrying': 'Reintentando…',
+  'proposalDetail.sendButton': 'Enviar',
+  'proposalDetail.sending': 'Enviando…',
   'proposalDetail.retrySuccess': 'Email enviado. El presupuesto ya está marcado como enviado.',
+  'proposalDetail.downloadPdf': 'Descargar PDF',
   'proposalDetail.duplicateButton': 'Duplicar',
   'proposalDetail.editButton': 'Editar',
   'proposalDetail.duplicating': 'Duplicando…',
@@ -313,7 +310,6 @@ const es = {
   'proposalDetail.notFound': 'Presupuesto no encontrado.',
   'proposalDetail.leadTimeForced': 'Antelación forzada',
   'proposalDetail.leadTimeForcedReason': 'Motivo: {reason}',
-  'proposalDetail.downloadPdf': 'Descargar PDF',
 
   'accountsList.title': 'Cuentas',
   'accountsList.colLegalName': 'Razón social',
@@ -527,7 +523,6 @@ const fr: Dict = {
   'proposalBuilder.editTitle': 'Modifier le devis {number}',
   'proposalBuilder.editUnavailable':
     "Le devis que tu voulais modifier n'est plus disponible (il n'existe plus, ou il a déjà été envoyé avec succès). Tu peux en créer un nouveau ici.",
-  'proposalBuilder.saveAndSend': 'Enregistrer et envoyer',
   'proposalBuilder.draftReplacedNotice': 'Le brouillon précédent a été remplacé par cet envoi.',
   'proposalBuilder.preSendChecks': "Contrôles avant l'envoi",
   'proposalBuilder.internalCost': 'Coût interne',
@@ -536,6 +531,8 @@ const fr: Dict = {
   'proposalBuilder.mediaBudget': 'Budget médias',
   'proposalBuilder.billedTotal': 'Montant facturé',
   'proposalBuilder.margin': 'Marge',
+  'proposalBuilder.save': 'Enregistrer',
+  'proposalBuilder.saving': 'Enregistrement…',
   'proposalBuilder.send': 'Envoyer au client',
   'proposalBuilder.sending': 'Envoi…',
   'proposalBuilder.sentTitle': 'Envoi effectué',
@@ -548,17 +545,12 @@ const fr: Dict = {
   'proposalBuilder.quantityHelpSoc': 'Nombre de publications/stories pendant la période.',
   'proposalBuilder.viewProposal': 'Voir le devis envoyé',
   'proposalBuilder.createAnother': 'Créer un autre devis',
-  'proposalBuilder.previewEmail': "Aperçu de l'email",
   'proposalBuilder.previewEmailModalTitle': "Aperçu de l'email",
   'proposalBuilder.previewEmailSubject': 'Objet',
   'proposalBuilder.previewEmailTabHtml': 'HTML',
   'proposalBuilder.previewEmailTabText': 'Texte brut',
   'proposalBuilder.previewEmailClose': 'Fermer',
-  'proposalBuilder.previewEmailPlaceholderNotice':
-    "Ceci n'envoie rien et ne consomme aucun quota Resend. Le lien public et le numéro de devis sont des valeurs provisoires : ils n'existent vraiment qu'après l'envoi.",
-  'proposalBuilder.previewEmailRealDataNotice':
-    "Ceci n'envoie rien et ne consomme aucun quota Resend. Le lien et le numéro de devis sont déjà les vrais : c'est exactement ce que recevrait le client si l'envoi réussissait maintenant.",
-  'proposalBuilder.previewEmailNeedsData':
+  'proposalBuilder.previewNeedsData':
     "Renseigne au moins la raison sociale et le nom du contact pour voir l'aperçu.",
   'proposalBuilder.previewPdf': 'Aperçu du devis',
   'proposalBuilder.previewPdfLoading': 'Génération…',
@@ -634,8 +626,8 @@ const fr: Dict = {
   'proposalDetail.back': '← Retour au tableau de bord',
   'proposalDetail.draftNotice':
     "Ce devis a été calculé et enregistré, mais l'email n'est jamais parti. Le client ne l'a pas vu.",
-  'proposalDetail.retryButton': "Réessayer l'envoi",
-  'proposalDetail.retrying': 'Nouvel essai…',
+  'proposalDetail.sendButton': 'Envoyer',
+  'proposalDetail.sending': 'Envoi…',
   'proposalDetail.retrySuccess': 'Email envoyé. Le devis est maintenant marqué comme envoyé.',
   'proposalDetail.duplicateButton': 'Dupliquer',
   'proposalDetail.editButton': 'Modifier',
@@ -858,7 +850,6 @@ const en: Dict = {
   'proposalBuilder.editTitle': 'Edit proposal {number}',
   'proposalBuilder.editUnavailable':
     "The proposal you wanted to edit is no longer available (it doesn't exist, or it was already sent successfully). You can create a new one here.",
-  'proposalBuilder.saveAndSend': 'Save changes and send',
   'proposalBuilder.draftReplacedNotice': 'The previous draft has been replaced by this send.',
   'proposalBuilder.preSendChecks': 'Pre-send checks',
   'proposalBuilder.internalCost': 'Internal cost',
@@ -867,6 +858,8 @@ const en: Dict = {
   'proposalBuilder.mediaBudget': 'Media budget',
   'proposalBuilder.billedTotal': 'Billed amount',
   'proposalBuilder.margin': 'Margin',
+  'proposalBuilder.save': 'Save',
+  'proposalBuilder.saving': 'Saving…',
   'proposalBuilder.send': 'Send to client',
   'proposalBuilder.sending': 'Sending…',
   'proposalBuilder.sentTitle': 'Proposal sent',
@@ -879,17 +872,12 @@ const en: Dict = {
   'proposalBuilder.quantityHelpSoc': 'Number of posts/stories during the period.',
   'proposalBuilder.viewProposal': 'View sent proposal',
   'proposalBuilder.createAnother': 'Create another proposal',
-  'proposalBuilder.previewEmail': 'Preview email',
   'proposalBuilder.previewEmailModalTitle': 'Email preview',
   'proposalBuilder.previewEmailSubject': 'Subject',
   'proposalBuilder.previewEmailTabHtml': 'HTML',
   'proposalBuilder.previewEmailTabText': 'Plain text',
   'proposalBuilder.previewEmailClose': 'Close',
-  'proposalBuilder.previewEmailPlaceholderNotice':
-    "This doesn't send anything and doesn't use any Resend quota. The public link and the proposal number are placeholders: they only exist for real after sending.",
-  'proposalBuilder.previewEmailRealDataNotice':
-    "This doesn't send anything and doesn't use any Resend quota. The link and proposal number are already the real ones: this is exactly what the client would receive if the send succeeded right now.",
-  'proposalBuilder.previewEmailNeedsData':
+  'proposalBuilder.previewNeedsData':
     'Fill in at least the legal name and the contact name to see the preview.',
   'proposalBuilder.previewPdf': 'Preview proposal',
   'proposalBuilder.previewPdfLoading': 'Generating…',
@@ -965,8 +953,8 @@ const en: Dict = {
   'proposalDetail.back': '← Back to dashboard',
   'proposalDetail.draftNotice':
     'This proposal was calculated and saved, but the email never went out. The client has not seen it.',
-  'proposalDetail.retryButton': 'Retry send',
-  'proposalDetail.retrying': 'Retrying…',
+  'proposalDetail.sendButton': 'Send',
+  'proposalDetail.sending': 'Sending…',
   'proposalDetail.retrySuccess': 'Email sent. The proposal is now marked as sent.',
   'proposalDetail.duplicateButton': 'Duplicate',
   'proposalDetail.editButton': 'Edit',
