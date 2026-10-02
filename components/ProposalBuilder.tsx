@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 import {
   MARKETS,
@@ -42,8 +43,6 @@ import { formatCents, formatPercent, supportLabel } from '@/lib/format';
 import { pricingErrorMessage } from '@/lib/pricing-error-messages';
 import { DiscountBanner } from '@/components/DiscountBanner';
 import { PreSendChecklist } from '@/components/PreSendChecklist';
-import { EmailPreviewModal } from '@/components/EmailPreviewModal';
-import { buildDraftProposalEmailPreview } from '@/lib/email/proposal-email-preview';
 import { useI18n, type InternalLanguage, type I18nKey } from '@/lib/i18n-internal';
 
 let lineKeySeq = 0;
@@ -84,7 +83,6 @@ export function ProposalBuilder({
   supports,
   holidays,
   accounts,
-  offerValidityDays,
   salesName,
   initialData,
   editingProposalId,
@@ -95,9 +93,7 @@ export function ProposalBuilder({
   supports: readonly SupportDefinition[];
   holidays: readonly PublicHoliday[];
   accounts: readonly AccountRow[];
-  /** CLAUDE.md §7, para la vista previa del email (ronda 12) — del juego de parámetros activo. */
-  offerValidityDays: number;
-  /** Nombre del comercial (creador), para la firma de la vista previa del email (ronda 12). */
+  /** Nombre del comercial (creador), para la vista previa del PDF (ronda 22). */
   salesName: string;
   /**
    * Precarga para "Editar" un presupuesto DRAFT que nunca llegó a enviarse
@@ -112,6 +108,7 @@ export function ProposalBuilder({
   editUnavailable?: boolean;
 }) {
   const { t, language: uiLanguage } = useI18n();
+  const router = useRouter();
   const catalog = useMemo(() => buildCatalog(supports), [supports]);
 
   const [accountId, setAccountId] = useState<string>(initialData?.accountId ?? accounts[0]?.id ?? '__new__');
@@ -127,10 +124,14 @@ export function ProposalBuilder({
     () => initialData?.options.slice() ?? [createOptionDraft(catalog, 'A', nextKey(), nextKey(), supports)],
   );
   const [activeOptionKey, setActiveOptionKey] = useState<string>(() => options[0]!.key);
-  const [submitting, setSubmitting] = useState(false);
+  // `null` = nada en curso; 'save'/'send' distingue qué botón está activo,
+  // para el texto de carga de CADA uno (CLAUDE.md §10.3, ronda 23) — los dos
+  // comparten el mismo `handleSubmit`, solo cambia si al final se intenta
+  // mandar el email o no.
+  const [pendingAction, setPendingAction] = useState<'save' | 'send' | null>(null);
+  const submitting = pendingAction !== null;
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<{ proposalId: string; publicToken: string } | null>(null);
-  const [showEmailPreview, setShowEmailPreview] = useState(false);
   const [previewPdfLoading, setPreviewPdfLoading] = useState(false);
   const [previewPdfError, setPreviewPdfError] = useState<string | null>(null);
 
@@ -139,7 +140,7 @@ export function ProposalBuilder({
   // Mismo par de valores que handleSubmit manda al servidor para
   // advertiserName/contactFullName (CLAUDE.md §10.3 duodecies, ronda 12) —
   // resueltos aquí, en el cliente, para poder alimentar la vista previa del
-  // email sin ningún round-trip de red: cuenta/contacto existentes, o los
+  // PDF sin ningún dato a medio rellenar: cuenta/contacto existentes, o los
   // campos de "nueva cuenta"/"nuevo contacto" que todavía no se han guardado.
   const previewAdvertiserName =
     accountId === '__new__' ? newAccount.legal_name.trim() : (selectedAccount?.legal_name ?? '');
@@ -147,7 +148,7 @@ export function ProposalBuilder({
     contactId === '__new__'
       ? newContact.full_name.trim()
       : (selectedAccount?.contacts.find((c) => c.id === contactId)?.full_name ?? '');
-  const canPreviewEmail = previewAdvertiserName !== '' && previewContactFullName !== '';
+  const hasAdvertiserAndContact = previewAdvertiserName !== '' && previewContactFullName !== '';
 
   // --- Transiciones de estado: todas delegan en el módulo puro
   // (src/pricing/option-draft.ts), testeado de extremo a extremo sin React.
@@ -316,14 +317,28 @@ export function ProposalBuilder({
 
   const hasEngineErrors = priced.some((p) => 'error' in p && p.error);
 
-  async function handleSubmit() {
-    setSubmitting(true);
+  /**
+   * "Guardar" y "Enviar" (CLAUDE.md §10.3, ronda 23) comparten exactamente
+   * este mismo código — la única diferencia es `sendEmail`, que decide si
+   * `/api/proposals` intenta mandar el email después de persistir. Las dos
+   * acciones pasan por el MISMO `create_and_send_proposal` (mismos
+   * controles: suelo de margen, conflicto de disponibilidad) — "Guardar" no
+   * es un camino más permisivo, solo uno que no manda nada al cliente
+   * todavía. Al guardar sin enviar, se navega al detalle del presupuesto ya
+   * persistido (`/proposals/[id]`) — ahí vive el botón "Enviar" para
+   * mandarlo cuando el comercial esté listo, y "Editar" para seguir
+   * retocándolo. Al enviar con éxito, se sigue mostrando la pantalla de
+   * confirmación de siempre (enlace público, etc.).
+   */
+  async function handleSubmit(sendEmail: boolean) {
+    setPendingAction(sendEmail ? 'send' : 'save');
     setSubmitError(null);
     try {
       const res = await fetch('/api/proposals', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          sendEmail,
           accountId: accountId === '__new__' ? null : accountId,
           newAccount: accountId === '__new__' ? newAccount : null,
           contactId: contactId === '__new__' ? null : contactId,
@@ -381,11 +396,18 @@ export function ProposalBuilder({
       if (!res.ok) {
         throw new Error(body.error ?? 'Error al crear el envío');
       }
-      setResult({ proposalId: body.proposalId, publicToken: body.publicToken });
+      if (sendEmail) {
+        setResult({ proposalId: body.proposalId, publicToken: body.publicToken });
+      } else {
+        // "Guardar" no muestra la pantalla de confirmación de envío (no se
+        // envió nada): navega directamente al detalle, donde vive el botón
+        // "Enviar" para mandarlo cuando el comercial esté listo.
+        router.push(`/proposals/${body.proposalId}`);
+      }
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Error desconocido');
     } finally {
-      setSubmitting(false);
+      setPendingAction(null);
     }
   }
 
@@ -693,33 +715,37 @@ export function ProposalBuilder({
       {submitError && <div className="wk-alert wk-alert-danger">{submitError}</div>}
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        {/*
+          "Guardar" y "Enviar" (CLAUDE.md §10.3, ronda 23): dos botones
+          independientes sobre el MISMO handleSubmit — guardar persiste el
+          presupuesto en DRAFT sin mandar nada al cliente; enviar hace lo
+          mismo y además intenta el email. Ninguno es más permisivo que el
+          otro: los mismos controles duros (suelo de margen, disponibilidad)
+          aplican a los dos.
+        */}
+        <button
+          type="button"
+          className="wk-btn wk-btn-secondary"
+          disabled={!preSend.canSend || hasEngineErrors || submitting}
+          onClick={() => handleSubmit(false)}
+          style={{ fontSize: 15, padding: '12px 24px' }}
+        >
+          {pendingAction === 'save' ? t('proposalBuilder.saving') : t('proposalBuilder.save')}
+        </button>
         <button
           type="button"
           className="wk-btn wk-btn-primary"
           disabled={!preSend.canSend || hasEngineErrors || submitting}
-          onClick={handleSubmit}
+          onClick={() => handleSubmit(true)}
           style={{ fontSize: 15, padding: '12px 24px' }}
         >
-          {submitting
-            ? t('proposalBuilder.sending')
-            : editingProposalId
-              ? t('proposalBuilder.saveAndSend')
-              : t('proposalBuilder.send')}
+          {pendingAction === 'send' ? t('proposalBuilder.sending') : t('proposalBuilder.send')}
         </button>
         <button
           type="button"
           className="wk-btn wk-btn-secondary"
-          disabled={!canPreviewEmail}
-          title={canPreviewEmail ? undefined : t('proposalBuilder.previewEmailNeedsData')}
-          onClick={() => setShowEmailPreview(true)}
-        >
-          {t('proposalBuilder.previewEmail')}
-        </button>
-        <button
-          type="button"
-          className="wk-btn wk-btn-secondary"
-          disabled={!canPreviewEmail || hasEngineErrors || previewPdfLoading}
-          title={canPreviewEmail ? undefined : t('proposalBuilder.previewEmailNeedsData')}
+          disabled={!hasAdvertiserAndContact || hasEngineErrors || previewPdfLoading}
+          title={hasAdvertiserAndContact ? undefined : t('proposalBuilder.previewNeedsData')}
           onClick={handlePreviewPdf}
         >
           {previewPdfLoading ? t('proposalBuilder.previewPdfLoading') : t('proposalBuilder.previewPdf')}
@@ -727,21 +753,6 @@ export function ProposalBuilder({
       </div>
 
       {previewPdfError && <div className="wk-alert wk-alert-danger">{previewPdfError}</div>}
-
-      {showEmailPreview && (
-        <EmailPreviewModal
-          content={buildDraftProposalEmailPreview({
-            advertiserName: previewAdvertiserName,
-            contactFullName: previewContactFullName,
-            brief: brief || null,
-            numberOfOptions: options.length,
-            salesName,
-            offerValidityDays,
-            language,
-          })}
-          onClose={() => setShowEmailPreview(false)}
-        />
-      )}
     </div>
   );
 }

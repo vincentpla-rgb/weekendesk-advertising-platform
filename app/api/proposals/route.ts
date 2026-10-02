@@ -26,6 +26,17 @@ interface RawBody {
    * perderse.
    */
   replacesDraftId?: string | null;
+  /**
+   * Botón "Guardar" vs. "Enviar" (CLAUDE.md §10.3, ronda 23): `false` guarda
+   * el presupuesto (cuenta, contacto, opciones, líneas, enlace público y
+   * número ya reales) sin intentar mandar ningún email — el envío se queda
+   * en `DRAFT`, ni enviado ni "fallido" (nunca se llama a
+   * `log_proposal_send_failure`: no hubo ningún intento que registrar como
+   * fallo). `undefined` se trata igual que `true`, por compatibilidad hacia
+   * atrás — el único llamante real (`ProposalBuilder.tsx`) siempre lo manda
+   * explícito.
+   */
+  sendEmail?: boolean;
 }
 
 /**
@@ -126,6 +137,21 @@ export async function POST(request: Request) {
   // que se quede atrás no es un error que deba tumbar la respuesta.
   if (body.replacesDraftId) {
     await supabase.from('proposals').delete().eq('id', body.replacesDraftId).eq('status', 'DRAFT');
+  }
+
+  // Botón "Guardar" (ronda 23): el presupuesto ya está persistido de verdad
+  // (cuenta, contacto, opciones, líneas, enlace público y número reales) —
+  // se corta aquí, antes de tocar Resend para nada. Nunca se llama a
+  // `log_proposal_send_failure`: no hubo ningún intento de envío que haya
+  // fallado, así que registrar uno sería mentir en el historial del
+  // presupuesto. El envío se queda en DRAFT, listo para "Enviar" más tarde
+  // desde `/proposals/[id]` o para seguir editándolo.
+  if (body.sendEmail === false) {
+    return NextResponse.json({
+      proposalId: created.proposal_id,
+      proposalNumber: created.proposal_number,
+      publicToken: created.public_token,
+    });
   }
 
   // Falta configuración de Resend: se trata igual que un envío de email
