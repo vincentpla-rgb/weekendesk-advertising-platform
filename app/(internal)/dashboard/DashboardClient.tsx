@@ -58,6 +58,8 @@ export interface DashboardData {
     readonly isCurrent: boolean;
   }[];
   readonly attentionItems: readonly AttentionItem[];
+  /** `true` si alguna de las cuatro consultas del bloque falló (ronda 25) — nunca tumba el panel, solo muestra un aviso discreto aquí dentro. */
+  readonly attentionError: boolean;
   readonly kpis: DashboardKpis;
   readonly profiles: readonly { readonly id: string; readonly fullName: string }[];
   readonly supports: readonly { readonly id: string; readonly name: string }[];
@@ -348,6 +350,7 @@ export function DashboardClient({ data }: { data: DashboardData }) {
             <p>{t('dashboard.attentionSubtitle')}</p>
           </div>
         </div>
+        {data.attentionError && <p className="muted">{t('dashboard.attentionLoadError')}</p>}
         {data.attentionItems.length === 0 ? (
           <p className="empty">
             <strong>{t('dashboard.attentionEmpty')}</strong>

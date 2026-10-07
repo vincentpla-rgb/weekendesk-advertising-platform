@@ -10,7 +10,8 @@ import {
   type DashboardProposalStatus,
   type Market,
 } from '@/src/pricing/index.js';
-import { DashboardClient, type AttentionItem, type DashboardData } from './DashboardClient';
+import { DashboardClient, type DashboardData } from './DashboardClient';
+import { loadAttentionItems } from './attention';
 
 export const dynamic = 'force-dynamic';
 
@@ -24,15 +25,8 @@ const STATUSES: readonly DashboardProposalStatus[] = [
   'COUNTERED',
 ];
 
-const STALE_DRAFT_DAYS = 7;
-
 function isStatus(value: string): value is DashboardProposalStatus {
   return (STATUSES as readonly string[]).includes(value);
-}
-
-function headlineAmountCents(options: readonly { readonly billed_total_cents: number | null }[]): number | null {
-  const amounts = options.map((o) => o.billed_total_cents).filter((c): c is number => c !== null);
-  return amounts.length > 0 ? Math.max(...amounts) : null;
 }
 
 /**
@@ -123,13 +117,12 @@ export default async function DashboardPage({
     .eq('fiscal_year', fiscalYear);
   if (params.owner) targetsQuery = targetsQuery.eq('profile_id', params.owner);
 
-  // --- "Requieren tu atención" (ronda 24): cuatro categorías con datos
-  // reales, independientes de los filtros del listado de abajo — es un
-  // resumen global, no una vista filtrada. Ver CLAUDE.md para el porqué de
-  // cada consulta.
+  // --- "Requieren tu atención" (ronda 24; resiliencia + consultas planas
+  // en ronda 25, ver `attention.ts`): cuatro categorías con datos reales,
+  // independientes de los filtros del listado de abajo — es un resumen
+  // global, no una vista filtrada. Nunca debe tumbar el panel: cualquier
+  // fallo se absorbe dentro de `loadAttentionItems`, nunca lanza.
   const now = new Date();
-  const soonLimitIso = new Date(now.getTime() + 4 * 86_400_000).toISOString();
-  const staleDraftLimitIso = new Date(now.getTime() - STALE_DRAFT_DAYS * 86_400_000).toISOString();
 
   const [
     { data: proposalsRaw, error: proposalsError },
@@ -137,36 +130,14 @@ export default async function DashboardPage({
     { data: acceptedOptions, error: acceptancesError },
     { data: targets, error: targetsError },
     { data: profiles, error: profilesError },
-    { data: pendingCpAttentionRows, error: pendingCpAttentionError },
-    { data: expiringAttentionRows, error: expiringAttentionError },
-    { data: marginOverrideRows, error: marginOverrideError },
-    { data: staleDraftRows, error: staleDraftError },
+    attentionResult,
   ] = await Promise.all([
     proposalsQuery,
     supabase.from('counter_proposals').select('proposal_id').eq('status', 'PENDING'),
     acceptancesQuery,
     targetsQuery,
     supabase.from('profiles').select('id, full_name').eq('is_active', true).order('full_name'),
-    supabase
-      .from('counter_proposals')
-      .select('proposal_id, submitted_at, proposals!inner(proposal_number, accounts(legal_name))')
-      .eq('status', 'PENDING'),
-    supabase
-      .from('proposals')
-      .select('id, proposal_number, expires_at, accounts(legal_name), proposal_options(billed_total_cents)')
-      .in('status', ['SENT', 'VIEWED'])
-      .not('expires_at', 'is', null)
-      .gte('expires_at', now.toISOString())
-      .lte('expires_at', soonLimitIso),
-    supabase
-      .from('overrides')
-      .select('proposal_id, reason, created_at, proposals!inner(proposal_number, status, accounts(legal_name))')
-      .eq('kind', 'MARGIN_BELOW_FLOOR'),
-    supabase
-      .from('proposals')
-      .select('id, proposal_number, created_at, accounts(legal_name), proposal_options(billed_total_cents)')
-      .eq('status', 'DRAFT')
-      .lte('created_at', staleDraftLimitIso),
+    loadAttentionItems(supabase, now),
   ]);
 
   if (proposalsError) throw new Error(`No se pudo cargar el listado: ${proposalsError.message}`);
@@ -174,9 +145,6 @@ export default async function DashboardPage({
   if (acceptancesError) throw new Error(`No se pudo cargar el objetivo: ${acceptancesError.message}`);
   if (targetsError) throw new Error(`No se pudieron cargar los objetivos: ${targetsError.message}`);
   if (profilesError) throw new Error(`No se pudieron cargar los advertising managers: ${profilesError.message}`);
-  if (pendingCpAttentionError || expiringAttentionError || marginOverrideError || staleDraftError) {
-    throw new Error('No se pudo cargar el bloque de atención.');
-  }
 
   const pendingProposalIds = new Set((pendingCounterProposals ?? []).map((c) => c.proposal_id));
 
@@ -274,94 +242,6 @@ export default async function DashboardPage({
     return { quarter: q, cents, targetCents: quarterTargetCents, isCurrent: q === currentQuarter };
   });
 
-  // --- "Requieren tu atención": construcción de las 4 categorías --------
-  const attentionItems: AttentionItem[] = [];
-
-  const pendingCpSorted = [...(pendingCpAttentionRows ?? [])].sort(
-    (a, b) => new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime(),
-  );
-  for (const row of pendingCpSorted) {
-    attentionItems.push({
-      kind: 'counterProposal',
-      proposalId: row.proposal_id,
-      proposalNumber: row.proposals?.proposal_number ?? null,
-      accountLegalName: row.proposals?.accounts?.legal_name ?? '',
-      days: null,
-      amountCents: null,
-      reason: null,
-    });
-  }
-
-  const expiringSorted = [...(expiringAttentionRows ?? [])].sort(
-    (a, b) => new Date(a.expires_at ?? 0).getTime() - new Date(b.expires_at ?? 0).getTime(),
-  );
-  for (const row of expiringSorted) {
-    const daysLeft = row.expires_at
-      ? Math.max(0, Math.ceil((new Date(row.expires_at).getTime() - now.getTime()) / 86_400_000))
-      : null;
-    attentionItems.push({
-      kind: 'expiringSoon',
-      proposalId: row.id,
-      proposalNumber: row.proposal_number,
-      accountLegalName: row.accounts?.legal_name ?? '',
-      days: daysLeft,
-      amountCents: headlineAmountCents(row.proposal_options ?? []),
-      reason: null,
-    });
-  }
-
-  // Un override por línea forzada (CLAUDE.md §4.3, ronda 16): se dedupe por
-  // presupuesto, quedándose con el más reciente — varias líneas forzadas en
-  // el mismo presupuesto no deben generar varias filas de atención.
-  // "Aún abiertos": se excluyen los presupuestos que ya cerraron en negativo
-  // (rechazado/caducado) — en la práctica, un override de este tipo siempre
-  // nace ya ACEPTADO (`accept_counter_proposal`, CLAUDE.md ronda 16), pero
-  // la comprobación queda aquí por si ese presupuesto se rechazara más
-  // adelante por otra vía.
-  const marginByProposal = new Map<string, { reason: string; createdAt: string; proposalNumber: string | null; accountLegalName: string }>();
-  for (const row of marginOverrideRows ?? []) {
-    const status = row.proposals?.status;
-    if (status === 'REJECTED' || status === 'EXPIRED') continue;
-    const existing = marginByProposal.get(row.proposal_id);
-    if (existing && new Date(existing.createdAt).getTime() >= new Date(row.created_at).getTime()) continue;
-    marginByProposal.set(row.proposal_id, {
-      reason: row.reason,
-      createdAt: row.created_at,
-      proposalNumber: row.proposals?.proposal_number ?? null,
-      accountLegalName: row.proposals?.accounts?.legal_name ?? '',
-    });
-  }
-  const marginSorted = Array.from(marginByProposal.entries()).sort(
-    (a, b) => new Date(b[1].createdAt).getTime() - new Date(a[1].createdAt).getTime(),
-  );
-  for (const [proposalId, info] of marginSorted) {
-    attentionItems.push({
-      kind: 'marginBelowFloor',
-      proposalId,
-      proposalNumber: info.proposalNumber,
-      accountLegalName: info.accountLegalName,
-      days: null,
-      amountCents: null,
-      reason: info.reason,
-    });
-  }
-
-  const staleDraftsSorted = [...(staleDraftRows ?? [])].sort(
-    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
-  );
-  for (const row of staleDraftsSorted) {
-    const daysOld = Math.floor((now.getTime() - new Date(row.created_at).getTime()) / 86_400_000);
-    attentionItems.push({
-      kind: 'staleDraft',
-      proposalId: row.id,
-      proposalNumber: row.proposal_number,
-      accountLegalName: row.accounts?.legal_name ?? '',
-      days: daysOld,
-      amountCents: headlineAmountCents(row.proposal_options ?? []),
-      reason: null,
-    });
-  }
-
   const expiringSoonCount = allProposals.filter((p) => isExpiringSoon(p, now)).length;
 
   const data: DashboardData = {
@@ -372,7 +252,8 @@ export default async function DashboardPage({
     totalProposalsBeforeFilters: allProposals.length,
     statusCounts: Object.fromEntries(statusCounts) as Partial<Record<DashboardProposalStatus, number>>,
     quarterBreakdown,
-    attentionItems: attentionItems.slice(0, 20),
+    attentionItems: attentionResult.items.slice(0, 20),
+    attentionError: attentionResult.failed,
     kpis: {
       billedNetOfMediaCents,
       targetCents,
