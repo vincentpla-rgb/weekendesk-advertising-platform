@@ -146,15 +146,13 @@ export default async function ProposalDetailPage({
   }
 
   return (
-    <div className="wk-shell">
-      <ProposalDetailClient
-        proposal={proposal}
-        options={options}
-        supportNames={supportNames}
-        counterProposal={counterProposal}
-        canDecideCounterProposal={canDecideCounterProposal}
-        currentUserName={currentUserName}
-      />
-    </div>
+    <ProposalDetailClient
+      proposal={proposal}
+      options={options}
+      supportNames={supportNames}
+      counterProposal={counterProposal}
+      canDecideCounterProposal={canDecideCounterProposal}
+      currentUserName={currentUserName}
+    />
   );
 }

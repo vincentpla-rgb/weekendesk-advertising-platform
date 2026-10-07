@@ -50,9 +50,14 @@ export interface DashboardFilters {
   readonly market: Market | null;
   readonly ownerId: string | null;
   readonly status: DashboardProposalStatus | null;
-  readonly accountQuery: string | null;
-  /** Búsqueda por número de presupuesto (p. ej. "2026-014"), subcadena, sin distinguir mayúsculas (ronda 20). */
-  readonly proposalNumberQuery: string | null;
+  /**
+   * Buscador único (CLAUDE.md, ronda 24): coincide por número de
+   * presupuesto O por cuenta (subcadena, sin distinguir mayúsculas) — un
+   * presupuesto pasa si CUALQUIERA de los dos coincide, nunca si hace falta
+   * que coincidan los dos a la vez. Sustituye a los antiguos `accountQuery`
+   * y `proposalNumberQuery` (ronda 20), que se combinaban con Y.
+   */
+  readonly searchQuery: string | null;
   readonly amountMinCents: number | null;
   readonly amountMaxCents: number | null;
   readonly supportId: string | null;
@@ -64,8 +69,7 @@ export const EMPTY_DASHBOARD_FILTERS: DashboardFilters = {
   market: null,
   ownerId: null,
   status: null,
-  accountQuery: null,
-  proposalNumberQuery: null,
+  searchQuery: null,
   amountMinCents: null,
   amountMaxCents: null,
   supportId: null,
@@ -98,13 +102,13 @@ export function filterDashboardProposals(
     if (filters.market && !p.options.some((o) => o.markets.includes(filters.market!))) return false;
     if (filters.ownerId && p.ownerId !== filters.ownerId) return false;
     if (filters.status && p.status !== filters.status) return false;
-    if (filters.accountQuery) {
-      const needle = filters.accountQuery.trim().toLowerCase();
-      if (needle && !p.accountLegalName.toLowerCase().includes(needle)) return false;
-    }
-    if (filters.proposalNumberQuery) {
-      const needle = filters.proposalNumberQuery.trim().toLowerCase();
-      if (needle && !(p.proposalNumber ?? '').toLowerCase().includes(needle)) return false;
+    if (filters.searchQuery) {
+      const needle = filters.searchQuery.trim().toLowerCase();
+      if (needle) {
+        const matchesAccount = p.accountLegalName.toLowerCase().includes(needle);
+        const matchesNumber = (p.proposalNumber ?? '').toLowerCase().includes(needle);
+        if (!matchesAccount && !matchesNumber) return false;
+      }
     }
     if (filters.supportId && !p.options.some((o) => o.supportIds.includes(filters.supportId!))) return false;
     if (filters.amountMinCents !== null || filters.amountMaxCents !== null) {

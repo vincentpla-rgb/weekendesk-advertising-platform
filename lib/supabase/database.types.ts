@@ -35,6 +35,14 @@ export type PaymentTermsEnum = 'SPLIT_30_70' | 'FULL_ON_SIGNATURE';
 export type CampaignDurationUnitEnum = 'WEEK' | 'MONTH';
 /** Contrapropuesta editable del cliente (CLAUDE.md, ronda 16). */
 export type CounterProposalStatusEnum = 'PENDING' | 'ACCEPTED' | 'REJECTED';
+/** Excepciones registradas con autor/motivo/marca de tiempo (CLAUDE.md §8). */
+export type OverrideKindEnum =
+  | 'MARGIN_BELOW_FLOOR'
+  | 'MANUAL_DISCOUNT'
+  | 'LEAD_TIME_FORCED'
+  | 'AVAILABILITY_FORCED'
+  | 'VOLUME_DISCOUNT_DISABLED'
+  | 'MEDIA_FEE_FORCED';
 
 export interface Database {
   // Marcador que @supabase/postgrest-js (v2.47+) exige en el tipo Database
@@ -403,6 +411,38 @@ export interface Database {
           },
         ];
       };
+      // Excepciones registradas (CLAUDE.md §8) — primer `.select()` directo
+      // (ronda 24, panel de "Requieren tu atención"): hasta ahora solo se
+      // insertaba desde las funciones SQL, nunca se leía vía postgrest-js.
+      overrides: {
+        Row: {
+          id: string;
+          proposal_id: string;
+          option_id: string | null;
+          support_id: string | null;
+          market: Market | null;
+          kind: OverrideKindEnum;
+          reason: string;
+          created_by: string;
+          created_at: string;
+        };
+        Insert: Partial<Database['public']['Tables']['overrides']['Row']> & {
+          proposal_id: string;
+          kind: OverrideKindEnum;
+          reason: string;
+          created_by: string;
+        };
+        Update: Partial<Database['public']['Tables']['overrides']['Row']>;
+        Relationships: [
+          {
+            foreignKeyName: 'overrides_proposal_id_fkey';
+            columns: ['proposal_id'];
+            isOneToOne: false;
+            referencedRelation: 'proposals';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       // Objetivo por advertising manager y por quarter fiscal (CLAUDE.md §0).
       // En el esquema desde la primera migración; ronda 18, bloque 4 es su
       // primer uso real (confirmado por Vincent: la tabla sirve tal cual).
@@ -629,6 +669,7 @@ export interface Database {
       vat_regime: VatRegimeEnum;
       payment_terms: PaymentTermsEnum;
       counter_proposal_status: CounterProposalStatusEnum;
+      override_kind: OverrideKindEnum;
     };
     CompositeTypes: Record<string, never>;
   };

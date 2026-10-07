@@ -2,8 +2,15 @@
 
 import { INTERNAL_LANGUAGES, INTERNAL_LANGUAGE_LABELS, useI18n } from '@/lib/i18n-internal';
 
-/** Selector visible del idioma de la INTERFAZ (CLAUDE.md §2, ronda 2) — no confundir con el idioma del cliente (§5.6, §6), que se elige por presupuesto. */
-export function LanguageSwitcher({ dark = false }: { dark?: boolean }) {
+/**
+ * Selector visible del idioma de la INTERFAZ (CLAUDE.md §2, ronda 2) — no
+ * confundir con el idioma del cliente (§5.6, §6), que se elige por
+ * presupuesto. `bare` (ronda 24): sin estilos en línea propios, para que el
+ * CSS ambiente de quien lo envuelve decida el aspecto (`.lang select` del
+ * menú lateral nuevo, `app/globals.css`) — login y `/change-password` siguen
+ * usando `dark`, sin tocar.
+ */
+export function LanguageSwitcher({ dark = false, bare = false }: { dark?: boolean; bare?: boolean }) {
   const { language, setLanguage } = useI18n();
 
   return (
@@ -11,15 +18,19 @@ export function LanguageSwitcher({ dark = false }: { dark?: boolean }) {
       aria-label="Idioma de la interfaz / Interface language / Langue de l'interface"
       value={language}
       onChange={(e) => setLanguage(e.target.value as (typeof INTERNAL_LANGUAGES)[number])}
-      style={{
-        background: dark ? 'rgba(255,255,255,0.12)' : 'var(--wk-surface)',
-        color: dark ? '#fff' : 'var(--wk-text)',
-        border: `1px solid ${dark ? 'rgba(255,255,255,0.3)' : 'var(--wk-border)'}`,
-        borderRadius: 8,
-        padding: '4px 8px',
-        fontSize: 13,
-        fontFamily: 'inherit',
-      }}
+      style={
+        bare
+          ? undefined
+          : {
+              background: dark ? 'rgba(255,255,255,0.12)' : 'var(--wk-surface)',
+              color: dark ? '#fff' : 'var(--wk-text)',
+              border: `1px solid ${dark ? 'rgba(255,255,255,0.3)' : 'var(--wk-border)'}`,
+              borderRadius: 8,
+              padding: '4px 8px',
+              fontSize: 13,
+              fontFamily: 'inherit',
+            }
+      }
     >
       {INTERNAL_LANGUAGES.map((l) => (
         <option key={l} value={l} style={{ color: '#000' }}>
