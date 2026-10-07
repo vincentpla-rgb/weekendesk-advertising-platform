@@ -59,7 +59,7 @@ describe('filterDashboardProposals', () => {
 
   it('busca por cuenta, sin distinguir mayúsculas ni acentos exactos', () => {
     const list = [proposal({ id: 'a', accountLegalName: 'Office de tourisme de Amiens' }), proposal({ id: 'b', accountLegalName: 'Comité Régional' })];
-    const result = filterDashboardProposals(list, { ...EMPTY_DASHBOARD_FILTERS, accountQuery: 'amiens' });
+    const result = filterDashboardProposals(list, { ...EMPTY_DASHBOARD_FILTERS, searchQuery: 'amiens' });
     expect(result.map((p) => p.id)).toEqual(['a']);
   });
 
@@ -68,14 +68,26 @@ describe('filterDashboardProposals', () => {
       proposal({ id: 'a', proposalNumber: '2026-014' }),
       proposal({ id: 'b', proposalNumber: '2026-099' }),
     ];
-    const result = filterDashboardProposals(list, { ...EMPTY_DASHBOARD_FILTERS, proposalNumberQuery: '2026-01' });
+    const result = filterDashboardProposals(list, { ...EMPTY_DASHBOARD_FILTERS, searchQuery: '2026-01' });
     expect(result.map((p) => p.id)).toEqual(['a']);
   });
 
   it('búsqueda por número de presupuesto no revienta si el presupuesto no tiene número todavía', () => {
     const list = [proposal({ id: 'sin-numero', proposalNumber: null })];
-    const result = filterDashboardProposals(list, { ...EMPTY_DASHBOARD_FILTERS, proposalNumberQuery: '2026' });
+    const result = filterDashboardProposals(list, { ...EMPTY_DASHBOARD_FILTERS, searchQuery: '2026' });
     expect(result).toHaveLength(0);
+  });
+
+  it('búsqueda única (ronda 24): coincide por número O por cuenta, no hace falta que coincidan ambos', () => {
+    const list = [
+      proposal({ id: 'by-number', proposalNumber: '2026-014', accountLegalName: 'Comité Régional' }),
+      proposal({ id: 'by-account', proposalNumber: '2026-099', accountLegalName: 'Office de tourisme de Amiens' }),
+      proposal({ id: 'neither', proposalNumber: '2026-050', accountLegalName: 'Visit Flanders' }),
+    ];
+    const byNumber = filterDashboardProposals(list, { ...EMPTY_DASHBOARD_FILTERS, searchQuery: '2026-014' });
+    expect(byNumber.map((p) => p.id)).toEqual(['by-number']);
+    const byAccount = filterDashboardProposals(list, { ...EMPTY_DASHBOARD_FILTERS, searchQuery: 'amiens' });
+    expect(byAccount.map((p) => p.id)).toEqual(['by-account']);
   });
 
   it('filtra por soporte, en cualquier opción', () => {

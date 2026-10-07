@@ -31,10 +31,14 @@ export function DuplicateButton({ proposalId }: { proposalId: string }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
-      <button type="button" className="wk-btn" disabled={isPending} onClick={handleClick}>
+      <button type="button" className="btn-secondary btn-compact" disabled={isPending} onClick={handleClick}>
         {isPending ? t('proposalDetail.duplicating') : t('proposalDetail.duplicateButton')}
       </button>
-      {error && <div className="wk-alert wk-alert-danger">{error}</div>}
+      {error && (
+        <div className="alert alert--danger" role="note">
+          {error}
+        </div>
+      )}
     </div>
   );
 }

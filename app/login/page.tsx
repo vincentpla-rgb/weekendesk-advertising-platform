@@ -52,7 +52,7 @@ export default function LoginPage() {
 
     // Pantalla de entrada tras el login (CLAUDE.md §10.1.1, ronda 21): el
     // dashboard, no el creador de presupuestos directamente — es el "inicio"
-    // de la navegación interna desde la ronda 20 (`InternalHeader.tsx`).
+    // de la navegación interna desde la ronda 20 (`InternalSidebar.tsx`, antes `InternalHeader.tsx`).
     const next = new URLSearchParams(window.location.search).get('next') ?? '/dashboard';
     router.push(next);
     router.refresh();
